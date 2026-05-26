@@ -11619,6 +11619,18 @@ fn skips_startup_backend_selection(command: Option<&Commands>) -> bool {
     uses_report_only_cuda_benchmark_receipt(command)
         || uses_read_only_model_status(command)
         || uses_read_only_support_bundle(command)
+        || uses_lunar_lake_ask_runtime(command)
+}
+
+#[cfg(feature = "full-cli")]
+fn uses_lunar_lake_ask_runtime(command: Option<&Commands>) -> bool {
+    matches!(command, Some(Commands::LunarLake(cmd)) if matches!(&cmd.action, LunarLakeAction::Ask { .. }))
+}
+
+#[cfg(not(feature = "full-cli"))]
+fn uses_lunar_lake_ask_runtime(command: Option<&Commands>) -> bool {
+    let _ = command;
+    false
 }
 
 fn uses_report_only_cuda_benchmark_receipt(command: Option<&Commands>) -> bool {
@@ -13819,6 +13831,34 @@ mod tests {
         });
 
         assert!(uses_read_only_support_bundle(Some(&command)));
+        assert!(skips_startup_backend_selection(Some(&command)));
+        assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
+    }
+
+    #[test]
+    #[cfg(feature = "full-cli")]
+    fn lunar_lake_ask_skips_startup_backend_selection() {
+        let command = Commands::LunarLake(LunarLakeCommand {
+            action: LunarLakeAction::Ask {
+                artifact_root: std::path::PathBuf::from("ci/hardware/intel-258v/2026-05-08"),
+                operator_receipt: std::path::PathBuf::from("lunar-lake-operator-readiness.json"),
+                promotion_ledger: std::path::PathBuf::from("lunar-lake-route-promotion.json"),
+                route_profile_comparison: std::path::PathBuf::from(
+                    "lunar-lake-route-profile-comparison.json",
+                ),
+                profile: "ask_normal".to_string(),
+                route: "dense_slm_openvino_gpu_candidate".to_string(),
+                model: None,
+                tokenizer: None,
+                question: Some("What is 2+2?".to_string()),
+                question_arg: None,
+                max_new_tokens: 8,
+                expect_contains: Some("4".to_string()),
+                json_out: None,
+            },
+        });
+
+        assert!(uses_lunar_lake_ask_runtime(Some(&command)));
         assert!(skips_startup_backend_selection(Some(&command)));
         assert_eq!(default_log_level_for_command(Some(&command)), Some("warn"));
     }
