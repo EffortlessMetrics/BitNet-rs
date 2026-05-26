@@ -2,11 +2,11 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_thermal_context",
   "proof_stage": "live_telemetry_context_captured_no_promotion_change",
-  "created_utc": "2026-05-19T09:30:00Z",
+  "created_utc": "2026-05-26T08:00:00Z",
   "machine_id": "intel-258v",
   "telemetry_scope": "current_machine_runtime_telemetry",
-  "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=11462389760;used_bytes=22411390976",
-  "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=100;ac_power_inferred=true",
+  "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=12632371200;used_bytes=21241409536",
+  "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=2;EstimatedChargeRemaining=98;ac_power_inferred=true",
   "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
   "availability": {
     "memory_context_recorded": true,
@@ -16,19 +16,26 @@
   "memory": {
     "source": "sysinfo",
     "total_bytes": 33873780736,
-    "available_bytes": 11462389760,
-    "used_bytes": 22411390976
+    "available_bytes": 12632371200,
+    "used_bytes": 21241409536
   },
   "power": {
     "source": "os_power_probe",
     "active_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
-    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=100",
+    "battery_status": "BatteryStatus=2;EstimatedChargeRemaining=98",
     "ac_power_inferred": true
   },
   "thermal": {
     "source": "windows_perf_thermal_zone",
     "thermal_zones_visible": 1,
     "temperatures_celsius": []
+  },
+  "capture_requirements": {
+    "battery_mode_required": false,
+    "battery_mode_sample_recorded": false,
+    "requirement_satisfied": true,
+    "status": "not_required",
+    "gaps": []
   },
   "sources": [
     {
@@ -44,10 +51,11 @@
     {
       "source": "windows_perf_thermal_zone",
       "available": true,
-      "status": "captured"
+      "status": "zone_visible_temperature_readings_unavailable"
     }
   ],
   "gaps": [
+    "thermal zone visibility is recorded, but temperature readings are unavailable from the current OS telemetry probe",
     "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
   ],
   "claim_boundary": {
