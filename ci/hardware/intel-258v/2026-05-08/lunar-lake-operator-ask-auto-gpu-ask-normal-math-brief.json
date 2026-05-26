@@ -37,11 +37,15 @@
     "fallback_used": false,
     "openvino_candidate_route_executed": true
   },
-  "created_utc": "2026-05-19T23:39:22Z",
+  "created_utc": "2026-05-26T11:32:27Z",
   "dense_slm": null,
   "execution_coverage": null,
   "fallback_reason": null,
   "fallback_used": false,
+  "known_gaps": [
+    "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+    "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+  ],
   "machine_id": "intel-258v",
   "model": {
     "architecture": "qwen2",
@@ -217,8 +221,7 @@
     "selected_route": "dense_slm_openvino_gpu_candidate",
     "selection_source": "promotion_ledger_auto",
     "why_not_cpu": [
-      "route blocker for profile `ask_normal`: openvino_gpu_promoted_for_ask_normal",
-      "route is not promoted for profile `ask_normal`"
+      "OpenVINO GPU is promoted for profile `ask_normal` by benchmark-qualified route evidence; this route is not auto-selected for `ask_normal`"
     ],
     "why_not_gpu": [
       "dense_slm_openvino_gpu_candidate is promoted for profile ask_normal by benchmark-qualified route evidence"
@@ -262,7 +265,7 @@
         "Full BitNet inference works on Arc or NPU."
       ]
     },
-    "created_utc": "2026-05-19T23:39:22Z",
+    "created_utc": "2026-05-26T11:32:26Z",
     "environment": {
       "openvino": {
         "available_devices": [
@@ -286,6 +289,10 @@
       "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json"
     },
     "item": "LNL258V-ASK-004",
+    "known_gaps": [
+      "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+      "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+    ],
     "machine_id": "intel-258v",
     "model": {
       "files": {
@@ -358,7 +365,7 @@
     "model_family": "qwen",
     "output": {
       "first_streamed_text_chunk": "2",
-      "first_streamed_text_chunk_ms": 253.75789997633547,
+      "first_streamed_text_chunk_ms": 249.45410003419968,
       "generated_text": "2 + 2 equals 4.",
       "generated_token_count": 8,
       "generated_token_ids": [
@@ -451,37 +458,47 @@
     "selected_backend": "openvino-gpu",
     "selected_kernel_or_runtime": "openvino-genai-llmpipeline-gpu0",
     "timing": {
-      "generation_wall_ms": 285.51780001726,
+      "cold_total_ms": 2181.832400150597,
+      "decode_timing_source": "generation_wall_ms",
+      "decode_total_ms": 278.5832000663504,
+      "first_token_ms": 158.34620666503906,
+      "first_token_timing_source": "openvino_perf_metrics.time_to_first_token.mean_ms",
+      "generation_total_ms": 278.5832000663504,
+      "generation_wall_ms": 278.5832000663504,
+      "known_gaps": [
+        "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+        "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+      ],
       "openvino_perf_metrics": {
         "detokenization": {
           "mean_ms": -1.0,
           "std_ms": -1.0
         },
         "generate": {
-          "mean_ms": 280.37701416015625,
+          "mean_ms": 273.47698974609375,
           "std_ms": 0.0
         },
         "inference": {
-          "mean_ms": 277.18499755859375,
+          "mean_ms": 270.4429931640625,
           "std_ms": 0.0
         },
         "inter_token_latency": {
-          "mean_ms": 34.9379997253418,
-          "std_ms": 53.44001007080078
+          "mean_ms": 34.07075119018555,
+          "std_ms": 52.75055694580078
         },
-        "load_time_ms": 2202.0,
+        "load_time_ms": 1883.0,
         "num_generated_tokens": 8,
         "num_input_tokens": 39,
         "throughput": {
-          "mean_ms": 58.722023010253906,
-          "std_ms": 90.92342376708984
+          "mean_ms": 61.18314743041992,
+          "std_ms": 96.41046142578124
         },
         "time_per_output_token": {
-          "mean_ms": 17.029386520385742,
-          "std_ms": 26.3677921295166
+          "mean_ms": 16.344369888305664,
+          "std_ms": 25.754940032958984
         },
         "time_to_first_token": {
-          "mean_ms": 160.489501953125,
+          "mean_ms": 158.34620666503906,
           "std_ms": 0.0
         },
         "tokenization": {
@@ -489,7 +506,10 @@
           "std_ms": -1.0
         }
       },
-      "pipeline_construct_wall_ms": 2224.170300003607
+      "pipeline_construct_wall_ms": 1903.2492000842467,
+      "prefill_ms": null,
+      "time_to_first_token_ms": 158.34620666503906,
+      "total_ms": 2181.832400150597
     },
     "tokenizer_source": "hf_tokenizer_export",
     "verification": {
@@ -501,43 +521,54 @@
       "llmpipeline_constructed": true,
       "openvino_perf_metrics_recorded": true,
       "operator_ready": true,
-      "operator_route_validated": true
+      "operator_route_validated": true,
+      "standard_timing_aliases_recorded": true
     }
   },
   "source_run_receipt": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief-source-run.json",
   "speedup_claim": false,
   "timing": {
-    "generation_wall_ms": 285.51780001726,
+    "cold_total_ms": 2181.832400150597,
+    "decode_timing_source": "generation_wall_ms",
+    "decode_total_ms": 278.5832000663504,
+    "first_token_ms": 158.34620666503906,
+    "first_token_timing_source": "openvino_perf_metrics.time_to_first_token.mean_ms",
+    "generation_total_ms": 278.5832000663504,
+    "generation_wall_ms": 278.5832000663504,
+    "known_gaps": [
+      "OpenVINO GenAI operator ask does not expose a separate prefill_ms split; time_to_first_token_ms is recorded from OpenVINO perf metrics when available.",
+      "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
+    ],
     "openvino_perf_metrics": {
       "detokenization": {
         "mean_ms": -1.0,
         "std_ms": -1.0
       },
       "generate": {
-        "mean_ms": 280.37701416015625,
+        "mean_ms": 273.47698974609375,
         "std_ms": 0.0
       },
       "inference": {
-        "mean_ms": 277.18499755859375,
+        "mean_ms": 270.4429931640625,
         "std_ms": 0.0
       },
       "inter_token_latency": {
-        "mean_ms": 34.9379997253418,
-        "std_ms": 53.44001007080078
+        "mean_ms": 34.07075119018555,
+        "std_ms": 52.75055694580078
       },
-      "load_time_ms": 2202.0,
+      "load_time_ms": 1883.0,
       "num_generated_tokens": 8,
       "num_input_tokens": 39,
       "throughput": {
-        "mean_ms": 58.722023010253906,
-        "std_ms": 90.92342376708984
+        "mean_ms": 61.18314743041992,
+        "std_ms": 96.41046142578124
       },
       "time_per_output_token": {
-        "mean_ms": 17.029386520385742,
-        "std_ms": 26.3677921295166
+        "mean_ms": 16.344369888305664,
+        "std_ms": 25.754940032958984
       },
       "time_to_first_token": {
-        "mean_ms": 160.489501953125,
+        "mean_ms": 158.34620666503906,
         "std_ms": 0.0
       },
       "tokenization": {
@@ -545,7 +576,10 @@
         "std_ms": -1.0
       }
     },
-    "pipeline_construct_wall_ms": 2224.170300003607
+    "pipeline_construct_wall_ms": 1903.2492000842467,
+    "prefill_ms": null,
+    "time_to_first_token_ms": 158.34620666503906,
+    "total_ms": 2181.832400150597
   },
   "tokenizer_source": "hf_tokenizer_export",
   "tokens": {
@@ -563,8 +597,7 @@
     "prompt_count": 39
   },
   "why_not_cpu": [
-    "route blocker for profile `ask_normal`: openvino_gpu_promoted_for_ask_normal",
-    "route is not promoted for profile `ask_normal`"
+    "OpenVINO GPU is promoted for profile `ask_normal` by benchmark-qualified route evidence; this route is not auto-selected for `ask_normal`"
   ],
   "why_not_gpu": [
     "dense_slm_openvino_gpu_candidate is promoted for profile ask_normal by benchmark-qualified route evidence"

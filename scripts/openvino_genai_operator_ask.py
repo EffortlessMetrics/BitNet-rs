@@ -408,7 +408,7 @@ def main() -> int:
     }
 
     args.json_out.parent.mkdir(parents=True, exist_ok=True)
-    args.json_out.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+    args.json_out.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
     return 0 if gate["passed"] else 1
 
 
