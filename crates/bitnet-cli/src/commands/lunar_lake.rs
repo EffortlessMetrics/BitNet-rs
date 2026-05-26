@@ -8509,6 +8509,11 @@ fn build_telemetry_context_from_parts(
             "thermal sensor context is not available from the current OS telemetry probe"
                 .to_string(),
         );
+    } else if thermal.temperatures_celsius.is_empty() {
+        gaps.push(
+            "thermal zone visibility is recorded, but temperature readings are unavailable from the current OS telemetry probe"
+                .to_string(),
+        );
     }
     gaps.push(
         "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
@@ -8547,11 +8552,7 @@ fn build_telemetry_context_from_parts(
         TelemetrySourceStatus {
             source: thermal.source.clone(),
             available: thermal_context_recorded,
-            status: if thermal_context_recorded {
-                "captured".to_string()
-            } else {
-                "unavailable".to_string()
-            },
+            status: thermal_source_status(&thermal, thermal_context_recorded),
         },
     ];
 
@@ -9469,6 +9470,19 @@ fn format_thermal_context(thermal: &TelemetryThermalContext) -> String {
             )
         }
         _ => "thermal_context_unavailable".to_string(),
+    }
+}
+
+fn thermal_source_status(
+    thermal: &TelemetryThermalContext,
+    thermal_context_recorded: bool,
+) -> String {
+    if !thermal_context_recorded {
+        "unavailable".to_string()
+    } else if thermal.temperatures_celsius.is_empty() {
+        "zone_visible_temperature_readings_unavailable".to_string()
+    } else {
+        "captured".to_string()
     }
 }
 
@@ -19653,6 +19667,42 @@ mod tests {
             "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable"
         ));
         assert!(thermal_context_is_unavailable("thermal_context_unavailable"));
+    }
+
+    #[test]
+    fn telemetry_context_marks_visible_thermal_zone_without_temperature_readings() {
+        let receipt = build_telemetry_context_from_parts(
+            "2026-05-26T08:00:00Z".to_string(),
+            TelemetryMemoryContext {
+                source: "test_memory".to_string(),
+                total_bytes: Some(16 * 1024 * 1024),
+                available_bytes: Some(8 * 1024 * 1024),
+                used_bytes: Some(8 * 1024 * 1024),
+            },
+            TelemetryPowerContext {
+                source: "test_power".to_string(),
+                active_scheme: Some("Balanced".to_string()),
+                battery_status: Some("BatteryStatus=2;EstimatedChargeRemaining=98".to_string()),
+                ac_power_inferred: Some(true),
+            },
+            TelemetryThermalContext {
+                source: "windows_perf_thermal_zone".to_string(),
+                thermal_zones_visible: Some(1),
+                temperatures_celsius: Vec::new(),
+            },
+            false,
+        );
+
+        assert!(receipt.availability.thermal_context_recorded);
+        assert!(
+            receipt.gaps.iter().any(|gap| gap.contains("temperature readings are unavailable"))
+        );
+        let thermal_source = receipt
+            .sources
+            .iter()
+            .find(|source| source.source == "windows_perf_thermal_zone")
+            .map(|source| (source.available, source.status.as_str()));
+        assert_eq!(thermal_source, Some((true, "zone_visible_temperature_readings_unavailable")));
     }
 
     #[test]
