@@ -5599,7 +5599,8 @@ fn inspect_operator_ask_regression(
                 "source_receipt.verification.generated_token_ids_available_from_pipeline",
             ],
         ) == Some(true);
-    let source_run_receipt = string_at(&receipt, "source_run_receipt");
+    let source_run_receipt =
+        string_at(&receipt, "source_run_receipt").map(|path| normalize_path_string(&path));
 
     if profile_id != expected.profile_id {
         gaps.push(format!(
@@ -16102,7 +16103,12 @@ fn value_at<'a>(json: &'a Value, dotted_path: &str) -> Option<&'a Value> {
 }
 
 fn path_string(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
+    let path = path.to_string_lossy();
+    normalize_path_string(path.as_ref())
+}
+
+fn normalize_path_string(path: &str) -> String {
+    path.replace('\\', "/")
 }
 
 fn answer_preview(answer: &str) -> String {
@@ -21024,6 +21030,36 @@ mod tests {
         assert!(!summary.power_advantage_claim);
         assert!(!summary.acceleration_claim);
         assert!(!summary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn operator_ask_regression_normalizes_source_run_receipt_path() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_ask_short_auto_gpu_ask(temp.path(), AUTO_GPU_ASK_SHORT_ASK_RECEIPT)?;
+        let path = temp.path().join(AUTO_GPU_ASK_SHORT_ASK_RECEIPT);
+        let mut receipt: Value = read_json_receipt(&path)?;
+        receipt["source_run_receipt"] = json!(
+            "ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-auto-gpu-ask-short-math-brief-source-run.json"
+        );
+        fs::write(&path, serde_json::to_vec_pretty(&receipt)?)?;
+
+        let summary = inspect_operator_ask_regression(
+            &path,
+            OperatorAskRegressionExpectation {
+                label: "ask_short",
+                profile_id: "ask_short",
+                selected_route: "dense_slm_openvino_gpu_candidate",
+                selected_backend: "openvino-gpu",
+            },
+        )?;
+
+        assert_eq!(
+            summary.source_run_receipt.as_deref(),
+            Some(
+                "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-short-math-brief-source-run.json"
+            )
+        );
         Ok(())
     }
 

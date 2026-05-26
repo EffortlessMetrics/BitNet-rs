@@ -518,7 +518,7 @@
       "standard_timing_aliases_recorded": true
     }
   },
-  "source_run_receipt": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-ask-openvino-gpu-math-brief-source-run.json",
+  "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-openvino-gpu-math-brief-source-run.json",
   "speedup_claim": false,
   "timing": {
     "cold_total_ms": 2129.5089999912307,
