@@ -81,7 +81,7 @@ This document describes all environment variables used throughout BitNet-rs for 
 
 ### Lunar Lake OpenVINO Ask Runtime
 
-- `BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR`: OpenVINO IR directory used by `bitnet lunar-lake ask` when an auto-selected OpenVINO GPU/NPU route needs a local model and `--model` is omitted. This is intended for ignored local model exports such as `models/openvino/qwen2.5-0.5b-instruct-int4-sym`; it does not commit model binaries or change route promotion.
+- `BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR`: OpenVINO IR directory used by `bitnet lunar-lake ask` when a selected OpenVINO GPU/NPU route needs a local model and `--model` is omitted. This is intended for ignored local model exports such as `models/openvino/qwen2.5-0.5b-instruct-int4-sym`; it does not commit model binaries or change route promotion.
 - `BITNET_LUNAR_LAKE_OPENVINO_PYTHON`: Python executable used by the Lunar Lake OpenVINO GenAI helper. Set this when the checkout-local `.venv/Scripts/python.exe` is absent or does not include `openvino_genai`.
 
 ### Model Configuration (Environment Overrides)
