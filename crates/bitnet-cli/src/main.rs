@@ -13875,6 +13875,40 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "full-cli")]
+    fn lunar_lake_ask_cli_defaults_to_auto_route_for_profile_selection() -> Result<()> {
+        let handle = std::thread::Builder::new()
+            .name("lunar-lake-ask-clap-parse".to_string())
+            .stack_size(64 * 1024 * 1024)
+            .spawn(|| -> Result<(String, String)> {
+                let cli = Cli::try_parse_from([
+                    "bitnet",
+                    "lunar-lake",
+                    "ask",
+                    "--question",
+                    "What is 2+2?",
+                ])
+                .context("lunar-lake ask defaults should parse")?;
+
+                let Some(Commands::LunarLake(LunarLakeCommand {
+                    action: LunarLakeAction::Ask { profile, route, .. },
+                })) = cli.command
+                else {
+                    anyhow::bail!("expected lunar-lake ask command");
+                };
+
+                Ok((profile, route))
+            })
+            .map_err(|err| anyhow::anyhow!("spawn clap parse thread: {err}"))?;
+        let (profile, route) =
+            handle.join().map_err(|_| anyhow::anyhow!("clap parse thread panicked"))??;
+
+        assert_eq!(profile, "ask_normal");
+        assert_eq!(route, "auto");
+        Ok(())
+    }
+
+    #[test]
     #[cfg(feature = "cli-bench")]
     fn report_only_cuda_benchmark_receipt_skips_startup_backend_selection() {
         let report_command = Commands::Benchmark(BenchmarkCommand {
