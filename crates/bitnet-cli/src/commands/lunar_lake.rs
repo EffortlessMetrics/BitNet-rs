@@ -91,6 +91,7 @@ const AUTO_NPU_WARM_RESIDENT_ASK_RECEIPT: &str =
 const ANSWER_CORPUS_V2: &str = "ci/quality/lunar-lake-answer-corpus-v2.yaml";
 const REGRESSION_V2_SURFACE_ID: &str = "lunar_lake_regression_v2";
 pub const DEFAULT_ASK_ROUTE: &str = "dense_slm_default_cpu";
+const DEFAULT_ASK_CLI_ROUTE: &str = "auto";
 
 const REQUIRED_CORPUS_V2_PROFILES: &[&str] = &[
     "regression_tiny",
@@ -886,7 +887,7 @@ pub enum LunarLakeAction {
         /// Operator route to execute, or auto to select from the promotion ledger.
         /// Auto selection only uses ledger-promoted routes; OpenVINO candidate routes require
         /// an explicit --route plus matching --device request.
-        #[arg(long, default_value = DEFAULT_ASK_ROUTE)]
+        #[arg(long, default_value = DEFAULT_ASK_CLI_ROUTE)]
         route: String,
 
         /// Dense Qwen model path. When omitted, the ask path resolves the local model path from
