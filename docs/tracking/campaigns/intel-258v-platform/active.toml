@@ -12071,6 +12071,9 @@ commands = [
 allowed_paths = [
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-before.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-after.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-gpu.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-npu.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-energy-proxy.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
