@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0.0",
+  "artifact_kind": "lunar_lake_power_thermal_context",
+  "proof_stage": "battery_mode_telemetry_context_captured_no_promotion_change",
+  "created_utc": "2026-05-29T12:07:18Z",
+  "machine_id": "intel-258v",
+  "telemetry_scope": "low_power_battery_mode_telemetry",
+  "memory_context": "source=sysinfo;total_bytes=33873780736;available_bytes=12572524544;used_bytes=21301256192",
+  "power_context": "source=os_power_probe;active_scheme=Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced);battery_status=BatteryStatus=1;EstimatedChargeRemaining=96;ac_power_inferred=false",
+  "thermal_context": "source=windows_perf_thermal_zone;thermal_zones_visible=1;temperatures_celsius=unavailable",
+  "availability": {
+    "memory_context_recorded": true,
+    "power_context_recorded": true,
+    "thermal_context_recorded": true
+  },
+  "memory": {
+    "source": "sysinfo",
+    "total_bytes": 33873780736,
+    "available_bytes": 12572524544,
+    "used_bytes": 21301256192
+  },
+  "power": {
+    "source": "os_power_probe",
+    "active_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
+    "battery_status": "BatteryStatus=1;EstimatedChargeRemaining=96",
+    "ac_power_inferred": false
+  },
+  "thermal": {
+    "source": "windows_perf_thermal_zone",
+    "thermal_zones_visible": 1,
+    "temperatures_celsius": []
+  },
+  "capture_requirements": {
+    "battery_mode_required": true,
+    "battery_mode_sample_recorded": true,
+    "requirement_satisfied": true,
+    "status": "battery_mode_sample_recorded",
+    "gaps": []
+  },
+  "sources": [
+    {
+      "source": "sysinfo",
+      "available": true,
+      "status": "captured"
+    },
+    {
+      "source": "os_power_probe",
+      "available": true,
+      "status": "captured"
+    },
+    {
+      "source": "windows_perf_thermal_zone",
+      "available": true,
+      "status": "zone_visible_temperature_readings_unavailable"
+    }
+  ],
+  "gaps": [
+    "thermal zone visibility is recorded, but temperature readings are unavailable from the current OS telemetry probe",
+    "power context is recorded for routing evidence, but no speedup or power-advantage claim is made"
+  ],
+  "claim_boundary": {
+    "new_inference_executed": false,
+    "telemetry_measurement_executed": true,
+    "route_promotion_changed": false,
+    "speedup_claim": false,
+    "power_advantage_claim": false,
+    "acceleration_claim": false,
+    "hidden_fallback_allowed": false
+  }
+}

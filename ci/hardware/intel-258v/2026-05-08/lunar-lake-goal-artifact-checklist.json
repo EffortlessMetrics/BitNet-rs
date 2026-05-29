@@ -2,29 +2,28 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-26T12:00:00Z",
+  "created_utc": "2026-05-29T12:07:18Z",
   "machine_id": "intel-258v",
-  "source_revision": "c0050d0e7ccfa03fd779c4e5384cb68df13b5a47",
+  "source_revision": "a4960a7662fb2d8ac51fe8ddead8bc3af73bcf2d",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
-  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, and LNL258V-BITNET-INTAKE-005 refreshing the former A770 shared BitNet semantic watchpoints #4756/#4757/#4767/#4853/#5064 after live GitHub state showed all five are closed unmerged, leaving pending_shared_change_count=0 and stale_after_merged_count=0. POWER-007/POWER-008 keep the runbook discoverable for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079 and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 remain non-semantic adjacent accelerator evidence. The current swarm main also includes main-history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 as repo/support-gate updates that do not change Lunar Lake route evidence. The objective is not complete because low_power has no promoted route, current energy-proxy evidence is AC-only, battery-mode telemetry remains blocked by AC power, and thermal temperature readings remain unavailable. POWER-010/#116 plus closeout #117 now add and close out the no-inference low_power battery-plan command and committed lunar-lake-low-power-battery-plan.json receipt. That plan makes the eventual POWER-006 physical battery run machine-readable, but it records can_collect_battery_evidence_now=false from the current AC-blocked telemetry context and does not clear low_power promotion, battery-mode, thermal, speedup, power-advantage, native accelerator, Qwen3 Lunar Lake, or BitNet behavior gaps. The current swarm main also includes SLM-CPU-067/#109 as an adjacent SLM CPU runtime-support update, not Lunar Lake route evidence, route promotion, speedup, broad quality, Qwen3 Lunar Lake promotion, or BitNet behavior proof. A770-011/#115 is now merged and A770-011 closeout #143 is on current swarm main; it is recorded here as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence, not Lunar Lake inference, semantic-intake stale evidence, route promotion, speedup, power advantage, native OpenCL/NPU proof, full BitNet accelerator inference, packed QK256 accelerator decode, or BitNet QK256/I2_S behavior proof. LNL258V-GOAL-AUDIT-031/#350 and closeout #357 are now merged, and post-357 handoff #359 is on current swarm main; the checklist records them as audit, tracker, and handoff state only without changing route evidence or claim boundaries. The branch was refreshed after #360 landed on swarm main; #360 is repo-boundary promotion-packet tooling only and does not change Lunar Lake route evidence, completion status, command behavior, route promotion, speedup, power advantage, battery-mode evidence, native accelerator proof, source promotion completion, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior. Current BitNet-rs main now also includes #6216, #6217, #6218, and #6219 as Lunar Lake ask receipt timing/explanation, committed OpenVINO ask receipt refresh, and path-normalization cleanup only; they do not add route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior changes.",
+  "decision_reason": "The committed evidence supports profile-aware operator readiness, strict regression v2, bounded dense Qwen CPU/OpenVINO quality evidence, profile-scoped route promotion, BitNet semantic-intake protection, post-VALIDATE-002 readiness indexing of low_power power-profile plus thermal temperature availability context, REG-011 route/model identity gating for route-profile and cold/warm benchmark evidence, OP-013 fail-closed default model resolution for blocked auto routes, OP-014 low_power blocked-ask runbook and next-evidence guidance, VALIDATE-003 readiness indexing of that blocked low_power ask receipt, POWER-009/#6097 power-profile indexing of the same runbook and telemetry-context --require-battery guidance with closeout #6099 merged, REG-012/#6102 strict-regression-surface fields for Arc/NPU bounded proof coverage with closeout #6103 merged, REG-013/#6106 strict-regression-surface fields for BitNet CPU reference route evidence with closeout #6107 merged, ASK-006/ASK-007 appliance-level auto ask receipts for ask_normal and ask_short, and LNL258V-BITNET-INTAKE-005 refreshing the former A770 shared BitNet semantic watchpoints #4756/#4757/#4767/#4853/#5064 after live GitHub state showed all five are closed unmerged, leaving pending_shared_change_count=0 and stale_after_merged_count=0. POWER-007/POWER-008 keep the runbook discoverable for the physical battery-mode low_power run, A770-005/#6072 selected-device OpenCL smoke closeout #6079 and A770-006/#6110 selected-device OpenCL matmul_i2s CPU parity closeout #6112 remain non-semantic adjacent accelerator evidence. The current swarm main also includes main-history import #104, CLI model-cache module-path fix #100, and Qwen3 comparator support-bundle lock #99 as repo/support-gate updates that do not change Lunar Lake route evidence. The objective is not complete because low_power has no promoted route, battery-mode telemetry and energy-proxy evidence are now recorded, benchmark-qualified power advantage is not proven, and thermal temperature readings remain unavailable. POWER-010/#116 plus closeout #117 now add and close out the no-inference low_power battery-plan command and committed lunar-lake-low-power-battery-plan.json receipt. The POWER-006 battery run now records real battery-mode telemetry, explicit CPU/GPU/NPU low_power route samples, and an energy-proxy receipt, but it does not clear low_power promotion, thermal, speedup, power-advantage, native accelerator, Qwen3 Lunar Lake, or BitNet behavior gaps. The current swarm main also includes SLM-CPU-067/#109 as an adjacent SLM CPU runtime-support update, not Lunar Lake route evidence, route promotion, speedup, broad quality, Qwen3 Lunar Lake promotion, or BitNet behavior proof. A770-011/#115 is now merged and A770-011 closeout #143 is on current swarm main; it is recorded here as adjacent selected-device inline-scaled QK256 OpenCL candidate evidence, not Lunar Lake inference, semantic-intake stale evidence, route promotion, speedup, power advantage, native OpenCL/NPU proof, full BitNet accelerator inference, packed QK256 accelerator decode, or BitNet QK256/I2_S behavior proof. LNL258V-GOAL-AUDIT-031/#350 and closeout #357 are now merged, and post-357 handoff #359 is on current swarm main; the checklist records them as audit, tracker, and handoff state only without changing route evidence or claim boundaries. The branch was refreshed after #360 landed on swarm main; #360 is repo-boundary promotion-packet tooling only and does not change Lunar Lake route evidence, completion status, command behavior, route promotion, speedup, power advantage, battery-mode evidence, native accelerator proof, source promotion completion, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior. Current BitNet-rs main now also includes #6216, #6217, #6218, and #6219 as Lunar Lake ask receipt timing/explanation, committed OpenVINO ask receipt refresh, and path-normalization cleanup only; they do not add route promotion, speedup, power advantage, measured temperature, native accelerator proof, broad quality, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior changes.",
   "current_main_delta": "Current swarm main now includes the previously audited state through LNL258V-GOAL-AUDIT-031/#350, LNL258V-GOAL-AUDIT-031 closeout #357, post-357 handoff checkpoint #359, adjacent SLM-CPU-081 timing/closeout #349/#354, repo-boundary drift-warning tooling #351, and adjacent CUDA-MODEL-017M source-capture timeout #353. #350/#357 are Lunar Lake audit/tracker state only, #359 is swarm handoff/operator state only, #349/#354 are adjacent SLM CPU tracker/evidence planning state only, #351 is repo-boundary tooling only, and #353 is adjacent CUDA/Qwen3 diagnostic state only. None changes Lunar Lake route evidence, completion status, route promotion, fallback behavior, model loading, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality, semantic-intake status, runtime/sidecar behavior, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior, plus repo-boundary promotion-packet generator #360. #360 is repo-boundary tooling only and does not change Lunar Lake route evidence, completion status, command behavior, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, source promotion completion, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior.",
   "post_369_checkpoint_delta": "Current swarm main now additionally includes #361/#367 as adjacent SLM CPU tracker/planning state, #362/#366 as adjacent A770 diagnostic/tracker state, #363/#365 as Lunar Lake audit/tracker state, #364 as an ancestry-preserving source-to-swarm sync to source main 9b655ae474e6ebe96e832d20c219dd8a92c0c63a, #368/#369 as repo-boundary and promotion-contract documentation, and #370 as swarm handoff/operator checkpoint state. These changes do not add Lunar Lake inference, model loading, fallback behavior changes, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality evidence, semantic-intake stale state, source promotion completion, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior changes.",
   "post_6211_ask_boundary_delta": "Current BitNet-rs main additionally includes PR #6211 as a Lunar Lake command-boundary clarity update: bitnet_strict_reference/bitnet_reference_cpu in lunar-lake ask fails closed before inference and directs operators to validate, regress, and compare for BitNet CPU reference evidence. This adds no Lunar Lake inference, model load, fallback behavior change, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change.",
-  "post_6219_ask_receipt_delta": "Current BitNet-rs main additionally includes PRs #6216, #6217, #6218, and #6219 as Lunar Lake ask receipt timing/explanation, committed auto/direct OpenVINO ask receipt refresh, and deterministic path-normalization cleanup. These refresh existing bounded dense-Qwen/OpenVINO ask evidence and derived regression/comparison receipts without adding route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change.",
+  "post_6219_ask_receipt_delta": "Current BitNet-rs main additionally includes PRs #6216, #6217, #6218, and #6219 as Lunar Lake ask receipt timing/explanation, committed auto/direct OpenVINO ask receipt refresh, and deterministic path-normalization cleanup. These refresh existing bounded dense-Qwen/OpenVINO ask evidence and derived regression/comparison receipts without adding route promotion, speedup, power advantage, measured temperature, native accelerator proof, broad quality evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-006",
-    "status": "blocked",
-    "reason": "Real battery-mode low_power telemetry and energy-proxy evidence are unavailable while the current power context indicates AC power.",
+    "status": "in_progress",
+    "reason": "Real battery-mode low_power telemetry and energy-proxy evidence are recorded; low_power remains unpromoted because benchmark-qualified power advantage and measured thermal readings are still missing.",
     "required_to_clear": [
-      "telemetry-context --require-battery passes before the route/profile run",
-      "battery-mode low_power route/profile samples exist for dense_slm_default_cpu, dense_slm_openvino_gpu_candidate, and dense_slm_openvino_npu_candidate using the explicit POWER-011 receipt paths",
-      "before/after battery-mode telemetry can rebuild lunar-lake-low-power-energy-proxy.json",
-      "power-profile, regression-v2, operator-comparison, and excellence-audit artifacts are refreshed from battery-mode evidence",
+      "the battery evidence PR is reviewed, validated, and merged",
+      "benchmark-qualified low_power power advantage is proven before any low_power route promotion",
+      "thermal temperature readings are recorded if the OS telemetry path becomes available",
       "operators follow docs/hardware/intel-258v-low-power-battery-runbook.md before collecting POWER-006 evidence",
       "low_power remains unpromoted unless answer gates, fallback=false, stable timing, and benchmark-qualified power advantage all pass",
-      "low-power-plan receipt remains operator_plan_ready=true and is refreshed after POWER-006 battery evidence is collected"
+      "low-power-plan and objective artifacts are refreshed again after any later low_power promotion evidence"
     ]
   },
   "route_policy_snapshot": {
@@ -109,6 +108,29 @@
         "POWER-012 lets explicit low_power CPU/GPU/NPU battery-run sample asks pass route-profile guard for evidence collection while preserving candidate blockers in receipts.",
         "--device auto remains blocked for low_power until a route is promoted for that profile.",
         "This is sample-collection plumbing only; it is not battery-mode telemetry, route promotion, speedup, power advantage, new inference, or a BitNet behavior claim."
+      ]
+    },
+    {
+      "id": "low_power_battery_route_samples",
+      "status": "captured_candidate_only",
+      "evidence": [
+        "lunar-lake-low-power-battery-before.json",
+        "lunar-lake-operator-ask-battery-low-power-cpu.json",
+        "lunar-lake-operator-ask-battery-low-power-cpu-source-run.json",
+        "lunar-lake-operator-ask-battery-low-power-gpu.json",
+        "lunar-lake-operator-ask-battery-low-power-gpu-source-run.json",
+        "lunar-lake-operator-ask-battery-low-power-npu.json",
+        "lunar-lake-operator-ask-battery-low-power-npu-source-run.json",
+        "lunar-lake-low-power-battery-after.json",
+        "lunar-lake-low-power-energy-proxy.json",
+        "lunar-lake-power-profile-evidence.json",
+        "lunar-lake-regression-bundle-v2.json",
+        "lunar-lake-operator-comparison.json"
+      ],
+      "notes": [
+        "Before/after telemetry record BatteryStatus=1 and ac_power_inferred=false.",
+        "CPU, OpenVINO GPU, and OpenVINO NPU explicit low_power samples pass their bounded answer gates with fallback_used=false.",
+        "The refreshed power, regression, and comparison artifacts keep low_power candidate-only with no route promotion, speedup, power-advantage, native accelerator, broad quality, or BitNet QK256/I2_S behavior claim."
       ]
     },
     {
@@ -242,7 +264,7 @@
       "notes": [
         "Route, backend, runtime, fallback status, timing, memory, power context, model identity, tokenizer/template identity, and model-hash-or-explicit-gap coverage are indexed across the committed receipt family.",
         "REG-011 records 23/23 route rows with model identity and tokenizer/template coverage, 9 rows with model SHA256, and 14 OpenVINO IR rows with an explicit no-local-model-SHA gap instead of a fake hash.",
-        "Operator readiness now carries AC-only low_power battery context, energy-proxy status, thermal-zone visibility, and no usable measured temperature readings.",
+        "Operator readiness carries low_power battery context, energy-proxy status, thermal-zone visibility, and no usable measured temperature readings.",
         "Thermal visibility remains limited because temperature readings are unavailable."
       ]
     },
@@ -294,14 +316,19 @@
       "evidence": [
         "lunar-lake-power-profile-evidence.json",
         "lunar-lake-low-power-battery-telemetry-blocked.json",
+        "lunar-lake-low-power-battery-before.json",
+        "lunar-lake-low-power-battery-after.json",
         "lunar-lake-low-power-energy-proxy.json",
+        "lunar-lake-operator-ask-battery-low-power-cpu.json",
+        "lunar-lake-operator-ask-battery-low-power-gpu.json",
+        "lunar-lake-operator-ask-battery-low-power-npu.json",
         "lunar-lake-operator-ask-auto-low-power-blocked.json",
         "lunar-lake-low-power-battery-plan.json"
       ],
       "notes": [
         "low_power has no promoted route.",
-        "The current energy-proxy evidence is AC-only and does not prove battery-mode power advantage.",
-        "POWER-010 adds the no-inference plan receipt, but low_power remains blocked because it is not battery-mode evidence and cannot prove power advantage."
+        "The current battery-mode telemetry and energy-proxy evidence are real battery samples, but they do not prove benchmark-qualified power advantage.",
+        "The explicit CPU/GPU/NPU low_power ask receipts are fallback-free candidate samples; low_power remains blocked because power advantage is not proven."
       ]
     },
     {
@@ -319,8 +346,8 @@
       ],
       "notes": [
         "POWER-010 adds bitnet lunar-lake low-power-plan and a committed plan receipt for the POWER-006 physical battery-mode low_power run.",
-        "The plan records operator_plan_ready=true from existing runbook and next-evidence guidance, while can_collect_battery_evidence_now=false because the telemetry context is AC-blocked.",
-        "The plan is not battery-mode evidence, route promotion, speedup, power advantage, measured temperature, native accelerator evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior evidence.",
+        "The plan records operator_plan_ready=true from the runbook and next-evidence guidance; the later POWER-006 battery receipts are the actual battery evidence.",
+        "The plan is not route promotion, speedup, power advantage, measured temperature, native accelerator evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior evidence.",
         "POWER-011 replaces the placeholder route/profile sample step with exact CPU/GPU/NPU explicit-route ask commands and receipt paths.",
         "POWER-011 still does not run inference, collect battery-mode telemetry, promote low_power, prove speedup or power advantage, add model binaries, or change BitNet QK256/I2_S behavior."
       ]
@@ -535,7 +562,7 @@
         "M4 tracker closeout #215 is recorded only as adjacent non-Lunar-Lake tracker state; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
         "Runner rollout plan #207 is recorded only as adjacent control-plane documentation; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet behavior, or completion status.",
         "POWER-011/#223 plus closeout #224 make the low_power battery sample commands explicit, but final boring support remains not complete until POWER-006 has real battery-mode telemetry and benchmark-qualified power advantage.",
-        "POWER-012/#232 plus closeout #244 make explicit low_power CPU/GPU/NPU sample asks pass route-profile guard for evidence collection while keeping candidate blockers in receipts and auto low_power blocked; this does not add battery-mode evidence, route promotion, speedup, power advantage, fallback behavior change, native accelerator proof, or BitNet QK256/I2_S behavior change.",
+        "POWER-012/#232 plus closeout #244 made explicit low_power CPU/GPU/NPU sample asks pass route-profile guard for evidence collection while keeping candidate blockers in receipts and auto low_power blocked; this did not add route promotion, speedup, power advantage, fallback behavior change, native accelerator proof, or BitNet QK256/I2_S behavior change.",
         "PR #247 is recorded only as adjacent CUDA/Qwen3 one-token phase trace support; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet semantic intake, or BitNet QK256/I2_S behavior.",
         "PR #248 is recorded only as LNL258V-GOAL-AUDIT-022 tracker closeout; it does not change Lunar Lake route evidence, route promotion, command behavior, speedup, power advantage, native accelerator proof, broad quality, or BitNet QK256/I2_S behavior.",
         "PR #250 is recorded only as adjacent CUDA/Qwen3 phase-trace test-expect cleanup; it does not change Lunar Lake route evidence, route promotion, speedup, power advantage, native accelerator proof, BitNet semantic intake, or BitNet QK256/I2_S behavior.",
@@ -577,8 +604,8 @@
   "open_gaps": [
     {
       "id": "LNL258V-POWER-006",
-      "status": "blocked",
-      "reason": "Battery-mode telemetry and low_power energy-proxy evidence are unavailable while the machine is on AC power."
+      "status": "in_progress",
+      "reason": "Battery-mode telemetry and low_power energy-proxy evidence are recorded, but the evidence PR is not merged and benchmark-qualified power advantage is not proven."
     },
     {
       "id": "thermal_temperature_readings",

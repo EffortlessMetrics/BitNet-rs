@@ -12048,7 +12048,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-006"
-status = "blocked"
+status = "pr_open"
+pr = 6224
+head_sha = "083efd2d4e5205b8117b5e7ad2b19565cea09499"
 branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
 stackable = false
 review_mode = "codex_premerge"
@@ -12072,13 +12074,17 @@ allowed_paths = [
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-before.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-after.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu-source-run.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-gpu.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-gpu-source-run.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-npu.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-npu-source-run.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-energy-proxy.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
   "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
   "docs/tracking/campaigns/intel-258v-platform/**",
   "docs/tracking/generated/**",
 ]

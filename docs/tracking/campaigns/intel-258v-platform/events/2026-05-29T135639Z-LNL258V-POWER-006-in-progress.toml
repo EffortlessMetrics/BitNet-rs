@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-29T13:56:39Z"
+event = "in_progress"
+item = "LNL258V-POWER-006"
+previous_status = "blocked"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
+actor = "codex"
+summary = "Started the real battery-mode low_power evidence refresh."
+
+notes = [
+  "Battery-mode before/after telemetry receipts now record BatteryStatus=1 with ac_power_inferred=false around the low_power route sample window.",
+  "CPU, OpenVINO GPU, and OpenVINO NPU explicit low_power ask receipts are being indexed as fallback-free candidate-route samples, not route promotion evidence.",
+  "low_power remains unpromoted because benchmark-qualified power advantage and measured thermal readings are still missing.",
+]

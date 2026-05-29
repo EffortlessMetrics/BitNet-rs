@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-29T14:09:22Z"
+event = "pr_open"
+item = "LNL258V-POWER-006"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6224
+head_sha = "083efd2d4e5205b8117b5e7ad2b19565cea09499"
+branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
+actor = "codex"
+summary = "Opened the real battery-mode low_power evidence PR."
+
+notes = [
+  "PR #6224 records before/after battery telemetry with BatteryStatus=1 and ac_power_inferred=false around the low_power route sample window.",
+  "The PR records fallback-free CPU, OpenVINO GPU, and OpenVINO NPU explicit low_power route samples as candidate evidence only.",
+  "low_power remains unpromoted because benchmark-qualified power advantage and measured thermal readings are still missing.",
+]
