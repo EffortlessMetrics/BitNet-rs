@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-29T14:26:59Z"
+event = "merged"
+item = "LNL258V-POWER-006"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6224
+head_sha = "ce53856d0709bfeb464cea8bb68ecd309c5f3ff0"
+merge_sha = "725847247705599b5136e56ad974ddd2fa795f0c"
+branch = "codex/lunar-lake/LNL258V-POWER-006-battery-low-power-evidence"
+actor = "codex"
+summary = "Merged the real battery-mode low_power evidence PR."
+
+notes = [
+  "PR #6224 landed battery-mode before/after telemetry, low_power CPU/GPU/NPU candidate asks, and refreshed power/regression/comparison/audit artifacts.",
+  "The merged evidence records battery mode and fallback-free candidate samples, but it does not promote low_power.",
+  "The remaining low_power blocker is benchmark-qualified power advantage, with measured thermal readings still unavailable.",
+]
