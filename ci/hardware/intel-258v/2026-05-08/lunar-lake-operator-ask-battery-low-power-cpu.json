@@ -1,0 +1,1094 @@
+{
+  "acceleration_claim": false,
+  "answer": {
+    "gate": {
+      "broad_quality_claim": false,
+      "expected_contains": "4",
+      "failed_rules": [],
+      "name": "contains_bounded_operator_answer",
+      "passed": true
+    },
+    "normalized_text": "4",
+    "text": "4"
+  },
+  "answer_gate_passed": true,
+  "arc_or_npu_execution_claim": false,
+  "artifact_kind": "lunar_lake_operator_ask",
+  "artifact_root": "ci/hardware/intel-258v/2026-05-08",
+  "backend": {
+    "backend_lane": null,
+    "fallback_reason": null,
+    "fallback_used": false,
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "selected_kernel_or_runtime": "dense-qwen-cpu-reference"
+  },
+  "backend_lane": null,
+  "bitnet_qk256_i2s_claim": false,
+  "broad_quality_claim": false,
+  "claim_boundary": {
+    "acceleration_claim": false,
+    "arc_or_npu_acceleration_claim": false,
+    "bitnet_qk256_i2s_claim": false,
+    "broad_dense_slm_quality_claim": false,
+    "cpu_default_route_only": true,
+    "default_route_changed": false,
+    "fallback_used": false,
+    "openvino_candidate_route_executed": false
+  },
+  "created_utc": "2026-05-29T12:05:48Z",
+  "dense_slm": {
+    "architecture": "qwen2",
+    "claim_scope": "strict dense SLM CPU answer smoke only",
+    "execution_phase": "decode",
+    "kernel_family": "dense_qwen",
+    "kernel_id": "dense-qwen-cpu-reference",
+    "layout": "gguf_dense_q8_0",
+    "layout_source": "gguf_dense_q8_0_reference",
+    "model_family": "qwen",
+    "provenance": "dense_slm_gguf_cpu_reference",
+    "quant_format": "Q8_0"
+  },
+  "execution_coverage": {
+    "dense_slm_layers_on_cpu": null,
+    "dense_slm_layers_total": null,
+    "execution_claim": "dense_slm_cpu_reference_answer_smoke",
+    "unsupported_ops": []
+  },
+  "fallback_reason": null,
+  "fallback_used": false,
+  "known_gaps": [],
+  "machine_id": "intel-258v",
+  "model": {
+    "architecture": "qwen2",
+    "fallback_loader_used": false,
+    "family": "qwen",
+    "loader_mode": "real_gguf",
+    "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+    "quant_format": "Q8_0",
+    "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+    "source": {
+      "architecture": "qwen2",
+      "context_length": 32768,
+      "fallback_loader_used": false,
+      "family": "qwen",
+      "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+      "format": "gguf",
+      "loader_mode": "real_gguf",
+      "output_head_tensor": "output.weight",
+      "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+      "quant_format": "Q8_0",
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+      "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+      "tie_word_embeddings": false,
+      "tokenizer": "gguf_metadata",
+      "vocab_size": 151936
+    },
+    "tokenizer": "gguf_metadata",
+    "vocab_size": 151936
+  },
+  "model_architecture": "qwen2",
+  "model_family": "qwen",
+  "openvino_candidate_route_executed": false,
+  "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "profile": {
+    "allocation_audit": {
+      "claim_scope": "not_requested",
+      "decode": {
+        "embed": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "forward": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "logits": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "sample": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "steady_state": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "token_decode": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "total": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        }
+      },
+      "enabled": false,
+      "instrumentation_excluded": [
+        "model_load",
+        "tokenizer_load",
+        "prompt_tokenize",
+        "json_receipt_serialization",
+        "debug_logit_dump_topk_unless_enabled"
+      ],
+      "instrumentation_included": [
+        "prompt_prefill_step",
+        "decode_step_total",
+        "model.embed",
+        "model.forward",
+        "model.logits_and_extract",
+        "sampler.sample",
+        "tokenizer.decode",
+        "stdout_text_write",
+        "token_vector_updates",
+        "stop_tail_updates"
+      ],
+      "measured_tokens": 0,
+      "method": "not_requested",
+      "per_token_alloc_bytes_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "per_token_alloc_count_delta": {
+        "count": 0,
+        "max_per_token": null,
+        "mean_per_token": null,
+        "total": 0
+      },
+      "prompt_prefill": {
+        "alloc_bytes_total": 0,
+        "alloc_count_total": 0,
+        "count": 0,
+        "dealloc_bytes_total": 0,
+        "dealloc_count_total": 0,
+        "max_alloc_bytes_per_token": null,
+        "max_alloc_count_per_token": null,
+        "mean_alloc_bytes_per_token": null,
+        "mean_alloc_count_per_token": null,
+        "net_bytes_total": 0
+      },
+      "scope": "not_requested",
+      "steady_state_alloc_bytes_per_token": null,
+      "steady_state_alloc_count_per_token": null,
+      "warmup_tokens": 0
+    },
+    "backend": {
+      "fallback_reason": null,
+      "fallback_used": false,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust"
+    },
+    "claim_scope": "selected CPU backend phase timing only",
+    "decode": {
+      "embed_ms": {
+        "count": 2,
+        "max_ms": 0.025,
+        "mean_ms": 0.022,
+        "min_ms": 0.019,
+        "p50_ms": 0.019,
+        "p95_ms": 0.025,
+        "total_ms": 0.044
+      },
+      "first_token_decode_ms": 425.249,
+      "forward_ms": {
+        "count": 2,
+        "max_ms": 305.835,
+        "mean_ms": 291.095,
+        "min_ms": 276.354,
+        "p50_ms": 276.354,
+        "p95_ms": 305.835,
+        "total_ms": 582.189
+      },
+      "generated_tokens": 2,
+      "logits_ms": {
+        "count": 2,
+        "max_ms": 97.89,
+        "mean_ms": 89.297,
+        "min_ms": 80.704,
+        "p50_ms": 80.704,
+        "p95_ms": 97.89,
+        "total_ms": 178.594
+      },
+      "per_token_ms": {
+        "count": 2,
+        "max_ms": 425.249,
+        "mean_ms": 401.653,
+        "min_ms": 378.057,
+        "p50_ms": 378.057,
+        "p95_ms": 425.249,
+        "total_ms": 803.306
+      },
+      "sample_ms": {
+        "count": 2,
+        "max_ms": 13.587,
+        "mean_ms": 8.05,
+        "min_ms": 2.513,
+        "p50_ms": 2.513,
+        "p95_ms": 13.587,
+        "total_ms": 16.1
+      },
+      "steady_per_token_ms": {
+        "count": 1,
+        "max_ms": 378.057,
+        "mean_ms": 378.057,
+        "min_ms": 378.057,
+        "p50_ms": 378.057,
+        "p95_ms": 378.057,
+        "total_ms": 378.057
+      },
+      "steady_state_tok_s": 2.645,
+      "steady_state_tokens": 1,
+      "token_decode_ms": {
+        "count": 2,
+        "max_ms": 0.55,
+        "mean_ms": 0.292,
+        "min_ms": 0.034,
+        "p50_ms": 0.034,
+        "p95_ms": 0.55,
+        "total_ms": 0.584
+      },
+      "warmup_tokens": 1
+    },
+    "id": "lunar_lake_ask",
+    "kind": "steady_decode_prefill",
+    "machine_context_recorded": true,
+    "model_load_ms": 12600.124,
+    "phase": "decode",
+    "prompt_prefill": {
+      "exercised": true,
+      "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+      "ms": 8130.542,
+      "per_token_ms": {
+        "count": 41,
+        "max_ms": 321.644,
+        "mean_ms": 198.303,
+        "min_ms": 124.443,
+        "p50_ms": 137.099,
+        "p95_ms": 310.585,
+        "total_ms": 8130.43
+      },
+      "tokens": 41
+    },
+    "prompt_tokenize_ms": 217.877,
+    "requested": true,
+    "tokenizer_load_ms": 336.129
+  },
+  "profile_id": "low_power",
+  "promotion_status": "direct_route_validated",
+  "prompt": {
+    "render": {
+      "add_bos": false,
+      "parse_special": true,
+      "qwen_no_think": false,
+      "rendered_sha256": "cbd41b82a74e87f5b2229f530e3c1b671b45668856a2ef958f4ba4f31de6d4af",
+      "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer with just the number.<|im_end|>\n<|im_start|>assistant\n",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_token_ids": [
+        151645,
+        151644
+      ],
+      "template_family": "qwen25-chat"
+    },
+    "template": null,
+    "token_ids": [
+      151644,
+      8948,
+      198,
+      2610,
+      525,
+      1207,
+      16948,
+      11,
+      3465,
+      553,
+      54364,
+      14817,
+      13,
+      1446,
+      525,
+      264,
+      10950,
+      17847,
+      13,
+      151645,
+      198,
+      151644,
+      872,
+      198,
+      3838,
+      374,
+      220,
+      17,
+      10,
+      17,
+      30,
+      21806,
+      448,
+      1101,
+      279,
+      1372,
+      13,
+      151645,
+      198,
+      151644,
+      77091,
+      198
+    ]
+  },
+  "prompt_template": null,
+  "proof_stage": "operator_default_route_executed",
+  "quantization": "Q8_0",
+  "question": "What is 2+2? Answer with just the number.",
+  "requested_backend": "cpu",
+  "requested_device": "cpu",
+  "requested_route": "dense_slm_default_cpu",
+  "route": {
+    "acceleration_claim": false,
+    "answer_gate_evidence": "slm-answer-corpus-qwen25-cpu-clean-provenance.json",
+    "fallback_policy": "strict_no_fallback",
+    "phase_evidence": "slm-phase-warm-session-qwen25-cpu.json",
+    "route_id": "dense_slm_default_cpu",
+    "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+    "selected_model": "Qwen2.5-0.5B-Instruct Q8_0 GGUF",
+    "workload": "ask"
+  },
+  "route_id": "dense_slm_default_cpu",
+  "route_profile_blockers": [
+    "power advantage evidence missing for low_power promotion",
+    "route not promoted for profile low_power"
+  ],
+  "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "route_profile_status": "candidate_only",
+  "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
+  "route_selection": {
+    "candidate_routes": [],
+    "profile_id": "low_power",
+    "promotion_ledger": null,
+    "promotion_status": "direct_route_validated",
+    "requested_device": "cpu",
+    "requested_route": "dense_slm_default_cpu",
+    "route_profile_blockers": [
+      "power advantage evidence missing for low_power promotion",
+      "route not promoted for profile low_power"
+    ],
+    "route_profile_comparison": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+    "route_profile_status": "candidate_only",
+    "route_reason": "Default route id and dense Qwen CPU regression baseline because strict answer gates, generated-token evidence, phase receipts, and fallback_used=false are present; profile-scoped auto routing may select promoted OpenVINO GPU/NPU routes for specific workload profiles, while low_power remains blocked until battery-mode or energy-proxy power evidence is benchmark-qualified.",
+    "runtime_api": "cpu",
+    "selected_backend": "cpu-rust",
+    "selected_route": "dense_slm_default_cpu",
+    "selection_source": "operator_receipt_direct",
+    "why_not_cpu": [
+      "CPU route was explicitly requested and validated"
+    ],
+    "why_not_gpu": [
+      "auto routing was not requested"
+    ],
+    "why_not_npu": [
+      "auto routing was not requested"
+    ]
+  },
+  "runtime_api": "cpu",
+  "schema_version": "1.0.0",
+  "selected_backend": "cpu-rust",
+  "selected_kernel_or_runtime": "dense-qwen-cpu-reference",
+  "selected_route": "dense_slm_default_cpu",
+  "source_receipt": {
+    "artifact_kind": "inference_result",
+    "artifact_path": "ci/hardware/intel-258v/2026-05-08\\lunar-lake-operator-ask-battery-low-power-cpu-source-run.json",
+    "counts": {
+      "n_kv": 26,
+      "n_tensors": 291,
+      "unmapped": 0
+    },
+    "cpu": {
+      "arch": "x86_64",
+      "features": [
+        "avx2",
+        "avx",
+        "fma",
+        "sse4.2",
+        "sse2"
+      ],
+      "model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+      "threads": 1
+    },
+    "dense_slm": {
+      "architecture": "qwen2",
+      "claim_scope": "strict dense SLM CPU answer smoke only",
+      "execution_phase": "decode",
+      "kernel_family": "dense_qwen",
+      "kernel_id": "dense-qwen-cpu-reference",
+      "layout": "gguf_dense_q8_0",
+      "layout_source": "gguf_dense_q8_0_reference",
+      "model_family": "qwen",
+      "provenance": "dense_slm_gguf_cpu_reference",
+      "quant_format": "Q8_0"
+    },
+    "execution": {
+      "batch_size": 1,
+      "fallback_reason": null,
+      "fallback_used": false,
+      "generated_tokens": 2,
+      "phase": "decode",
+      "prompt_tokens": 42,
+      "requested_backend": "cpu",
+      "runtime_api": "cpu",
+      "selected_backend": "cpu-rust",
+      "thread_count": 1
+    },
+    "execution_coverage": {
+      "dense_slm_layers_on_cpu": null,
+      "dense_slm_layers_total": null,
+      "execution_claim": "dense_slm_cpu_reference_answer_smoke",
+      "unsupported_ops": []
+    },
+    "fallback_reason": null,
+    "fallback_used": false,
+    "gen_policy": {
+      "bos": false,
+      "deterministic": true,
+      "explicit_bos_requested": false,
+      "greedy": true,
+      "max_new_tokens": 8,
+      "parse_special": true,
+      "qwen_no_think": false,
+      "repetition_penalty": 1.100000023841858,
+      "seed": 0,
+      "temperature": 0.0,
+      "top_k": 0,
+      "top_p": 1.0
+    },
+    "kernel": {
+      "dequantizes_before_compute": true,
+      "family": "dense_qwen",
+      "implementation": "cpu-reference",
+      "kernel_id": "dense-qwen-cpu-reference",
+      "layout": "gguf_dense_q8_0"
+    },
+    "latency": {
+      "cmd_to_first_ms": 8563,
+      "decode_first_ms": 8563,
+      "total_ms": 8941
+    },
+    "loader": {
+      "minimal_fallback_allowed": false,
+      "minimal_fallback_disabled": true,
+      "minimal_loader_fallback_used": false,
+      "mock_tensors_used": false,
+      "mode": "real_gguf",
+      "tokenizer_source": "gguf_metadata"
+    },
+    "logits_dump": null,
+    "logits_index_boundary": {
+      "expected_logits_vector_length": 151936,
+      "expected_logits_vector_length_source": "tokenizer_vocab_size",
+      "first_step_logits_vector_length": null,
+      "observed_logits_vector_length": null,
+      "observed_logits_vector_length_source": "not_available"
+    },
+    "model": {
+      "architecture": "qwen2",
+      "context_length": 32768,
+      "fallback_loader_used": false,
+      "family": "qwen",
+      "file": "qwen2.5-0.5b-instruct-q8_0.gguf",
+      "format": "gguf",
+      "loader_mode": "real_gguf",
+      "output_head_tensor": "output.weight",
+      "path": "C:\\Users\\szim9\\AppData\\Local\\bitnet-rs\\models\\qwen2.5-0.5b-instruct-q8_0\\qwen2.5-0.5b-instruct-q8_0.gguf",
+      "quant_format": "Q8_0",
+      "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+      "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
+      "tie_word_embeddings": false,
+      "tokenizer": "gguf_metadata",
+      "vocab_size": 151936
+    },
+    "not_claims": [
+      "selected_attention_residency",
+      "resident_kv_decode",
+      "attention_scores_residency",
+      "softmax_residency",
+      "attention_value_mix_residency",
+      "full_support_op_residency",
+      "full_device_residency",
+      "completion"
+    ],
+    "profile": {
+      "allocation_audit": {
+        "claim_scope": "not_requested",
+        "decode": {
+          "embed": {
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
+            "count": 0,
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": null,
+            "max_alloc_count_per_token": null,
+            "mean_alloc_bytes_per_token": null,
+            "mean_alloc_count_per_token": null,
+            "net_bytes_total": 0
+          },
+          "forward": {
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
+            "count": 0,
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": null,
+            "max_alloc_count_per_token": null,
+            "mean_alloc_bytes_per_token": null,
+            "mean_alloc_count_per_token": null,
+            "net_bytes_total": 0
+          },
+          "logits": {
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
+            "count": 0,
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": null,
+            "max_alloc_count_per_token": null,
+            "mean_alloc_bytes_per_token": null,
+            "mean_alloc_count_per_token": null,
+            "net_bytes_total": 0
+          },
+          "sample": {
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
+            "count": 0,
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": null,
+            "max_alloc_count_per_token": null,
+            "mean_alloc_bytes_per_token": null,
+            "mean_alloc_count_per_token": null,
+            "net_bytes_total": 0
+          },
+          "steady_state": {
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
+            "count": 0,
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": null,
+            "max_alloc_count_per_token": null,
+            "mean_alloc_bytes_per_token": null,
+            "mean_alloc_count_per_token": null,
+            "net_bytes_total": 0
+          },
+          "token_decode": {
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
+            "count": 0,
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": null,
+            "max_alloc_count_per_token": null,
+            "mean_alloc_bytes_per_token": null,
+            "mean_alloc_count_per_token": null,
+            "net_bytes_total": 0
+          },
+          "total": {
+            "alloc_bytes_total": 0,
+            "alloc_count_total": 0,
+            "count": 0,
+            "dealloc_bytes_total": 0,
+            "dealloc_count_total": 0,
+            "max_alloc_bytes_per_token": null,
+            "max_alloc_count_per_token": null,
+            "mean_alloc_bytes_per_token": null,
+            "mean_alloc_count_per_token": null,
+            "net_bytes_total": 0
+          }
+        },
+        "enabled": false,
+        "instrumentation_excluded": [
+          "model_load",
+          "tokenizer_load",
+          "prompt_tokenize",
+          "json_receipt_serialization",
+          "debug_logit_dump_topk_unless_enabled"
+        ],
+        "instrumentation_included": [
+          "prompt_prefill_step",
+          "decode_step_total",
+          "model.embed",
+          "model.forward",
+          "model.logits_and_extract",
+          "sampler.sample",
+          "tokenizer.decode",
+          "stdout_text_write",
+          "token_vector_updates",
+          "stop_tail_updates"
+        ],
+        "measured_tokens": 0,
+        "method": "not_requested",
+        "per_token_alloc_bytes_delta": {
+          "count": 0,
+          "max_per_token": null,
+          "mean_per_token": null,
+          "total": 0
+        },
+        "per_token_alloc_count_delta": {
+          "count": 0,
+          "max_per_token": null,
+          "mean_per_token": null,
+          "total": 0
+        },
+        "prompt_prefill": {
+          "alloc_bytes_total": 0,
+          "alloc_count_total": 0,
+          "count": 0,
+          "dealloc_bytes_total": 0,
+          "dealloc_count_total": 0,
+          "max_alloc_bytes_per_token": null,
+          "max_alloc_count_per_token": null,
+          "mean_alloc_bytes_per_token": null,
+          "mean_alloc_count_per_token": null,
+          "net_bytes_total": 0
+        },
+        "scope": "not_requested",
+        "steady_state_alloc_bytes_per_token": null,
+        "steady_state_alloc_count_per_token": null,
+        "warmup_tokens": 0
+      },
+      "backend": {
+        "fallback_reason": null,
+        "fallback_used": false,
+        "requested_backend": "cpu",
+        "runtime_api": "cpu",
+        "selected_backend": "cpu-rust"
+      },
+      "claim_scope": "selected CPU backend phase timing only",
+      "decode": {
+        "embed_ms": {
+          "count": 2,
+          "max_ms": 0.025,
+          "mean_ms": 0.022,
+          "min_ms": 0.019,
+          "p50_ms": 0.019,
+          "p95_ms": 0.025,
+          "total_ms": 0.044
+        },
+        "first_token_decode_ms": 425.249,
+        "forward_ms": {
+          "count": 2,
+          "max_ms": 305.835,
+          "mean_ms": 291.095,
+          "min_ms": 276.354,
+          "p50_ms": 276.354,
+          "p95_ms": 305.835,
+          "total_ms": 582.189
+        },
+        "generated_tokens": 2,
+        "logits_ms": {
+          "count": 2,
+          "max_ms": 97.89,
+          "mean_ms": 89.297,
+          "min_ms": 80.704,
+          "p50_ms": 80.704,
+          "p95_ms": 97.89,
+          "total_ms": 178.594
+        },
+        "per_token_ms": {
+          "count": 2,
+          "max_ms": 425.249,
+          "mean_ms": 401.653,
+          "min_ms": 378.057,
+          "p50_ms": 378.057,
+          "p95_ms": 425.249,
+          "total_ms": 803.306
+        },
+        "sample_ms": {
+          "count": 2,
+          "max_ms": 13.587,
+          "mean_ms": 8.05,
+          "min_ms": 2.513,
+          "p50_ms": 2.513,
+          "p95_ms": 13.587,
+          "total_ms": 16.1
+        },
+        "steady_per_token_ms": {
+          "count": 1,
+          "max_ms": 378.057,
+          "mean_ms": 378.057,
+          "min_ms": 378.057,
+          "p50_ms": 378.057,
+          "p95_ms": 378.057,
+          "total_ms": 378.057
+        },
+        "steady_state_tok_s": 2.645,
+        "steady_state_tokens": 1,
+        "token_decode_ms": {
+          "count": 2,
+          "max_ms": 0.55,
+          "mean_ms": 0.292,
+          "min_ms": 0.034,
+          "p50_ms": 0.034,
+          "p95_ms": 0.55,
+          "total_ms": 0.584
+        },
+        "warmup_tokens": 1
+      },
+      "id": "lunar_lake_ask",
+      "kind": "steady_decode_prefill",
+      "machine_context_recorded": true,
+      "model_load_ms": 12600.124,
+      "phase": "decode",
+      "prompt_prefill": {
+        "exercised": true,
+        "kv_cache_behavior": "prompt_prefix_prefilled_before_decode",
+        "ms": 8130.542,
+        "per_token_ms": {
+          "count": 41,
+          "max_ms": 321.644,
+          "mean_ms": 198.303,
+          "min_ms": 124.443,
+          "p50_ms": 137.099,
+          "p95_ms": 310.585,
+          "total_ms": 8130.43
+        },
+        "tokens": 41
+      },
+      "prompt_tokenize_ms": 217.877,
+      "requested": true,
+      "tokenizer_load_ms": 336.129
+    },
+    "prompt": "What is 2+2? Answer with just the number.",
+    "prompt_generation_identity": {
+      "generation_parameters": {
+        "deterministic": true,
+        "fixed_token_count": false,
+        "greedy": true,
+        "max_new_tokens": 8,
+        "qwen_no_think": false,
+        "repetition_penalty": 1.100000023841858,
+        "seed": null,
+        "stream": null,
+        "temperature": 0.0,
+        "threads": 1,
+        "top_k": 0,
+        "top_p": 1.0
+      },
+      "generation_params_sha256": "3e323f0d547b84415ad67df1f3c39717f1ed531fa05107348e67411eb45c2eaf",
+      "identity_sha256": "e244453b3043ea097137d13a326576770db4061252e62b0b4a1cf6aff064bd02",
+      "schema_version": "1.0.0",
+      "stop_criteria": {
+        "manual_stop_sequences": [
+          "<|im_end|>"
+        ],
+        "manual_stop_token_ids": [],
+        "policy": "manual_plus_template_defaults",
+        "stop_sequences": [
+          "<|im_end|>",
+          "<|im_start|>"
+        ],
+        "stop_string_window": 10,
+        "stop_token_ids": [
+          151645,
+          151644
+        ]
+      },
+      "stop_criteria_sha256": "44bdc32dd3f6bd1ad8dfd59a1441ad6ff91ff1cc45d9776d4d90fd90e4944cf7",
+      "stop_sequences_sha256": "bb3dd6ef22aad3c58befc84bdb0900647ebf1c4d1be4288a371bbb4b7096cb9b",
+      "stop_token_ids_sha256": "aa7a4dff015908c4a28593433458cc84ac536e9997dab52b7b924d2e09eb2331",
+      "template": {
+        "family": "qwen25-chat",
+        "source": "bitnet-prompt-templates-core"
+      },
+      "template_family": "qwen25-chat",
+      "template_sha256": "be829f95ac1a95f9fd9b9641a7df864186594cde3285438f6f8fdddc89c428e3",
+      "tokenizer_authority": {
+        "authority": "present",
+        "sha256": null,
+        "source": "gguf_metadata",
+        "strict": true
+      }
+    },
+    "prompt_identity": {
+      "bos_policy": false,
+      "parse_special": true,
+      "prompt_token_count": 42,
+      "prompt_token_ids_sha256": "9e233dc9f1b7110c89fa32b39eebd260136b6c81c07bf631f0638799afb1fcd8",
+      "rendered_prompt_sha256": "cbd41b82a74e87f5b2229f530e3c1b671b45668856a2ef958f4ba4f31de6d4af",
+      "template": "qwen25-chat"
+    },
+    "prompt_render": {
+      "add_bos": false,
+      "parse_special": true,
+      "qwen_no_think": false,
+      "rendered_sha256": "cbd41b82a74e87f5b2229f530e3c1b671b45668856a2ef958f4ba4f31de6d4af",
+      "rendered_text": "<|im_start|>system\nYou are Qwen, created by Alibaba Cloud. You are a helpful assistant.<|im_end|>\n<|im_start|>user\nWhat is 2+2? Answer with just the number.<|im_end|>\n<|im_start|>assistant\n",
+      "stop_sequences": [
+        "<|im_end|>",
+        "<|im_start|>"
+      ],
+      "stop_token_ids": [
+        151645,
+        151644
+      ],
+      "template_family": "qwen25-chat"
+    },
+    "proof_summary": {
+      "backend_claimable": false,
+      "backend_fallback_reason": null,
+      "backend_fallback_used": false,
+      "claim_level": "diagnostic_cli_run",
+      "execution_backend": "cpu-rust",
+      "execution_backend_matched": false,
+      "fallback_used": false,
+      "kernel_route": {
+        "claimable": false,
+        "diagnostic_only": true,
+        "route_declared": false,
+        "route_id": null
+      },
+      "loader_fallback_used": false,
+      "model_contract": null,
+      "model_contract_declared": false,
+      "not_claims": [
+        "selected_attention_residency",
+        "resident_kv_decode",
+        "attention_scores_residency",
+        "softmax_residency",
+        "attention_value_mix_residency",
+        "full_support_op_residency",
+        "full_device_residency",
+        "completion"
+      ],
+      "requested_backend": "cpu",
+      "requested_device": "cpu",
+      "route_declared": false,
+      "selected_backend": "cpu-rust",
+      "strict_backend": true,
+      "tokenizer_fallback_used": false
+    },
+    "requested_backend": "cpu",
+    "runtime_api": "cpu",
+    "schema_version": "1.0.0",
+    "selected_backend": "cpu-rust",
+    "strict_provenance": {
+      "cpu_features": [
+        "avx2",
+        "avx",
+        "fma",
+        "sse4.2",
+        "sse2"
+      ],
+      "cpu_model": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+      "decode_tokens": 2,
+      "decode_tps": 0.22368862543339668,
+      "fallback_reason": null,
+      "fallback_used": false,
+      "loader_mode": "real_gguf",
+      "model_family": "qwen",
+      "phase": "decode",
+      "prompt_tokens": 42,
+      "provenance": "dense_slm_gguf_cpu_reference",
+      "quant_format": "Q8_0",
+      "requested_backend": "cpu",
+      "requested_kernel": "dense-qwen-cpu-reference",
+      "selected_backend": "cpu-rust",
+      "selected_kernel": "dense-qwen-cpu-reference",
+      "thread_count": 1,
+      "tokenizer_source": "gguf_metadata",
+      "tokenizer_strict": true
+    },
+    "text": "4",
+    "throughput": {
+      "decoded_tokens": 2,
+      "tokens_per_second": 0.22368862543339668
+    },
+    "timestamp": "2026-05-29T12:05:47.934872+00:00",
+    "timing": {
+      "a770_opencl_device_to_host_bytes": null,
+      "a770_opencl_host_to_device_bytes": null,
+      "a770_opencl_kernel_invocations": null,
+      "cuda_kernel_time_ms": null,
+      "decode_steady_state_tok_s": 2.645,
+      "decode_total_ms": 803.306,
+      "device_to_host_bytes": null,
+      "first_token_decode_ms": 425.249,
+      "first_token_ms": 8563,
+      "host_to_device_bytes": null,
+      "model_load_ms": 12600.124,
+      "prefill_ms": 8130.542,
+      "sampling_ms_per_token": 8.05,
+      "tokenize_ms": 217.877,
+      "tokenizer_load_ms": 336.129
+    },
+    "tokenizer": {
+      "bos": 151643,
+      "eos": 151645,
+      "model_family": "gguf_metadata",
+      "origin": "embedded",
+      "pretokenizer_authority": "present",
+      "source": "gguf_metadata",
+      "strict": true,
+      "type": "gguf_metadata"
+    },
+    "tokens": {
+      "generated": 2,
+      "generated_ids": [
+        19,
+        151645
+      ],
+      "ids": [
+        19,
+        151645
+      ],
+      "prompt": 42,
+      "prompt_ids": [
+        151644,
+        8948,
+        198,
+        2610,
+        525,
+        1207,
+        16948,
+        11,
+        3465,
+        553,
+        54364,
+        14817,
+        13,
+        1446,
+        525,
+        264,
+        10950,
+        17847,
+        13,
+        151645,
+        198,
+        151644,
+        872,
+        198,
+        3838,
+        374,
+        220,
+        17,
+        10,
+        17,
+        30,
+        21806,
+        448,
+        1101,
+        279,
+        1372,
+        13,
+        151645,
+        198,
+        151644,
+        77091,
+        198
+      ],
+      "total": 44
+    }
+  },
+  "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu-source-run.json",
+  "speedup_claim": false,
+  "timing": {
+    "a770_opencl_device_to_host_bytes": null,
+    "a770_opencl_host_to_device_bytes": null,
+    "a770_opencl_kernel_invocations": null,
+    "cuda_kernel_time_ms": null,
+    "decode_steady_state_tok_s": 2.645,
+    "decode_total_ms": 803.306,
+    "device_to_host_bytes": null,
+    "first_token_decode_ms": 425.249,
+    "first_token_ms": 8563,
+    "host_to_device_bytes": null,
+    "model_load_ms": 12600.124,
+    "prefill_ms": 8130.542,
+    "sampling_ms_per_token": 8.05,
+    "tokenize_ms": 217.877,
+    "tokenizer_load_ms": 336.129
+  },
+  "tokenizer_source": "gguf_metadata",
+  "tokens": {
+    "generated_count": 2,
+    "generated_ids": [
+      19,
+      151645
+    ],
+    "prompt_count": 42
+  },
+  "why_not_cpu": [
+    "CPU route was explicitly requested and validated"
+  ],
+  "why_not_gpu": [
+    "auto routing was not requested"
+  ],
+  "why_not_npu": [
+    "auto routing was not requested"
+  ]
+}

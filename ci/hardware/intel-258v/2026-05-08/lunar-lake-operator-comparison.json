@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-21T06:49:14Z",
+  "created_utc": "2026-05-29T12:07:18Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -936,15 +936,15 @@
         "low_power_route_count=3",
         "low_power_routes_remain_unpromoted=true",
         "current_context_is_ac_only=true",
-        "battery_mode_sample_recorded=false",
-        "battery_sample_source=none",
+        "battery_mode_sample_recorded=true",
+        "battery_sample_source=battery_telemetry_context",
         "energy_proxy_recorded=true",
         "energy_proxy_source=energy_proxy_receipt",
         "thermal_context_recorded=true",
         "operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
-        "next_required_evidence=rerun telemetry-context --require-battery on battery power before collecting low_power route samples | collect before/after battery-mode telemetry around the CPU/GPU/NPU low_power route matrix | rebuild the low_power energy proxy, power-profile evidence, strict regression, and operator comparison before any promotion decision | record thermal temperatures if available; current thermal evidence is zone visibility only | only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass",
+        "next_required_evidence=record thermal temperatures if available; current thermal evidence is zone visibility only | only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass",
         "claim_boundary_preserved=true",
-        "blocker_count=7"
+        "blocker_count=5"
       ]
     },
     {
