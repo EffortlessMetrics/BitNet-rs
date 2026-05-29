@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-29T12:07:18Z",
+  "created_utc": "2026-05-29T14:26:59Z",
   "machine_id": "intel-258v",
-  "source_revision": "a4960a7662fb2d8ac51fe8ddead8bc3af73bcf2d",
+  "source_revision": "725847247705599b5136e56ad974ddd2fa795f0c",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
@@ -14,11 +14,10 @@
   "post_6211_ask_boundary_delta": "Current BitNet-rs main additionally includes PR #6211 as a Lunar Lake command-boundary clarity update: bitnet_strict_reference/bitnet_reference_cpu in lunar-lake ask fails closed before inference and directs operators to validate, regress, and compare for BitNet CPU reference evidence. This adds no Lunar Lake inference, model load, fallback behavior change, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change.",
   "post_6219_ask_receipt_delta": "Current BitNet-rs main additionally includes PRs #6216, #6217, #6218, and #6219 as Lunar Lake ask receipt timing/explanation, committed auto/direct OpenVINO ask receipt refresh, and deterministic path-normalization cleanup. These refresh existing bounded dense-Qwen/OpenVINO ask evidence and derived regression/comparison receipts without adding route promotion, speedup, power advantage, measured temperature, native accelerator proof, broad quality evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change.",
   "active_blocker": {
-    "work_item": "LNL258V-POWER-006",
-    "status": "in_progress",
-    "reason": "Real battery-mode low_power telemetry and energy-proxy evidence are recorded; low_power remains unpromoted because benchmark-qualified power advantage and measured thermal readings are still missing.",
+    "work_item": "LNL258V-POWER-013",
+    "status": "blocked",
+    "reason": "POWER-006 real battery-mode low_power telemetry and energy-proxy evidence are merged; low_power remains unpromoted because benchmark-qualified power advantage and measured thermal readings are still missing.",
     "required_to_clear": [
-      "the battery evidence PR is reviewed, validated, and merged",
       "benchmark-qualified low_power power advantage is proven before any low_power route promotion",
       "thermal temperature readings are recorded if the OS telemetry path becomes available",
       "operators follow docs/hardware/intel-258v-low-power-battery-runbook.md before collecting POWER-006 evidence",
@@ -602,11 +601,6 @@
     }
   ],
   "open_gaps": [
-    {
-      "id": "LNL258V-POWER-006",
-      "status": "in_progress",
-      "reason": "Battery-mode telemetry and low_power energy-proxy evidence are recorded, but the evidence PR is not merged and benchmark-qualified power advantage is not proven."
-    },
     {
       "id": "thermal_temperature_readings",
       "status": "unavailable",

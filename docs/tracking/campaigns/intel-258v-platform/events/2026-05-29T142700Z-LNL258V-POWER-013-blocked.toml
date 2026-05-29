@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-29T14:27:00Z"
+event = "blocked"
+item = "LNL258V-POWER-013"
+branch = "codex/lunar-lake/LNL258V-POWER-013-low-power-power-advantage"
+from = "proposed"
+to = "blocked"
+actor = "codex"
+summary = "Added the next low_power power-advantage proof blocker after POWER-006 merged."
+
+notes = [
+  "POWER-006 merged real battery-mode telemetry, energy-proxy, and fallback-free CPU/GPU/NPU low_power candidate asks.",
+  "low_power still cannot be promoted because benchmark-qualified power advantage is not proven and measured thermal readings remain unavailable.",
+  "POWER-013 must preserve the same no-promotion, no-speedup, no-native-accelerator, and no-BitNet-QK256/I2_S claim boundary until proof exists.",
+]
