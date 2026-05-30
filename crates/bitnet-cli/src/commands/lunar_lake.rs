@@ -5848,12 +5848,15 @@ fn inspect_blocked_ask_regression(path: &Path) -> Result<BlockedAskRegressionSum
                 "low_power blocked ask receipt must point to {LOW_POWER_BATTERY_RUNBOOK}"
             ));
         }
-        if !next_required_evidence
-            .iter()
-            .any(|item| item.contains("telemetry-context --require-battery"))
-        {
+        let has_low_power_next_step = next_required_evidence.iter().any(|item| {
+            item.contains("telemetry-context --require-battery")
+                || item.contains("benchmark-qualified low_power power-advantage evidence")
+                || item.contains("fallback-free CPU/GPU/NPU low_power ask receipts")
+        });
+        if !has_low_power_next_step {
             gaps.push(
-                "low_power blocked ask receipt must name telemetry-context --require-battery as next evidence".to_string(),
+                "low_power blocked ask receipt must name the next low_power evidence gate"
+                    .to_string(),
             );
         }
         if !route_selection_error.contains(LOW_POWER_BATTERY_RUNBOOK) {
@@ -11238,7 +11241,7 @@ pub fn resolve_operator_ask_route_selection(
     let Some(selected_route_id) = profile.promoted_route.as_deref() else {
         let (why_not_cpu, why_not_gpu, why_not_npu) =
             route_selection_explanations(&ledger, profile, "");
-        let guidance = blocked_operator_ask_error_guidance(&profile.profile_id);
+        let guidance = blocked_operator_ask_error_guidance_for_artifacts(root, &profile.profile_id);
         bail!(
             "no promoted Lunar Lake auto route for profile `{profile_id}`; candidates={}; why_not_cpu={}; why_not_gpu={}; why_not_npu={}{}",
             join_or_none(&profile.candidate_routes),
@@ -11337,7 +11340,10 @@ pub fn explain_blocked_operator_ask_route_selection(
         why_not_gpu,
         why_not_npu,
         operator_runbook: blocked_operator_ask_runbook(&profile.profile_id).map(str::to_string),
-        next_required_evidence: blocked_operator_ask_next_required_evidence(&profile.profile_id),
+        next_required_evidence: blocked_operator_ask_next_required_evidence_for_artifacts(
+            root,
+            &profile.profile_id,
+        ),
         promotion_ledger: Some(path_string(&ledger_path)),
         route_profile_comparison,
     }))
@@ -11361,9 +11367,117 @@ pub fn blocked_operator_ask_next_required_evidence(profile_id: &str) -> Vec<Stri
     }
 }
 
-fn blocked_operator_ask_error_guidance(profile_id: &str) -> String {
-    let next_required_evidence = blocked_operator_ask_next_required_evidence(profile_id);
+fn blocked_operator_ask_next_required_evidence_for_artifacts(
+    root: &Path,
+    profile_id: &str,
+) -> Vec<String> {
+    if profile_id != "low_power" {
+        return blocked_operator_ask_next_required_evidence(profile_id);
+    }
+    let power_profile_path = resolve_receipt_path(root, Path::new(POWER_PROFILE_EVIDENCE_FILE));
+    let Ok(power_profile) = read_json_receipt(&power_profile_path) else {
+        return blocked_operator_ask_next_required_evidence(profile_id);
+    };
+    blocked_operator_ask_next_required_evidence_from_power_profile(&power_profile)
+}
+
+fn blocked_operator_ask_next_required_evidence_from_power_profile(
+    power_profile: &Value,
+) -> Vec<String> {
+    let battery_mode_sample_recorded =
+        value_at(power_profile, "telemetry.battery_mode_sample_recorded")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+    let energy_proxy_recorded = value_at(power_profile, "telemetry.energy_proxy_recorded")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let power_advantage_proven =
+        value_at(power_profile, "power_advantage_proven").and_then(Value::as_bool).unwrap_or(false);
+    let thermal_temperature_count = value_at(power_profile, "telemetry.thermal_temperature_count")
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
+    let route_samples_ready = low_power_battery_route_samples_ready(power_profile);
+
+    let mut next_required_evidence = Vec::new();
+    if !battery_mode_sample_recorded {
+        next_required_evidence.push(
+            "rerun telemetry-context --require-battery on battery power before collecting low_power route samples"
+                .to_string(),
+        );
+    }
+    if !route_samples_ready {
+        next_required_evidence.push(
+            "index fallback-free CPU/GPU/NPU low_power ask receipts with --low-power-ask-receipt before qualifying power advantage"
+                .to_string(),
+        );
+    }
+    if !energy_proxy_recorded {
+        next_required_evidence.push(
+            "record an accepted low_power energy proxy from before/after battery-mode telemetry"
+                .to_string(),
+        );
+    }
+    if battery_mode_sample_recorded
+        && route_samples_ready
+        && energy_proxy_recorded
+        && !power_advantage_proven
+    {
+        next_required_evidence.push(
+            "collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion"
+                .to_string(),
+        );
+    }
+    if battery_mode_sample_recorded && route_samples_ready && thermal_temperature_count == 0 {
+        next_required_evidence.push(
+            "record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker"
+                .to_string(),
+        );
+    }
+    if power_advantage_proven {
+        next_required_evidence.push(
+            "review benchmark-qualified low_power evidence and update the route-promotion ledger only if every promotion gate passes"
+                .to_string(),
+        );
+    }
+    next_required_evidence.push(
+        "after any new low_power power evidence, rebuild power-profile evidence, blocked ask receipt, operator readiness, strict regression, and operator comparison before any promotion decision"
+            .to_string(),
+    );
+
+    let mut deduped_next_required_evidence = Vec::new();
+    for item in next_required_evidence {
+        if !deduped_next_required_evidence.contains(&item) {
+            deduped_next_required_evidence.push(item);
+        }
+    }
+    deduped_next_required_evidence
+}
+
+fn low_power_battery_route_samples_ready(power_profile: &Value) -> bool {
+    let Some(samples) =
+        value_at(power_profile, "low_power_battery_route_samples").and_then(Value::as_array)
+    else {
+        return false;
+    };
+    LOW_POWER_BATTERY_ROUTE_IDS.iter().all(|route_id| {
+        samples.iter().any(|sample| {
+            string_at(sample, "route_id").as_deref() == Some(*route_id)
+                && value_at(sample, "requirement_satisfied").and_then(Value::as_bool) == Some(true)
+        })
+    })
+}
+
+fn blocked_operator_ask_error_guidance_for_artifacts(root: &Path, profile_id: &str) -> String {
+    let next_required_evidence =
+        blocked_operator_ask_next_required_evidence_for_artifacts(root, profile_id);
     let operator_runbook = blocked_operator_ask_runbook(profile_id);
+    blocked_operator_ask_error_guidance_from_parts(&next_required_evidence, operator_runbook)
+}
+
+fn blocked_operator_ask_error_guidance_from_parts(
+    next_required_evidence: &[String],
+    operator_runbook: Option<&str>,
+) -> String {
     if next_required_evidence.is_empty() && operator_runbook.is_none() {
         return String::new();
     }
@@ -22240,6 +22354,85 @@ mod tests {
                 .next_required_evidence
                 .iter()
                 .any(|item| item.contains("telemetry-context --require-battery"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_low_power_guidance_advances_after_battery_samples_are_indexed() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_auto_ask_selection_artifacts(temp.path())?;
+        write_json(
+            temp.path(),
+            POWER_PROFILE_EVIDENCE_FILE,
+            json!({
+                "artifact_kind": "lunar_lake_power_profile_evidence",
+                "power_advantage_proven": false,
+                "telemetry": {
+                    "battery_mode_sample_recorded": true,
+                    "energy_proxy_recorded": true,
+                    "thermal_temperature_count": 0
+                },
+                "low_power_battery_route_samples": [
+                    {
+                        "route_id": DEFAULT_ASK_ROUTE,
+                        "requirement_satisfied": true
+                    },
+                    {
+                        "route_id": "dense_slm_openvino_gpu_candidate",
+                        "requirement_satisfied": true
+                    },
+                    {
+                        "route_id": "dense_slm_openvino_npu_candidate",
+                        "requirement_satisfied": true
+                    }
+                ]
+            }),
+        )?;
+
+        let err = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "auto",
+            "auto",
+            "low_power",
+        )
+        .unwrap_err()
+        .to_string();
+
+        assert!(err.contains("low_power_power_advantage_unproven"), "got: {err}");
+        assert!(
+            err.contains("benchmark-qualified low_power power-advantage evidence"),
+            "got: {err}"
+        );
+        assert!(
+            !err.contains("telemetry-context --require-battery"),
+            "got stale pre-battery guidance: {err}"
+        );
+
+        let blocked = explain_blocked_operator_ask_route_selection(
+            temp.path(),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "auto",
+            "auto",
+            "low_power",
+        )?
+        .context("missing blocked auto-route explanation")?;
+        assert!(blocked.next_required_evidence.iter().any(|item| {
+            item.contains("benchmark-qualified low_power power-advantage evidence")
+        }));
+        assert!(!blocked.next_required_evidence.iter().any(|item| {
+            item.contains("collect before/after battery-mode telemetry")
+                || item.contains("telemetry-context --require-battery")
+        }));
+        assert!(
+            blocked
+                .next_required_evidence
+                .iter()
+                .any(|item| { item.contains("record measured thermal temperatures") })
         );
         Ok(())
     }
