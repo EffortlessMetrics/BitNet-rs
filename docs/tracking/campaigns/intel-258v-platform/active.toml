@@ -12745,7 +12745,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-016"
-status = "in_progress"
+status = "pr_open"
+pr = 6251
+head_sha = "92b10e4f744cdd31982f72197ea6b4ca279f9d5f"
 branch = "codex/lunar-lake/LNL258V-POWER-016-low-power-thermal-preflight"
 stackable = false
 review_mode = "codex_premerge"
