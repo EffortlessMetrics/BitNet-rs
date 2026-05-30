@@ -2,9 +2,9 @@
   "schema_version": 1,
   "artifact_kind": "lunar_lake_goal_artifact_checklist",
   "proof_stage": "objective_artifact_mapping_no_inference",
-  "created_utc": "2026-05-30T03:30:00Z",
+  "created_utc": "2026-05-30T06:05:00Z",
   "machine_id": "intel-258v",
-  "source_revision": "23ee4a73bf276d61a0332a9b22fb9e4e5cd5cf1a",
+  "source_revision": "a17c7ec7ce73d27d79c1371a9d2a1ea17ca36d47",
   "audited_objective": "Make Lunar Lake an excellent profile-aware local inference appliance with a reliable dense Qwen route, earned OpenVINO GPU/NPU route promotion, protected BitNet CPU reference behavior, strict regression, and explicit claim boundaries.",
   "completion_decision": "not_complete",
   "excellent_support_ready": false,
@@ -14,6 +14,7 @@
   "post_6211_ask_boundary_delta": "Current BitNet-rs main additionally includes PR #6211 as a Lunar Lake command-boundary clarity update: bitnet_strict_reference/bitnet_reference_cpu in lunar-lake ask fails closed before inference and directs operators to validate, regress, and compare for BitNet CPU reference evidence. This adds no Lunar Lake inference, model load, fallback behavior change, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change.",
   "post_6219_ask_receipt_delta": "Current BitNet-rs main additionally includes PRs #6216, #6217, #6218, and #6219 as Lunar Lake ask receipt timing/explanation, committed auto/direct OpenVINO ask receipt refresh, and deterministic path-normalization cleanup. These refresh existing bounded dense-Qwen/OpenVINO ask evidence and derived regression/comparison receipts without adding route promotion, speedup, power advantage, measured temperature, native accelerator proof, broad quality evidence, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change.",
   "post_6226_ask_hash_coverage_delta": "Current BitNet-rs main additionally includes PR #6226 as Lunar Lake ask receipt contract hardening: new ask receipts now emit model.hash_coverage with either a real single model.sha256 or an explicit OpenVINO IR per-file SHA256 identity gap, and ask source validation fails closed if required OpenVINO per-file hashes disappear. This is receipt validation and metadata coverage only; it does not refresh committed hardware receipts, promote routes, add speedup or power-advantage evidence, add measured temperature, prove native accelerator execution, broaden quality claims, promote Qwen3 on Lunar Lake, or change BitNet QK256/I2_S behavior.",
+  "post_6231_power013_delta": "Current BitNet-rs main additionally includes PRs #6228, #6229, #6230, and #6231 as POWER-013 low_power evidence guidance hardening: #6228 indexes committed CPU/GPU/NPU battery-route ask samples into power-profile evidence, #6229 advances blocked low_power auto-ask guidance after battery samples are indexed, #6230 surfaces the benchmark-qualified low_power power-advantage gate in power-profile evidence, and #6231 advances lunar-lake-low-power-battery-plan.json to the same gate while restoring the low-power ask receipt inputs in the refresh command. These changes refresh guidance and receipts only; they do not promote low_power, claim speedup, claim power advantage, claim measured temperature, prove native accelerator execution, broaden quality, promote Qwen3 on Lunar Lake, or change BitNet QK256/I2_S behavior.",
   "active_blocker": {
     "work_item": "LNL258V-POWER-013",
     "status": "blocked",
@@ -646,7 +647,8 @@
     "audit_032_refresh_scope": "no new inference; #350/#357 are audit/tracker state, #359 is handoff/operator state, #349/#354 are adjacent SLM CPU state, #351 is repo-boundary tooling, and #353 is adjacent CUDA/Qwen3 diagnostic state only; #360 is repo-boundary tooling only",
     "post_6211_ask_boundary_scope": "no new inference, model load, fallback behavior change, route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change; PR #6211 only makes bitnet_strict_reference/bitnet_reference_cpu ask fail closed before inference and directs operators to validate, regress, and compare for reference evidence",
     "post_6219_ask_receipt_refresh_scope": "no route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change; PRs #6216-#6219 only clarify ask timing/explanation fields, refresh committed bounded OpenVINO ask receipts, and normalize receipt path metadata",
-    "post_6226_ask_hash_coverage_scope": "no route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality claim, model-binary claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change; PR #6226 only hardens future Lunar Lake ask receipts and source validation so model.hash_coverage records a single model SHA256 or explicit OpenVINO per-file SHA256 gap"
+    "post_6226_ask_hash_coverage_scope": "no route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, broad quality claim, model-binary claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change; PR #6226 only hardens future Lunar Lake ask receipts and source validation so model.hash_coverage records a single model SHA256 or explicit OpenVINO per-file SHA256 gap",
+    "post_6231_power013_scope": "no low_power route promotion, speedup claim, power advantage claim, measured temperature claim, native accelerator proof, broad quality claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior change; PRs #6228-#6231 only refresh POWER-013 guidance, committed receipts, and battery-plan state after battery samples were indexed"
   },
   "adjacent_support_updates": [
     {
@@ -680,6 +682,23 @@
       "head_sha": "75d2ad98908d367905f3ed9ccca2123f3b547b15",
       "status": "lunar_lake_ask_receipt_contract_hardening_not_route_promotion",
       "claim_boundary": "no Lunar Lake route promotion, speedup, power advantage, battery-mode evidence, measured temperature, native accelerator proof, model-binary claim, broad quality claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior claim"
+    },
+    {
+      "id": "LNL258V-POWER-013-GUIDANCE-2026-05-30",
+      "prs": [
+        6228,
+        6229,
+        6230,
+        6231
+      ],
+      "merge_shas": [
+        "51c8d8ff375edfb53efdd92b28f004e08bcafda3",
+        "04cf0043208ae923f0a3cb3f2f27219b3b68b590",
+        "dce33b2e553a30e4be29be325073010d2b60c403",
+        "a17c7ec7ce73d27d79c1371a9d2a1ea17ca36d47"
+      ],
+      "status": "low_power_power_advantage_guidance_and_receipt_hardening_not_route_promotion",
+      "claim_boundary": "no low_power route promotion, speedup claim, power advantage claim, measured temperature claim, native accelerator proof, broad quality claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior claim"
     },
     {
       "id": "SLM-CPU-067",
