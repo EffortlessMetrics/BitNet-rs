@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T17:03:07Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-039"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6257
+head_sha = "eb698f47b2f54ddf4bfecf4fc9ec7f84b7d6e6a9"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-039-power013-blocker-wording"
+actor = "codex"
+summary = "Opened PR #6257 for the no-inference POWER-013 blocker wording cleanup."
+
+notes = [
+  "PR #6257 refreshes the audit/checklist source revision after GOAL-AUDIT-038 closeout #6256.",
+  "The PR removes stale current-blocker wording that said POWER-006 remained active and records POWER-013 as the active low_power blocker.",
+  "POWER-006 remains historical battery-mode evidence; POWER-013 remains blocked on benchmark-qualified power advantage and measured thermal context.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]

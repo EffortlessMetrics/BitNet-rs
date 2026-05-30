@@ -12948,7 +12948,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-GOAL-AUDIT-039"
-status = "in_progress"
+status = "pr_open"
+pr = 6257
+head_sha = "eb698f47b2f54ddf4bfecf4fc9ec7f84b7d6e6a9"
 branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-039-power013-blocker-wording"
 stackable = false
 review_mode = "codex_premerge"
