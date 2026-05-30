@@ -12384,9 +12384,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-015"
-status = "pr_open"
+status = "merged"
 pr = 6241
-head_sha = "1f6e2dbece8370501b3d06f9b419c5ad18e067f3"
+head_sha = "a83f98f92a7085d6d296e41971033395cfda2665"
+merge_sha = "43656c6df2afa3bec5e11786dc63a7a1165295c7"
 branch = "codex/lunar-lake/LNL258V-POWER-015-comparative-energy-proxy"
 stackable = false
 review_mode = "codex_premerge"
