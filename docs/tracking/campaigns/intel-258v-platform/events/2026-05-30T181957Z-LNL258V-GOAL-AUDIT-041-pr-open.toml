@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T18:19:57Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-041"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6261
+head_sha = "efa3d6b8d2d5353147941123a7cafa56547a072c"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-041-post-wording-guard-audit"
+actor = "codex"
+summary = "Opened PR #6261 for the post-wording-guard audit refresh."
+
+notes = [
+  "PR #6261 refreshes the Lunar Lake excellence audit and goal artifact checklist after GOAL-AUDIT-040/#6259 and closeout #6260.",
+  "The objective artifacts now record campaign-check enforcement for stale POWER-006 current-blocker wording.",
+  "POWER-006 remains historical battery evidence and POWER-013 remains the active low_power blocker.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]
