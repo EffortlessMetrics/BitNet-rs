@@ -1,0 +1,19 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T14:02:00Z"
+event = "merged"
+item = "LNL258V-REG-015"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6247
+head_sha = "fe4c05ac33cfef05368b795038bc17a0aa9a3e59"
+merge_sha = "d0b821c4a3c8962c17adcd2b0197fafc6af8a281"
+branch = "codex/lunar-lake/LNL258V-REG-015-default-auto-cpu-ask"
+actor = "codex"
+summary = "Merged default auto CPU ask regression coverage."
+
+notes = [
+  "PR #6247 merged after required checks were green and GitHub reported the branch mergeable.",
+  "Strict Lunar Lake regression and operator comparison now index the successful default auto CPU ask receipt and expose default_auto_ask_ready=true.",
+  "The closeout corrects the PR-open event SHA to the actual implementation commit and records the final merged PR head.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, measured-temperature claim, native accelerator claim, broad quality claim, Qwen3 promotion claim, or BitNet QK256/I2_S behavior-change claim is made.",
+]

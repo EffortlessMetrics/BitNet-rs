@@ -12596,9 +12596,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-015"
-status = "pr_open"
+status = "merged"
 pr = 6247
-head_sha = "a3529497ff75b0e30e36a996554bfb0a58a0dabe"
+head_sha = "fe4c05ac33cfef05368b795038bc17a0aa9a3e59"
+merge_sha = "d0b821c4a3c8962c17adcd2b0197fafc6af8a281"
 branch = "codex/lunar-lake/LNL258V-REG-015-default-auto-cpu-ask"
 stackable = false
 review_mode = "codex_premerge"
