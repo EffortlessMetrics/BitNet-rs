@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T15:04:27Z"
+event = "pr_open"
+item = "LNL258V-POWER-016"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6251
+head_sha = "92b10e4f744cdd31982f72197ea6b4ca279f9d5f"
+branch = "codex/lunar-lake/LNL258V-POWER-016-low-power-thermal-preflight"
+actor = "codex"
+summary = "Opened PR #6251 for the low_power thermal preflight runbook clarification."
+
+notes = [
+  "PR #6251 documents the thermal preflight commands and blocker handling needed before a physical POWER-013 battery route matrix.",
+  "The PR records MSAcpi access-denied and zero-valued thermal-zone counters as thermal-unavailable blockers, not measured-temperature evidence.",
+  "No battery evidence, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]
