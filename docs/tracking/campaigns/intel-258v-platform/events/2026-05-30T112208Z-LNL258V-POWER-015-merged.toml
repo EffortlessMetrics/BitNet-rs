@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T11:22:08Z"
+event = "merged"
+item = "LNL258V-POWER-015"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6241
+head_sha = "a83f98f92a7085d6d296e41971033395cfda2665"
+merge_sha = "43656c6df2afa3bec5e11786dc63a7a1165295c7"
+branch = "codex/lunar-lake/LNL258V-POWER-015-comparative-energy-proxy"
+actor = "codex"
+summary = "Merged the comparative low_power energy-proxy coverage PR."
+
+notes = [
+  "PR #6241 merged after required checks were green and GitHub reported it mergeable.",
+  "The merged change lets matrix-level energy proxies name CPU/GPU/NPU covered routes while keeping single-route proxies non-comparative.",
+  "low_power remains blocked by POWER-013 until benchmark-qualified battery-mode power advantage, measured or preserved thermal context, and route/profile evidence all pass.",
+]
