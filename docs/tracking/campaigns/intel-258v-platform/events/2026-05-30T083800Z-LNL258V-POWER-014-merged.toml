@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T08:38:00Z"
+event = "merged"
+item = "LNL258V-POWER-014"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6237
+head_sha = "d6668b4b17b552129a61232db378c43153e5346d"
+merge_sha = "feb1c161d80a05b19e5d6844998450cc0cfbc813"
+branch = "codex/lunar-lake/LNL258V-POWER-014-energy-proxy-qualification"
+actor = "codex"
+summary = "Merged the low_power energy-proxy qualification reporting PR."
+
+notes = [
+  "PR #6237 merged after required checks were green and GitHub reported it mergeable.",
+  "The merged receipts classify the POWER-006 energy proxy as recorded_not_comparative with accepted_for_power_advantage=false.",
+  "low_power remains blocked until benchmark-qualified comparative power advantage and measured thermal readings exist.",
+]
