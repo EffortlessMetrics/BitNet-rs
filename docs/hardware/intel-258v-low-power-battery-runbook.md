@@ -202,6 +202,9 @@ target/debug/bitnet.exe lunar-lake power-profile `
   --telemetry-context lunar-lake-power-thermal-context.json `
   --battery-telemetry-context lunar-lake-low-power-battery-after.json `
   --energy-proxy lunar-lake-low-power-energy-proxy.json `
+  --low-power-ask-receipt lunar-lake-operator-ask-battery-low-power-cpu.json `
+  --low-power-ask-receipt lunar-lake-operator-ask-battery-low-power-gpu.json `
+  --low-power-ask-receipt lunar-lake-operator-ask-battery-low-power-npu.json `
   --json-out lunar-lake-power-profile-evidence.json `
   --created-utc <battery-run-end-utc> `
   --strict
