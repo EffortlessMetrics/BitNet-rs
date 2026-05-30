@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-30T05:03:40Z",
+  "created_utc": "2026-05-30T06:32:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -933,6 +933,8 @@
         "power_profile_index_ready=true",
         "low_power_promotion_ready=false",
         "power_advantage_proven=false",
+        "power_advantage_qualification_status=benchmark_power_advantage_unproven",
+        "power_advantage_qualification_ready=false",
         "low_power_route_count=3",
         "low_power_routes_remain_unpromoted=true",
         "current_context_is_ac_only=true",
@@ -944,7 +946,7 @@
         "operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
         "next_required_evidence=collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion | record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker | only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass",
         "claim_boundary_preserved=true",
-        "blocker_count=5"
+        "blocker_count=7"
       ]
     },
     {

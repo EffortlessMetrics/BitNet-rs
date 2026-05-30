@@ -22,7 +22,7 @@
     "route_selection_blocked": true,
     "speedup_claim": false
   },
-  "created_utc": "2026-05-30T05:03:25Z",
+  "created_utc": "2026-05-30T06:31:49Z",
   "fallback_used": false,
   "machine_id": "intel-258v",
   "max_new_tokens": 4,
