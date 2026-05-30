@@ -12596,7 +12596,9 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-015"
-status = "in_progress"
+status = "pr_open"
+pr = 6247
+head_sha = "a3529497ff75b0e30e36a996554bfb0a58a0dabe"
 branch = "codex/lunar-lake/LNL258V-REG-015-default-auto-cpu-ask"
 stackable = false
 review_mode = "codex_premerge"
