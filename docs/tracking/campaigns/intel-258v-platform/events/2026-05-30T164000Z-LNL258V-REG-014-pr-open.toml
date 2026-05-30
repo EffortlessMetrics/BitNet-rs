@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T16:40:00Z"
+event = "pr_open"
+item = "LNL258V-REG-014"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6245
+head_sha = "beb32f5156b80e3fe3a087203ac7bb60d3fbc9b3"
+branch = "codex/lunar-lake/LNL258V-REG-014-operator-ask-hash-coverage"
+actor = "codex"
+summary = "Opened strict regression hardening for operator ask model hash coverage."
+
+notes = [
+  "PR #6245 makes successful auto ask_short, ask_normal, and warm_resident operator ask regression summaries record and require model_hash_or_explicit_gap coverage.",
+  "The refreshed regression and comparison receipts index embedded OpenVINO IR per-file SHA256 coverage from source_receipt.model.files for committed ask receipts that predate top-level model.hash_coverage.",
+  "The PR makes no inference, model-load, fallback-behavior, route-promotion, speedup, power-advantage, measured-temperature, native-accelerator, broad-quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim.",
+]

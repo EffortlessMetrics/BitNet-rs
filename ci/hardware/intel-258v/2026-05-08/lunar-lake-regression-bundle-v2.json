@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_regression_bundle",
   "proof_stage": "operator_regression_indexed",
-  "created_utc": "2026-05-30T08:05:00Z",
+  "created_utc": "2026-05-30T16:00:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -594,6 +594,18 @@
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
     "generated_token_ids_available": true,
+    "model_hash_or_explicit_gap": true,
+    "model_hash_coverage": {
+      "identity_mode": "openvino_ir_per_file_sha256_legacy",
+      "model_hash_or_explicit_gap": true,
+      "model_sha256_present": false,
+      "model_sha256_gap": "OpenVINO IR directory receipts have no-local single model SHA256; per-file OpenVINO IR and tokenizer SHA256 records are required instead of a fake model hash.",
+      "per_file_hashes_present": true,
+      "hashed_file_count": 10,
+      "required_openvino_ir_files_hashed": true,
+      "missing_required_openvino_ir_files": [],
+      "coverage_source": "source_receipt.model.files"
+    },
     "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-short-math-brief-source-run.json",
     "regression_ready": true,
     "gaps": []
@@ -619,6 +631,18 @@
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
     "generated_token_ids_available": true,
+    "model_hash_or_explicit_gap": true,
+    "model_hash_coverage": {
+      "identity_mode": "openvino_ir_per_file_sha256_legacy",
+      "model_hash_or_explicit_gap": true,
+      "model_sha256_present": false,
+      "model_sha256_gap": "OpenVINO IR directory receipts have no-local single model SHA256; per-file OpenVINO IR and tokenizer SHA256 records are required instead of a fake model hash.",
+      "per_file_hashes_present": true,
+      "hashed_file_count": 10,
+      "required_openvino_ir_files_hashed": true,
+      "missing_required_openvino_ir_files": [],
+      "coverage_source": "source_receipt.model.files"
+    },
     "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief-source-run.json",
     "regression_ready": true,
     "gaps": []
@@ -644,6 +668,18 @@
     "acceleration_claim": false,
     "bitnet_qk256_i2s_claim": false,
     "generated_token_ids_available": true,
+    "model_hash_or_explicit_gap": true,
+    "model_hash_coverage": {
+      "identity_mode": "openvino_ir_per_file_sha256_legacy",
+      "model_hash_or_explicit_gap": true,
+      "model_sha256_present": false,
+      "model_sha256_gap": "OpenVINO IR directory receipts have no-local single model SHA256; per-file OpenVINO IR and tokenizer SHA256 records are required instead of a fake model hash.",
+      "per_file_hashes_present": true,
+      "hashed_file_count": 10,
+      "required_openvino_ir_files_hashed": true,
+      "missing_required_openvino_ir_files": [],
+      "coverage_source": "source_receipt.model.files"
+    },
     "source_run_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-auto-npu-warm-resident-math-brief-source-run.json",
     "regression_ready": true,
     "gaps": []
@@ -1037,6 +1073,8 @@
         "openvino_candidate_route_executed=true",
         "new_inference_executed=true",
         "generated_token_ids_available=true",
+        "model_hash_or_explicit_gap=true",
+        "model_hash_coverage=openvino_ir_per_file_sha256_legacy",
         "ask_receipt_ready=true"
       ]
     },
@@ -1060,6 +1098,8 @@
         "openvino_candidate_route_executed=true",
         "new_inference_executed=true",
         "generated_token_ids_available=true",
+        "model_hash_or_explicit_gap=true",
+        "model_hash_coverage=openvino_ir_per_file_sha256_legacy",
         "ask_receipt_ready=true"
       ]
     },
@@ -1083,6 +1123,8 @@
         "openvino_candidate_route_executed=true",
         "new_inference_executed=true",
         "generated_token_ids_available=true",
+        "model_hash_or_explicit_gap=true",
+        "model_hash_coverage=openvino_ir_per_file_sha256_legacy",
         "ask_receipt_ready=true"
       ]
     },

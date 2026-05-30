@@ -63,6 +63,19 @@ const LOW_POWER_BATTERY_TELEMETRY_BLOCKED_FILE: &str =
     "lunar-lake-low-power-battery-telemetry-blocked.json";
 const LOW_POWER_ENERGY_PROXY_FILE: &str = "lunar-lake-low-power-energy-proxy.json";
 const LOW_POWER_BATTERY_PLAN_FILE: &str = "lunar-lake-low-power-battery-plan.json";
+const LUNAR_LAKE_OPENVINO_IR_MODEL_SHA256_GAP: &str = "OpenVINO IR directory receipts have no-local single model SHA256; per-file OpenVINO IR and tokenizer SHA256 records are required instead of a fake model hash.";
+const LUNAR_LAKE_OPENVINO_IR_REQUIRED_MODEL_FILES: &[&str] = &[
+    "openvino_model.xml",
+    "openvino_model.bin",
+    "openvino_tokenizer.xml",
+    "openvino_tokenizer.bin",
+    "openvino_detokenizer.xml",
+    "openvino_detokenizer.bin",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "generation_config.json",
+    "chat_template.jinja",
+];
 const DURABILITY_BUNDLE: &str =
     "ci/hardware/intel-258v/2026-05-08/lunar-lake-durability-bundle.json";
 const DURABLE_QWEN_CPU_WARM_SESSION: &str = "lunar-lake-durable-qwen25-cpu-warm-session.json";
@@ -1366,6 +1379,19 @@ pub struct ThermalTemperatureAvailabilityRegressionSummary {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OperatorAskModelHashCoverageSummary {
+    pub identity_mode: String,
+    pub model_hash_or_explicit_gap: bool,
+    pub model_sha256_present: bool,
+    pub model_sha256_gap: Option<String>,
+    pub per_file_hashes_present: bool,
+    pub hashed_file_count: usize,
+    pub required_openvino_ir_files_hashed: Option<bool>,
+    pub missing_required_openvino_ir_files: Vec<String>,
+    pub coverage_source: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct OperatorAskRegressionSummary {
     pub path: String,
     pub ask_receipt_ready: bool,
@@ -1387,6 +1413,8 @@ pub struct OperatorAskRegressionSummary {
     pub acceleration_claim: bool,
     pub bitnet_qk256_i2s_claim: bool,
     pub generated_token_ids_available: bool,
+    pub model_hash_or_explicit_gap: bool,
+    pub model_hash_coverage: OperatorAskModelHashCoverageSummary,
     pub source_run_receipt: Option<String>,
     pub regression_ready: bool,
     pub gaps: Vec<String>,
@@ -5667,6 +5695,119 @@ struct OperatorAskRegressionExpectation<'a> {
     selected_backend: &'a str,
 }
 
+fn inspect_operator_ask_model_hash_coverage(
+    receipt: &Value,
+) -> OperatorAskModelHashCoverageSummary {
+    if value_at(receipt, "model.hash_coverage").is_some() {
+        let model_hash_or_explicit_gap =
+            value_at(receipt, "model.hash_coverage.model_hash_or_explicit_gap")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+        let hashed_files = string_array_at(receipt, "model.hash_coverage.hashed_files");
+        let hashed_file_count = value_at(receipt, "model.hash_coverage.hashed_file_count")
+            .and_then(Value::as_u64)
+            .map(|count| count as usize)
+            .unwrap_or(hashed_files.len());
+        return OperatorAskModelHashCoverageSummary {
+            identity_mode: string_at(receipt, "model.hash_coverage.identity_mode")
+                .unwrap_or_else(|| "explicit_model_hash_coverage".to_string()),
+            model_hash_or_explicit_gap,
+            model_sha256_present: value_at(receipt, "model.hash_coverage.model_sha256_present")
+                .and_then(Value::as_bool)
+                .unwrap_or_else(|| {
+                    value_at(receipt, "model.sha256").and_then(sha256_value).is_some()
+                }),
+            model_sha256_gap: string_at(receipt, "model.hash_coverage.model_sha256_gap")
+                .or_else(|| string_at(receipt, "model.sha256_gap")),
+            per_file_hashes_present: value_at(
+                receipt,
+                "model.hash_coverage.per_file_hashes_present",
+            )
+            .and_then(Value::as_bool)
+            .unwrap_or(!hashed_files.is_empty()),
+            hashed_file_count,
+            required_openvino_ir_files_hashed: value_at(
+                receipt,
+                "model.hash_coverage.required_openvino_ir_files_hashed",
+            )
+            .and_then(Value::as_bool),
+            missing_required_openvino_ir_files: string_array_at(
+                receipt,
+                "model.hash_coverage.missing_required_openvino_ir_files",
+            ),
+            coverage_source: "model.hash_coverage".to_string(),
+        };
+    }
+
+    if value_at(receipt, "model.sha256")
+        .or_else(|| value_at(receipt, "source_receipt.model.sha256"))
+        .and_then(sha256_value)
+        .is_some()
+    {
+        return OperatorAskModelHashCoverageSummary {
+            identity_mode: "single_model_sha256_legacy".to_string(),
+            model_hash_or_explicit_gap: true,
+            model_sha256_present: true,
+            model_sha256_gap: None,
+            per_file_hashes_present: false,
+            hashed_file_count: 0,
+            required_openvino_ir_files_hashed: None,
+            missing_required_openvino_ir_files: Vec::new(),
+            coverage_source: "model.sha256".to_string(),
+        };
+    }
+
+    let files = value_at(receipt, "source_receipt.model.files").and_then(Value::as_object);
+    let mut hashed_files = Vec::new();
+    if let Some(files) = files {
+        for (name, record) in files {
+            if record.get("sha256").and_then(sha256_value).is_some() {
+                hashed_files.push(name.clone());
+            }
+        }
+    }
+    hashed_files.sort();
+
+    let mut missing_required_openvino_ir_files = Vec::new();
+    for required in LUNAR_LAKE_OPENVINO_IR_REQUIRED_MODEL_FILES {
+        let required_file_hashed = files
+            .and_then(|files| files.get(*required))
+            .and_then(|record| record.get("sha256"))
+            .and_then(sha256_value)
+            .is_some();
+        if !required_file_hashed {
+            missing_required_openvino_ir_files.push((*required).to_string());
+        }
+    }
+
+    let required_openvino_ir_files_hashed =
+        files.is_some() && missing_required_openvino_ir_files.is_empty();
+    OperatorAskModelHashCoverageSummary {
+        identity_mode: if required_openvino_ir_files_hashed {
+            "openvino_ir_per_file_sha256_legacy".to_string()
+        } else {
+            "missing_model_hash_coverage".to_string()
+        },
+        model_hash_or_explicit_gap: required_openvino_ir_files_hashed,
+        model_sha256_present: false,
+        model_sha256_gap: if required_openvino_ir_files_hashed {
+            Some(LUNAR_LAKE_OPENVINO_IR_MODEL_SHA256_GAP.to_string())
+        } else {
+            None
+        },
+        per_file_hashes_present: !hashed_files.is_empty(),
+        hashed_file_count: hashed_files.len(),
+        required_openvino_ir_files_hashed: Some(required_openvino_ir_files_hashed),
+        missing_required_openvino_ir_files,
+        coverage_source: "source_receipt.model.files".to_string(),
+    }
+}
+
+fn sha256_value(value: &Value) -> Option<&str> {
+    let sha = value.as_str()?.trim();
+    if sha.len() == 64 && sha.chars().all(|c| c.is_ascii_hexdigit()) { Some(sha) } else { None }
+}
+
 fn inspect_operator_ask_regression(
     path: &Path,
     expected: OperatorAskRegressionExpectation<'_>,
@@ -5755,6 +5896,8 @@ fn inspect_operator_ask_regression(
         ) == Some(true);
     let source_run_receipt =
         string_at(&receipt, "source_run_receipt").map(|path| normalize_path_string(&path));
+    let model_hash_coverage = inspect_operator_ask_model_hash_coverage(&receipt);
+    let model_hash_or_explicit_gap = model_hash_coverage.model_hash_or_explicit_gap;
 
     if profile_id != expected.profile_id {
         gaps.push(format!(
@@ -5825,6 +5968,12 @@ fn inspect_operator_ask_regression(
     if !generated_token_ids_available {
         gaps.push(format!("{} ask receipt has no generated token ID evidence", expected.label));
     }
+    if !model_hash_or_explicit_gap {
+        gaps.push(format!(
+            "{} ask receipt is missing model SHA256 or complete OpenVINO IR per-file SHA256 coverage",
+            expected.label
+        ));
+    }
 
     gaps.sort();
     gaps.dedup();
@@ -5849,6 +5998,8 @@ fn inspect_operator_ask_regression(
         acceleration_claim,
         bitnet_qk256_i2s_claim,
         generated_token_ids_available,
+        model_hash_or_explicit_gap,
+        model_hash_coverage,
         source_run_receipt,
         regression_ready: gaps.is_empty(),
         gaps,
@@ -6274,6 +6425,8 @@ fn operator_ask_regression_notes(summary: &OperatorAskRegressionSummary) -> Vec<
         format!("openvino_candidate_route_executed={}", summary.openvino_candidate_route_executed),
         format!("new_inference_executed={}", summary.new_inference_executed),
         format!("generated_token_ids_available={}", summary.generated_token_ids_available),
+        format!("model_hash_or_explicit_gap={}", summary.model_hash_or_explicit_gap),
+        format!("model_hash_coverage={}", summary.model_hash_coverage.identity_mode),
         format!("ask_receipt_ready={}", summary.ask_receipt_ready),
     ];
     notes.extend(summary.gaps.iter().cloned());
@@ -22179,6 +22332,8 @@ mod tests {
         assert_eq!(summary.selected_backend, "openvino-npu");
         assert!(summary.new_inference_executed);
         assert!(summary.generated_token_ids_available);
+        assert!(summary.model_hash_or_explicit_gap);
+        assert_eq!(summary.model_hash_coverage.identity_mode, "openvino_ir_per_file_sha256_legacy");
         assert!(!summary.speedup_claim);
         assert!(!summary.power_advantage_claim);
         assert!(!summary.acceleration_claim);
@@ -22209,6 +22364,8 @@ mod tests {
         assert_eq!(summary.selected_backend, "openvino-gpu");
         assert!(summary.new_inference_executed);
         assert!(summary.generated_token_ids_available);
+        assert!(summary.model_hash_or_explicit_gap);
+        assert_eq!(summary.model_hash_coverage.identity_mode, "openvino_ir_per_file_sha256_legacy");
         assert!(!summary.speedup_claim);
         assert!(!summary.power_advantage_claim);
         assert!(!summary.acceleration_claim);
@@ -22269,10 +22426,40 @@ mod tests {
         assert_eq!(summary.selected_backend, "openvino-gpu");
         assert!(summary.new_inference_executed);
         assert!(summary.generated_token_ids_available);
+        assert!(summary.model_hash_or_explicit_gap);
+        assert_eq!(summary.model_hash_coverage.identity_mode, "openvino_ir_per_file_sha256_legacy");
         assert!(!summary.speedup_claim);
         assert!(!summary.power_advantage_claim);
         assert!(!summary.acceleration_claim);
         assert!(!summary.bitnet_qk256_i2s_claim);
+        Ok(())
+    }
+
+    #[test]
+    fn operator_ask_regression_requires_model_hash_coverage() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_ask_short_auto_gpu_ask(temp.path(), AUTO_GPU_ASK_SHORT_ASK_RECEIPT)?;
+        let path = temp.path().join(AUTO_GPU_ASK_SHORT_ASK_RECEIPT);
+        let mut receipt: Value = read_json_receipt(&path)?;
+        receipt["source_receipt"]["model"] = Value::Null;
+        fs::write(&path, serde_json::to_vec_pretty(&receipt)?)?;
+
+        let summary = inspect_operator_ask_regression(
+            &path,
+            OperatorAskRegressionExpectation {
+                label: "ask_short",
+                profile_id: "ask_short",
+                selected_route: "dense_slm_openvino_gpu_candidate",
+                selected_backend: "openvino-gpu",
+            },
+        )?;
+
+        assert!(!summary.regression_ready);
+        assert!(!summary.model_hash_or_explicit_gap);
+        assert_eq!(summary.model_hash_coverage.identity_mode, "missing_model_hash_coverage");
+        assert!(summary.gaps.iter().any(|gap| {
+            gap.contains("missing model SHA256 or complete OpenVINO IR per-file SHA256 coverage")
+        }));
         Ok(())
     }
 
@@ -23593,6 +23780,45 @@ mod tests {
         Ok(())
     }
 
+    fn openvino_model_files_fixture() -> Value {
+        json!({
+            "openvino_model.xml": {
+                "sha256": test_sha256('a')
+            },
+            "openvino_model.bin": {
+                "sha256": test_sha256('b')
+            },
+            "openvino_tokenizer.xml": {
+                "sha256": test_sha256('c')
+            },
+            "openvino_tokenizer.bin": {
+                "sha256": test_sha256('d')
+            },
+            "openvino_detokenizer.xml": {
+                "sha256": test_sha256('e')
+            },
+            "openvino_detokenizer.bin": {
+                "sha256": test_sha256('f')
+            },
+            "tokenizer.json": {
+                "sha256": test_sha256('1')
+            },
+            "tokenizer_config.json": {
+                "sha256": test_sha256('2')
+            },
+            "generation_config.json": {
+                "sha256": test_sha256('3')
+            },
+            "chat_template.jinja": {
+                "sha256": test_sha256('4')
+            }
+        })
+    }
+
+    fn test_sha256(ch: char) -> String {
+        std::iter::repeat(ch).take(64).collect()
+    }
+
     fn write_warm_resident_auto_npu_ask(root: &Path, file: &str) -> Result<()> {
         write_json(
             root,
@@ -23639,6 +23865,9 @@ mod tests {
                 "source_run_receipt": "source-run.json",
                 "source_receipt": {
                     "artifact_kind": "lunar_lake_openvino_operator_ask",
+                    "model": {
+                        "files": openvino_model_files_fixture()
+                    },
                     "output": {
                         "generated_token_ids_available_from_pipeline": true,
                         "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
@@ -23718,6 +23947,9 @@ mod tests {
                 "source_run_receipt": "source-run.json",
                 "source_receipt": {
                     "artifact_kind": "lunar_lake_openvino_operator_ask",
+                    "model": {
+                        "files": openvino_model_files_fixture()
+                    },
                     "output": {
                         "generated_token_ids_available_from_pipeline": true,
                         "generated_token_ids_source": "openvino_genai_encoded_results_tokens",
@@ -24030,6 +24262,8 @@ mod tests {
             acceleration_claim: false,
             bitnet_qk256_i2s_claim: false,
             generated_token_ids_available: true,
+            model_hash_or_explicit_gap: true,
+            model_hash_coverage: ready_operator_ask_model_hash_coverage(),
             source_run_receipt: Some(
                 "lunar-lake-operator-ask-auto-npu-warm-resident-math-brief-source-run.json"
                     .to_string(),
@@ -24064,9 +24298,25 @@ mod tests {
             acceleration_claim: false,
             bitnet_qk256_i2s_claim: false,
             generated_token_ids_available: true,
+            model_hash_or_explicit_gap: true,
+            model_hash_coverage: ready_operator_ask_model_hash_coverage(),
             source_run_receipt: Some(path.replace(".json", "-source-run.json")),
             regression_ready: true,
             gaps: vec![],
+        }
+    }
+
+    fn ready_operator_ask_model_hash_coverage() -> OperatorAskModelHashCoverageSummary {
+        OperatorAskModelHashCoverageSummary {
+            identity_mode: "openvino_ir_per_file_sha256_legacy".to_string(),
+            model_hash_or_explicit_gap: true,
+            model_sha256_present: false,
+            model_sha256_gap: Some(LUNAR_LAKE_OPENVINO_IR_MODEL_SHA256_GAP.to_string()),
+            per_file_hashes_present: true,
+            hashed_file_count: LUNAR_LAKE_OPENVINO_IR_REQUIRED_MODEL_FILES.len(),
+            required_openvino_ir_files_hashed: Some(true),
+            missing_required_openvino_ir_files: vec![],
+            coverage_source: "source_receipt.model.files".to_string(),
         }
     }
 
