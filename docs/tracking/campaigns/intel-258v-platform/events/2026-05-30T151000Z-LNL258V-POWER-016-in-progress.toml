@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T15:10:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-016"
+branch = "codex/lunar-lake/LNL258V-POWER-016-low-power-thermal-preflight"
+actor = "codex"
+summary = "Started a runbook-only thermal preflight clarification for the blocked POWER-013 low_power battery run."
+
+notes = [
+  "The live 2026-05-30 POWER-013 preflight still reports AC/charging and strict telemetry-context --require-battery fails closed.",
+  "MSAcpi thermal readings are access-denied and the visible Windows thermal-zone counter reports CookedValue=0, so measured thermal readings remain unavailable.",
+  "This item updates operator guidance only; it does not add battery evidence, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claims.",
+]

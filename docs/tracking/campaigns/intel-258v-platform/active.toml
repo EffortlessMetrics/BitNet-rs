@@ -12744,6 +12744,60 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-POWER-016"
+status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-POWER-016-low-power-thermal-preflight"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-006", "LNL258V-THERMAL-001"]
+acceptance = "Clarify the low_power battery runbook after live POWER-013 AC/thermal preflights so operators check battery mode, strict telemetry-context --require-battery, MSAcpi thermal access, and Windows thermal-zone counter values before route samples. The runbook must state that access-denied MSAcpi and zero-valued thermal-zone counters are preserved as thermal-unavailable blockers, not measured-temperature evidence, while still keeping low_power unpromoted until benchmark-qualified battery-mode power advantage exists. Preserve no new battery evidence, no route promotion, no speedup claim, no power-advantage claim, no measured-temperature claim, no native accelerator proof, no broad quality claim, no Qwen3 Lunar Lake promotion, and no BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "Get-CimInstance -ClassName Win32_Battery | Select-Object Name,BatteryStatus,EstimatedChargeRemaining,PowerManagementSupported | Format-List # observed BatteryStatus=2 and EstimatedChargeRemaining=100 on 2026-05-30",
+  "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object InstanceName,CurrentTemperature,CriticalTripPoint | Format-List # observed access denied on 2026-05-30",
+  "Get-Counter '\\Thermal Zone Information(*)\\Temperature' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty CounterSamples | Select-Object Path,CookedValue,Status | Format-List # observed visible thermal zone with CookedValue=0 on 2026-05-30",
+  "target/debug/bitnet.exe lunar-lake telemetry-context --artifact-root ci/hardware/intel-258v/2026-05-08 --require-battery --json-out $env:TEMP/lnl258v-power013-current-preflight.json --created-utc 2026-05-30T15:05:00Z --strict # expected failure on AC; temp receipt removed",
+  "Select-String -Path docs/hardware/intel-258v-low-power-battery-runbook.md -Pattern 'ThermalZoneTemperature','CookedValue=0','thermal-unavailable','measured-temperature claim' -SimpleMatch",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "docs/hardware/intel-258v-low-power-battery-runbook.md",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/hardware/intel-258v/2026-05-08/**",
+]
+may_claim = [
+  "The low_power battery runbook now documents current AC and thermal preflight stop rules for POWER-013.",
+  "MSAcpi access-denied and zero-valued thermal-zone counters are recorded as thermal-unavailable blockers, not measured temperatures.",
+  "low_power remains unpromoted until benchmark-qualified battery-mode power advantage exists.",
+]
+must_not_claim = [
+  "New battery-mode evidence was collected.",
+  "Any low_power route is promoted.",
+  "OpenVINO GPU or NPU speedup is claimed.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Qwen3 is promoted on Lunar Lake.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-013"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-013-low-power-power-advantage"

@@ -1,8 +1,9 @@
 # Intel 258V Low-Power Battery Runbook
 
-This runbook is the operator checklist for `LNL258V-POWER-006`. It does not add
-low-power evidence by itself. It exists so the battery-mode run has clear stop
-rules before any route decision or power claim is updated.
+This runbook is the operator checklist for `LNL258V-POWER-006` and follow-on
+`LNL258V-POWER-013` battery attempts. It does not add low-power evidence by
+itself. It exists so the battery-mode run has clear stop rules before any route
+decision or power claim is updated.
 
 ## Scope
 
@@ -36,6 +37,28 @@ Get-CimInstance Win32_Battery |
 
 Stop if `BatteryStatus=2` or if the telemetry receipt below reports
 `ac_power_inferred=true`.
+
+Check thermal visibility before the battery run so the operator knows whether
+the route samples can carry measured temperatures or must preserve an explicit
+thermal-unavailable blocker:
+
+```powershell
+Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature |
+  Select-Object InstanceName, CurrentTemperature, CriticalTripPoint |
+  Format-List
+
+Get-Counter '\Thermal Zone Information(*)\Temperature' -ErrorAction SilentlyContinue |
+  Select-Object -ExpandProperty CounterSamples |
+  Select-Object Path, CookedValue, Status |
+  Format-List
+```
+
+If `MSAcpi_ThermalZoneTemperature` is access-denied, record that blocker rather
+than rerunning with elevated permissions during the battery matrix. If the
+thermal-zone counter is visible but reports `CookedValue=0`, treat it as
+temperature-unavailable evidence, not a measured temperature. The battery run may
+continue only as long as the later telemetry receipts preserve this state
+explicitly and no measured-temperature claim is made.
 
 Before unplugging for the physical run, emit the machine-readable plan receipt
 from the current committed blocker evidence:
@@ -75,6 +98,8 @@ Continue only if the receipt records:
 - `capture_requirements.battery_mode_sample_recorded=true`;
 - `capture_requirements.requirement_satisfied=true`;
 - `power.ac_power_inferred=false`.
+- thermal fields are present; if no usable temperature exists, the receipt keeps
+  the thermal-unavailable blocker explicit.
 
 If strict mode fails after writing a blocked receipt, do not rename it to the
 `before` artifact and do not update promotion evidence.
@@ -249,6 +274,8 @@ actually changes the completion audit.
 - timing is stable for the sampled profile;
 - before/after battery telemetry is valid battery-mode evidence;
 - the power-profile evidence records benchmark-qualified power advantage;
+- thermal context is preserved, with measured temperatures recorded only when
+  the OS exposes usable readings;
 - strict regression and operator comparison preserve the same decision.
 
 If any condition is missing, keep `low_power` unpromoted and record the blocker.
