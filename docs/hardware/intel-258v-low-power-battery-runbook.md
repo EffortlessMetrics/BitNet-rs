@@ -179,6 +179,9 @@ target/debug/bitnet.exe lunar-lake energy-proxy `
   --before-telemetry-context lunar-lake-low-power-battery-before.json `
   --after-telemetry-context lunar-lake-low-power-battery-after.json `
   --route dense_slm_openvino_npu_candidate `
+  --covered-route dense_slm_default_cpu `
+  --covered-route dense_slm_openvino_gpu_candidate `
+  --covered-route dense_slm_openvino_npu_candidate `
   --profile low_power `
   --sample-count <battery-run-sample-count> `
   --json-out lunar-lake-low-power-energy-proxy.json `
@@ -186,8 +189,10 @@ target/debug/bitnet.exe lunar-lake energy-proxy `
   --strict
 ```
 
-The proxy is not a power-advantage claim unless the refreshed power-profile
-evidence later qualifies it against the CPU/GPU/NPU route matrix.
+`--covered-route` must name every CPU/GPU/NPU low_power route covered by the
+same before/after battery-drain window. The proxy is not a power-advantage
+claim unless the refreshed power-profile evidence later qualifies it against the
+CPU/GPU/NPU route matrix.
 
 ## Refresh Artifacts
 

@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T10:28:27Z"
+event = "in_progress"
+item = "LNL258V-POWER-015"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-POWER-015-comparative-energy-proxy"
+actor = "codex"
+summary = "Started the comparative low_power energy-proxy coverage unblocker."
+
+notes = [
+  "POWER-013 remains blocked because the current energy proxy is recorded_not_comparative and covers only one route.",
+  "This item adds explicit CPU/GPU/NPU covered-route metadata and keeps existing single-route receipts non-comparative.",
+  "No new inference, route promotion, speedup, power-advantage, native accelerator, measured-temperature, or BitNet QK256/I2_S behavior-change claim is in scope.",
+]

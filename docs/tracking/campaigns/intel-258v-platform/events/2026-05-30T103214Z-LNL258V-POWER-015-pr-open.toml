@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T10:32:14Z"
+event = "pr_open"
+item = "LNL258V-POWER-015"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6241
+head_sha = "1f6e2dbece8370501b3d06f9b419c5ad18e067f3"
+branch = "codex/lunar-lake/LNL258V-POWER-015-comparative-energy-proxy"
+actor = "codex"
+summary = "Opened the comparative low_power energy-proxy coverage PR."
+
+notes = [
+  "PR #6241 adds explicit --covered-route metadata for matrix-level low_power energy-proxy receipts.",
+  "Single-route energy proxies remain recorded_not_comparative until refreshed with explicit CPU/GPU/NPU coverage.",
+  "The PR refreshes only the operator plan/runbook and does not collect new inference or promote low_power.",
+]
