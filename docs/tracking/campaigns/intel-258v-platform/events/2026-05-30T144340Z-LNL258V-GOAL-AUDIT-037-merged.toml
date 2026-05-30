@@ -1,0 +1,19 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T14:43:40Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-037"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6249
+head_sha = "a8bf458bae29037689aba66b43a883b71813a047"
+merge_sha = "8809a6ae4961c396ef2e10b3c9b25f9610f24340"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-037-post-reg015-audit"
+actor = "codex"
+summary = "Merged the no-inference audit refresh after REG-015 default auto CPU ask coverage landed."
+
+notes = [
+  "PR #6249 merged after required checks were green and GitHub reported the branch mergeable.",
+  "The merged audit/checklist refresh records #6243/#6244/#6245/#6246/#6247/#6248 as audit, receipt-identity, and default auto CPU ask regression coverage only.",
+  "The live POWER-013 AC preflight remains blocked-state context, not committed promotion evidence.",
+  "POWER-013 remains blocked until benchmark-qualified low_power power advantage and measured thermal readings exist.",
+]
