@@ -8752,6 +8752,13 @@ pub fn build_power_profile_evidence_with_created_utc(
     }
     let low_power_battery_samples_required =
         telemetry.battery_mode_sample_recorded || telemetry.energy_proxy_recorded;
+    let low_power_battery_route_samples_ready = !low_power_battery_route_samples.is_empty()
+        && LOW_POWER_BATTERY_ROUTE_IDS.iter().all(|route_id| {
+            low_power_battery_route_samples
+                .iter()
+                .any(|sample| sample.route_id.as_deref() == Some(*route_id))
+        })
+        && low_power_battery_route_samples.iter().all(|sample| sample.requirement_satisfied);
     if low_power_battery_samples_required && low_power_battery_route_samples.is_empty() {
         gaps.push(
             "low_power battery route ask receipts are missing from power-profile evidence"
@@ -8798,16 +8805,7 @@ pub fn build_power_profile_evidence_with_created_utc(
         && telemetry.power_context_recorded
         && input_claim_boundary_preserved
         && !low_power_routes.is_empty()
-        && (!low_power_battery_samples_required
-            || (!low_power_battery_route_samples.is_empty()
-                && LOW_POWER_BATTERY_ROUTE_IDS.iter().all(|route_id| {
-                    low_power_battery_route_samples
-                        .iter()
-                        .any(|sample| sample.route_id.as_deref() == Some(*route_id))
-                })
-                && low_power_battery_route_samples
-                    .iter()
-                    .all(|sample| sample.requirement_satisfied)));
+        && (!low_power_battery_samples_required || low_power_battery_route_samples_ready);
 
     let operator_runbook = Some(LOW_POWER_BATTERY_RUNBOOK.to_string());
     let mut next_required_evidence = Vec::new();
@@ -8819,17 +8817,19 @@ pub fn build_power_profile_evidence_with_created_utc(
             "record an energy or battery-drain proxy across repeated low_power runs".to_string(),
         );
     }
-    if low_power_battery_samples_required
-        && (low_power_battery_route_samples.is_empty()
-            || low_power_battery_route_samples.iter().any(|sample| !sample.requirement_satisfied)
-            || LOW_POWER_BATTERY_ROUTE_IDS.iter().any(|route_id| {
-                !low_power_battery_route_samples
-                    .iter()
-                    .any(|sample| sample.route_id.as_deref() == Some(*route_id))
-            }))
-    {
+    if low_power_battery_samples_required && !low_power_battery_route_samples_ready {
         next_required_evidence.push(
             "index fallback-free CPU/GPU/NPU low_power ask receipts with --low-power-ask-receipt before qualifying power advantage"
+                .to_string(),
+        );
+    }
+    if telemetry.battery_mode_sample_recorded
+        && telemetry.energy_proxy_recorded
+        && low_power_battery_route_samples_ready
+        && !power_advantage_proven
+    {
+        next_required_evidence.push(
+            "collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion"
                 .to_string(),
         );
     }
@@ -8840,7 +8840,7 @@ pub fn build_power_profile_evidence_with_created_utc(
         );
     } else if telemetry.thermal_temperature_count == 0 {
         next_required_evidence.push(
-            "record thermal temperatures if available; current thermal evidence is zone visibility only"
+            "record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker"
                 .to_string(),
         );
     }
@@ -20514,6 +20514,28 @@ mod tests {
             receipt.gaps.iter().any(
                 |gap| gap.contains("no low_power route has benchmark-qualified power evidence")
             )
+        );
+        assert!(
+            receipt.next_required_evidence.iter().any(|item| item
+                .contains("benchmark-qualified low_power power-advantage evidence")),
+            "{:?}",
+            receipt.next_required_evidence
+        );
+        assert!(
+            !receipt
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("telemetry-context --require-battery")),
+            "{:?}",
+            receipt.next_required_evidence
+        );
+        assert!(
+            receipt
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("record measured thermal temperatures")),
+            "{:?}",
+            receipt.next_required_evidence
         );
         Ok(())
     }
