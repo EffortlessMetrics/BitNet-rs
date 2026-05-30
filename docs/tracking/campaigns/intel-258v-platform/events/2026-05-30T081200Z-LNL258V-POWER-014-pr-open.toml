@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T08:12:00Z"
+event = "pr_open"
+item = "LNL258V-POWER-014"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6237
+head_sha = "f6b416f22049337a67777102e24a8b53fc61d11f"
+branch = "codex/lunar-lake/LNL258V-POWER-014-energy-proxy-qualification"
+actor = "codex"
+summary = "Opened the low_power energy-proxy qualification reporting PR."
+
+notes = [
+  "PR #6237 reports that the committed POWER-006 energy proxy is recorded but not accepted for promotion because it covers only one low_power candidate route.",
+  "The refreshed receipts keep low_power blocked and record accepted_for_power_advantage=false.",
+  "The PR preserves no inference, no route promotion, no speedup claim, no power-advantage claim, no measured-temperature claim, and no BitNet QK256/I2_S behavior change.",
+]

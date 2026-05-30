@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_comparison",
   "proof_stage": "operator_routes_compared",
-  "created_utc": "2026-05-30T06:32:00Z",
+  "created_utc": "2026-05-30T08:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
@@ -942,11 +942,14 @@
         "battery_sample_source=battery_telemetry_context",
         "energy_proxy_recorded=true",
         "energy_proxy_source=energy_proxy_receipt",
+        "energy_proxy_qualification_status=recorded_not_comparative",
+        "energy_proxy_accepted_for_power_advantage=false",
+        "energy_proxy_candidate_route_coverage=1/3",
         "thermal_context_recorded=true",
         "operator_runbook=docs/hardware/intel-258v-low-power-battery-runbook.md",
-        "next_required_evidence=collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion | record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker | only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass",
+        "next_required_evidence=collect an accepted comparative low_power energy proxy covering CPU, GPU, and NPU candidate routes before promotion | collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion | record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker | only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass",
         "claim_boundary_preserved=true",
-        "blocker_count=7"
+        "blocker_count=8"
       ]
     },
     {
