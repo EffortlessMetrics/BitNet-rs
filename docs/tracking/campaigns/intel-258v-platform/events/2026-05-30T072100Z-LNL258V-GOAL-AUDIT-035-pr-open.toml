@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T07:21:00Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-035"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6235
+head_sha = "d8c9e6d13b75fb3b6837b2616b15a254bb558284"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-035-power-qualification-summary"
+actor = "codex"
+summary = "Opened the post-#6233 no-inference Lunar Lake audit refresh PR."
+
+notes = [
+  "PR #6235 updates the audit/checklist source revision to f4a356984aba18d2fcd4028d255eb031d6c61ce2.",
+  "The PR records power_advantage_qualification as committed POWER-013 receipt/reporting state only.",
+  "POWER-013 remains blocked until benchmark-qualified low_power power advantage and measured thermal readings exist.",
+]
