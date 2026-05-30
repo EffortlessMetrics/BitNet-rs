@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T14:26:30Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-037"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6249
+head_sha = "731e8db79d0a31a4389c68569a4a3bdc4403a8d6"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-037-post-reg015-audit"
+actor = "codex"
+summary = "Opened PR #6249 for the no-inference audit refresh after REG-015."
+
+notes = [
+  "PR #6249 records #6243/#6244/#6245/#6246/#6247/#6248 as audit, receipt-identity, and default auto CPU ask regression coverage only.",
+  "The live POWER-013 preflight is recorded as AC-only blocked and is not committed as promotion evidence.",
+  "The PR makes no inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, measured-temperature claim, native accelerator claim, broad quality claim, Qwen3 promotion claim, or BitNet QK256/I2_S behavior-change claim.",
+]
