@@ -1,0 +1,20 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T17:57:02Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-040"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6259
+head_sha = "1c23cbf1c8a414e801cfbfdd261a76c0858e5084"
+merge_sha = "dbc3f3f376737245f7e68022d36a4d5406396de3"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-040-power006-wording-guard"
+actor = "codex"
+summary = "Merged the POWER-006 current-blocker wording guard."
+
+notes = [
+  "PR #6259 merged after required checks were green and REST reported the branch mergeable clean.",
+  "campaign check now rejects stale POWER-006 current-blocker wording in the intel-258v objective artifacts.",
+  "POWER-006 historical battery-mode telemetry, energy-proxy, and CPU/GPU/NPU candidate ask evidence wording remains allowed.",
+  "POWER-013 remains blocked until benchmark-qualified battery-mode low_power power advantage and preserved thermal context exist.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]
