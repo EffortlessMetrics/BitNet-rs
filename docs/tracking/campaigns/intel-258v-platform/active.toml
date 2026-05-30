@@ -8281,9 +8281,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-BITNET-ASK-001"
-status = "pr_open"
+status = "merged"
 pr = 6239
-head_sha = "1472ead06080df2e9aafaf0dbb646ff2158e669f"
+head_sha = "05cdc1dba153b4741bb5c7ba8dd2d95b328f8aa1"
+merge_sha = "ee44b62c6dc171f0325dd4410960d8a692836c4b"
 branch = "codex/lunar-lake/LNL258V-BITNET-ASK-001-strict-cpu-reference-ask"
 stackable = false
 review_mode = "codex_premerge"
