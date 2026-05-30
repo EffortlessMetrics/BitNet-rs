@@ -12519,9 +12519,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-REG-014"
-status = "pr_open"
+status = "merged"
 pr = 6245
-head_sha = "beb32f5156b80e3fe3a087203ac7bb60d3fbc9b3"
+head_sha = "03ea740139433f2bb88d36586ce771d72aa0c4ae"
+merge_sha = "b5deb5f2fa1f973a149cdb85a36b3db8ff73d81b"
 branch = "codex/lunar-lake/LNL258V-REG-014-operator-ask-hash-coverage"
 stackable = false
 review_mode = "codex_premerge"
@@ -12534,8 +12535,8 @@ commands = [
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::operator_ask_regression_requires_model_hash_coverage -- --exact --nocapture",
   "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::ask_short_auto_gpu_ask_receipt_is_regression_ready -- --exact --nocapture",
   "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
-  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-30T16:00:00Z --strict",
-  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-30T16:05:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-30T12:35:03Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-30T12:35:09Z --strict",
   "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
   "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
   "git diff --check",

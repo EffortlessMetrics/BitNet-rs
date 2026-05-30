@@ -1,11 +1,11 @@
 campaign = "intel-258v-platform"
-timestamp = "2026-05-30T16:40:00Z"
+timestamp = "2026-05-30T12:40:00Z"
 event = "pr_open"
 item = "LNL258V-REG-014"
 previous_status = "in_progress"
 new_status = "pr_open"
 pr = 6245
-head_sha = "beb32f5156b80e3fe3a087203ac7bb60d3fbc9b3"
+head_sha = "03ea740139433f2bb88d36586ce771d72aa0c4ae"
 branch = "codex/lunar-lake/LNL258V-REG-014-operator-ask-hash-coverage"
 actor = "codex"
 summary = "Opened strict regression hardening for operator ask model hash coverage."
