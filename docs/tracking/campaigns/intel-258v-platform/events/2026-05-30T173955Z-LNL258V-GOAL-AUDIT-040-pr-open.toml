@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T17:39:55Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-040"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6259
+head_sha = "49078d931428d126b16a8a501059937d941ac813"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-040-power006-wording-guard"
+actor = "codex"
+summary = "Opened PR #6259 for the POWER-006 current-blocker wording guard."
+
+notes = [
+  "PR #6259 adds campaign-check enforcement for stale POWER-006 current-blocker wording in the intel-258v objective artifacts.",
+  "The guard is scoped to the Lunar Lake excellence audit and goal artifact checklist.",
+  "POWER-006 historical evidence wording remains allowed, while POWER-013 remains the active low_power blocker.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]
