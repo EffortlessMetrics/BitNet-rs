@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_operator_readiness",
   "proof_stage": "operator_routes_indexed",
-  "created_utc": "2026-05-30T05:03:20Z",
+  "created_utc": "2026-05-30T06:32:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_ready": true,
@@ -227,6 +227,81 @@
     "power_profile_index_ready": true,
     "low_power_promotion_ready": false,
     "power_advantage_proven": false,
+    "power_advantage_qualification": {
+      "status": "benchmark_power_advantage_unproven",
+      "qualification_ready": false,
+      "benchmark_qualified_power_advantage": false,
+      "battery_mode_sample_recorded": true,
+      "energy_proxy_recorded": true,
+      "low_power_battery_route_samples_ready": true,
+      "thermal_context_recorded": true,
+      "measured_thermal_temperature_recorded": false,
+      "candidate_routes": [
+        {
+          "route_id": "dense_slm_default_cpu",
+          "selected_backend": "cpu-rust",
+          "benchmark_qualified_advantage": false,
+          "power_promotion_ready": false,
+          "battery_route_sample_indexed": true,
+          "battery_route_sample_ready": true,
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "battery_route_sample_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-cpu.json",
+          "blockers": [
+            "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
+            "power advantage evidence missing for low_power promotion",
+            "route is not power-promotion ready",
+            "route lacks benchmark-qualified power advantage",
+            "route not promoted for profile low_power"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_npu_candidate",
+          "selected_backend": "openvino-npu",
+          "benchmark_qualified_advantage": false,
+          "power_promotion_ready": false,
+          "battery_route_sample_indexed": true,
+          "battery_route_sample_ready": true,
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "battery_route_sample_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-npu.json",
+          "blockers": [
+            "benchmark-qualified speedup or power advantage missing",
+            "power advantage evidence missing for low_power promotion",
+            "route is not power-promotion ready",
+            "route lacks benchmark-qualified power advantage",
+            "route not promoted for profile low_power"
+          ]
+        },
+        {
+          "route_id": "dense_slm_openvino_gpu_candidate",
+          "selected_backend": "openvino-gpu",
+          "benchmark_qualified_advantage": false,
+          "power_promotion_ready": false,
+          "battery_route_sample_indexed": true,
+          "battery_route_sample_ready": true,
+          "fallback_used": false,
+          "answer_gate_passed": true,
+          "battery_route_sample_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-battery-low-power-gpu.json",
+          "blockers": [
+            "benchmark-qualified speedup or power advantage missing",
+            "power advantage evidence missing for low_power promotion",
+            "route is not power-promotion ready",
+            "route lacks benchmark-qualified power advantage",
+            "route not promoted for profile low_power"
+          ]
+        }
+      ],
+      "blockers": [
+        "measured thermal temperatures are unavailable; thermal-unavailable remains an explicit blocker",
+        "no low_power route has benchmark-qualified power advantage"
+      ],
+      "required_evidence": [
+        "collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion",
+        "record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker",
+        "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
+      ]
+    },
     "low_power_route_count": 3,
     "low_power_routes_remain_unpromoted": true,
     "current_context_is_ac_only": true,
@@ -247,6 +322,8 @@
     "blockers": [
       "Rust GGUF CPU profile-run receipt did not contain fallback-free timing for profile low_power",
       "benchmark-qualified speedup or power advantage missing",
+      "measured thermal temperatures are unavailable; thermal-unavailable remains an explicit blocker",
+      "no low_power route has benchmark-qualified power advantage",
       "no low_power route has benchmark-qualified power evidence",
       "power advantage evidence missing for low_power promotion",
       "route not promoted for profile low_power"

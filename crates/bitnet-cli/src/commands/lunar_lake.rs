@@ -1327,6 +1327,8 @@ pub struct PowerProfileRegressionSummary {
     pub power_profile_index_ready: bool,
     pub low_power_promotion_ready: bool,
     pub power_advantage_proven: bool,
+    #[serde(default)]
+    pub power_advantage_qualification: PowerAdvantageQualification,
     pub low_power_route_count: usize,
     pub low_power_routes_remain_unpromoted: bool,
     pub current_context_is_ac_only: bool,
@@ -2449,6 +2451,8 @@ pub struct LunarLakePowerProfileEvidence {
     pub power_profile_index_ready: bool,
     pub low_power_promotion_ready: bool,
     pub power_advantage_proven: bool,
+    #[serde(default)]
+    pub power_advantage_qualification: PowerAdvantageQualification,
     pub gaps: Vec<String>,
     #[serde(default)]
     pub operator_runbook: Option<String>,
@@ -2506,6 +2510,53 @@ pub struct PowerProfileRouteEvidence {
     pub power_related_blockers: Vec<String>,
     pub all_blockers: Vec<String>,
     pub power_promotion_ready: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PowerAdvantageQualification {
+    pub status: String,
+    pub qualification_ready: bool,
+    pub benchmark_qualified_power_advantage: bool,
+    pub battery_mode_sample_recorded: bool,
+    pub energy_proxy_recorded: bool,
+    pub low_power_battery_route_samples_ready: bool,
+    pub thermal_context_recorded: bool,
+    pub measured_thermal_temperature_recorded: bool,
+    pub candidate_routes: Vec<PowerAdvantageRouteQualification>,
+    pub blockers: Vec<String>,
+    pub required_evidence: Vec<String>,
+}
+
+impl Default for PowerAdvantageQualification {
+    fn default() -> Self {
+        Self {
+            status: "not_indexed".to_string(),
+            qualification_ready: false,
+            benchmark_qualified_power_advantage: false,
+            battery_mode_sample_recorded: false,
+            energy_proxy_recorded: false,
+            low_power_battery_route_samples_ready: false,
+            thermal_context_recorded: false,
+            measured_thermal_temperature_recorded: false,
+            candidate_routes: Vec::new(),
+            blockers: Vec::new(),
+            required_evidence: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct PowerAdvantageRouteQualification {
+    pub route_id: String,
+    pub selected_backend: String,
+    pub benchmark_qualified_advantage: bool,
+    pub power_promotion_ready: bool,
+    pub battery_route_sample_indexed: bool,
+    pub battery_route_sample_ready: bool,
+    pub fallback_used: Option<bool>,
+    pub answer_gate_passed: Option<bool>,
+    pub battery_route_sample_receipt: Option<String>,
+    pub blockers: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -5364,6 +5415,20 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
     if power.low_power_routes.iter().any(|route| route.fallback_used == Some(true)) {
         gaps.push("low_power power-profile evidence observed fallback_used=true".to_string());
     }
+    if power.power_advantage_qualification.benchmark_qualified_power_advantage
+        != power.power_advantage_proven
+    {
+        gaps.push("power advantage qualification must mirror power_advantage_proven".to_string());
+    }
+    if power.telemetry.battery_mode_sample_recorded
+        && power.telemetry.energy_proxy_recorded
+        && power.power_advantage_qualification.required_evidence.is_empty()
+    {
+        gaps.push(
+            "power advantage qualification must carry required evidence after battery samples and energy proxy are indexed"
+                .to_string(),
+        );
+    }
 
     let claim = &power.claim_boundary;
     let claim_boundary_preserved = !claim.new_inference_executed
@@ -5398,6 +5463,7 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
     }
 
     let mut blockers = power.gaps.clone();
+    blockers.extend(power.power_advantage_qualification.blockers.iter().cloned());
     for route in &power.low_power_routes {
         blockers.extend(route.power_related_blockers.iter().cloned());
     }
@@ -5409,6 +5475,7 @@ fn inspect_power_profile_regression(path: &Path) -> Result<PowerProfileRegressio
         power_profile_index_ready: power.power_profile_index_ready,
         low_power_promotion_ready: power.low_power_promotion_ready,
         power_advantage_proven: power.power_advantage_proven,
+        power_advantage_qualification: power.power_advantage_qualification,
         low_power_route_count: power.low_power_routes.len(),
         low_power_routes_remain_unpromoted,
         current_context_is_ac_only: power.telemetry.current_context_is_ac_only,
@@ -6067,6 +6134,14 @@ fn power_profile_regression_notes(summary: &PowerProfileRegressionSummary) -> Ve
         format!("power_profile_index_ready={}", summary.power_profile_index_ready),
         format!("low_power_promotion_ready={}", summary.low_power_promotion_ready),
         format!("power_advantage_proven={}", summary.power_advantage_proven),
+        format!(
+            "power_advantage_qualification_status={}",
+            summary.power_advantage_qualification.status
+        ),
+        format!(
+            "power_advantage_qualification_ready={}",
+            summary.power_advantage_qualification.qualification_ready
+        ),
         format!("low_power_route_count={}", summary.low_power_route_count),
         format!(
             "low_power_routes_remain_unpromoted={}",
@@ -8855,6 +8930,15 @@ pub fn build_power_profile_evidence_with_created_utc(
         }
     }
     let next_required_evidence = deduped_next_required_evidence;
+    let power_advantage_qualification = power_profile_power_advantage_qualification(
+        &telemetry,
+        &low_power_battery_route_samples,
+        &low_power_routes,
+        low_power_battery_route_samples_ready,
+        input_claim_boundary_preserved,
+        power_advantage_proven,
+        &next_required_evidence,
+    );
 
     Ok(LunarLakePowerProfileEvidence {
         schema_version: "1.0.0".to_string(),
@@ -8876,6 +8960,7 @@ pub fn build_power_profile_evidence_with_created_utc(
         power_profile_index_ready,
         low_power_promotion_ready,
         power_advantage_proven,
+        power_advantage_qualification,
         gaps,
         operator_runbook,
         next_required_evidence,
@@ -9426,6 +9511,134 @@ fn power_profile_low_power_routes(
             })
         })
         .collect()
+}
+
+fn power_profile_power_advantage_qualification(
+    telemetry: &PowerProfileTelemetrySummary,
+    low_power_battery_route_samples: &[PowerProfileBatteryRouteSample],
+    low_power_routes: &[PowerProfileRouteEvidence],
+    low_power_battery_route_samples_ready: bool,
+    input_claim_boundary_preserved: bool,
+    power_advantage_proven: bool,
+    next_required_evidence: &[String],
+) -> PowerAdvantageQualification {
+    let candidate_routes = low_power_routes
+        .iter()
+        .map(|route| {
+            let sample = low_power_battery_route_samples
+                .iter()
+                .find(|sample| sample.route_id.as_deref() == Some(route.route_id.as_str()));
+            let mut blockers = route.power_related_blockers.clone();
+            if !route.benchmark_qualified_advantage {
+                blockers.push("route lacks benchmark-qualified power advantage".to_string());
+            }
+            if !route.power_promotion_ready {
+                blockers.push("route is not power-promotion ready".to_string());
+            }
+            match sample {
+                Some(sample) if !sample.requirement_satisfied => {
+                    blockers.extend(
+                        sample
+                            .gaps
+                            .iter()
+                            .map(|gap| format!("battery route sample is not ready: {gap}")),
+                    );
+                }
+                Some(_) => {}
+                None => blockers.push("battery route sample is not indexed".to_string()),
+            }
+            blockers.sort();
+            blockers.dedup();
+            PowerAdvantageRouteQualification {
+                route_id: route.route_id.clone(),
+                selected_backend: route.selected_backend.clone(),
+                benchmark_qualified_advantage: route.benchmark_qualified_advantage,
+                power_promotion_ready: route.power_promotion_ready,
+                battery_route_sample_indexed: sample.is_some(),
+                battery_route_sample_ready: sample
+                    .map(|sample| sample.requirement_satisfied)
+                    .unwrap_or(false),
+                fallback_used: route.fallback_used,
+                answer_gate_passed: route.answer_gate_passed,
+                battery_route_sample_receipt: sample.map(|sample| sample.receipt.clone()),
+                blockers,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let measured_thermal_temperature_recorded = telemetry.thermal_temperature_count > 0;
+    let mut blockers = Vec::new();
+    if !input_claim_boundary_preserved {
+        blockers.push(
+            "low_power battery or energy proxy evidence violates the no-claim boundary".to_string(),
+        );
+    }
+    if !telemetry.power_context_recorded {
+        blockers.push("power context is not recorded".to_string());
+    }
+    if !telemetry.battery_mode_sample_recorded {
+        blockers.push("battery-mode sample is missing for low_power promotion".to_string());
+    }
+    if !telemetry.energy_proxy_recorded {
+        blockers.push("energy proxy evidence is missing for low_power promotion".to_string());
+    }
+    if !low_power_battery_route_samples_ready {
+        blockers.push(
+            "CPU/GPU/NPU low_power battery-route ask receipts are not all indexed and qualification-ready"
+                .to_string(),
+        );
+    }
+    if !telemetry.thermal_context_recorded {
+        blockers.push("thermal sensor context remains unavailable".to_string());
+    } else if !measured_thermal_temperature_recorded {
+        blockers.push(
+            "measured thermal temperatures are unavailable; thermal-unavailable remains an explicit blocker"
+                .to_string(),
+        );
+    }
+    if low_power_routes.is_empty() {
+        blockers.push("low_power route evidence is missing".to_string());
+    }
+    if !power_advantage_proven {
+        blockers.push("no low_power route has benchmark-qualified power advantage".to_string());
+    }
+    blockers.sort();
+    blockers.dedup();
+
+    let qualification_ready = input_claim_boundary_preserved
+        && telemetry.power_context_recorded
+        && telemetry.battery_mode_sample_recorded
+        && telemetry.energy_proxy_recorded
+        && low_power_battery_route_samples_ready
+        && telemetry.thermal_context_recorded
+        && measured_thermal_temperature_recorded
+        && power_advantage_proven;
+    let status = if qualification_ready {
+        "qualified"
+    } else if telemetry.battery_mode_sample_recorded
+        && telemetry.energy_proxy_recorded
+        && low_power_battery_route_samples_ready
+        && input_claim_boundary_preserved
+        && !power_advantage_proven
+    {
+        "benchmark_power_advantage_unproven"
+    } else {
+        "evidence_incomplete"
+    };
+
+    PowerAdvantageQualification {
+        status: status.to_string(),
+        qualification_ready,
+        benchmark_qualified_power_advantage: power_advantage_proven,
+        battery_mode_sample_recorded: telemetry.battery_mode_sample_recorded,
+        energy_proxy_recorded: telemetry.energy_proxy_recorded,
+        low_power_battery_route_samples_ready,
+        thermal_context_recorded: telemetry.thermal_context_recorded,
+        measured_thermal_temperature_recorded,
+        candidate_routes,
+        blockers,
+        required_evidence: next_required_evidence.to_vec(),
+    }
 }
 
 fn power_profile_battery_route_sample(path: &Path) -> Result<PowerProfileBatteryRouteSample> {
@@ -16996,9 +17209,8 @@ mod tests {
                 "gaps": [
                     "battery-mode sample is missing for low_power promotion"
                 ],
-                "next_required_evidence": [
-                    "battery-mode low_power telemetry"
-                ],
+                "operator_runbook": LOW_POWER_BATTERY_RUNBOOK,
+                "next_required_evidence": blocked_operator_ask_next_required_evidence("low_power"),
                 "claim_boundary": {
                     "new_inference_executed": false,
                     "route_promotion_changed": false,
@@ -20405,6 +20617,15 @@ mod tests {
             "2026-05-19T10:14:00Z".to_string(),
         )?;
         assert!(!missing_samples_receipt.power_profile_index_ready);
+        assert_eq!(
+            missing_samples_receipt.power_advantage_qualification.status,
+            "evidence_incomplete"
+        );
+        assert!(
+            !missing_samples_receipt
+                .power_advantage_qualification
+                .low_power_battery_route_samples_ready
+        );
         assert!(
             missing_samples_receipt
                 .gaps
@@ -20520,6 +20741,37 @@ mod tests {
                 .iter()
                 .all(|sample| sample.requirement_satisfied)
         );
+        assert_eq!(
+            receipt.power_advantage_qualification.status,
+            "benchmark_power_advantage_unproven"
+        );
+        assert!(!receipt.power_advantage_qualification.qualification_ready);
+        assert!(receipt.power_advantage_qualification.low_power_battery_route_samples_ready);
+        assert!(!receipt.power_advantage_qualification.measured_thermal_temperature_recorded);
+        assert!(
+            receipt.power_advantage_qualification.blockers.iter().any(|blocker| blocker
+                .contains("no low_power route has benchmark-qualified power advantage")),
+            "{:?}",
+            receipt.power_advantage_qualification.blockers
+        );
+        assert!(
+            receipt
+                .power_advantage_qualification
+                .blockers
+                .iter()
+                .any(|blocker| blocker.contains("measured thermal temperatures are unavailable")),
+            "{:?}",
+            receipt.power_advantage_qualification.blockers
+        );
+        let npu_qualification = receipt
+            .power_advantage_qualification
+            .candidate_routes
+            .iter()
+            .find(|route| route.route_id == "dense_slm_openvino_npu_candidate")
+            .context("missing NPU power advantage qualification")?;
+        assert!(npu_qualification.battery_route_sample_indexed);
+        assert!(npu_qualification.battery_route_sample_ready);
+        assert!(!npu_qualification.benchmark_qualified_advantage);
         assert!(!receipt.low_power_promotion_ready);
         assert!(!receipt.power_advantage_proven);
         assert!(!receipt.gaps.iter().any(|gap| gap.contains("battery-mode sample is missing")));
@@ -23218,6 +23470,19 @@ mod tests {
             power_profile_index_ready: true,
             low_power_promotion_ready: false,
             power_advantage_proven: false,
+            power_advantage_qualification: PowerAdvantageQualification {
+                status: "evidence_incomplete".to_string(),
+                qualification_ready: false,
+                benchmark_qualified_power_advantage: false,
+                battery_mode_sample_recorded: false,
+                energy_proxy_recorded: false,
+                low_power_battery_route_samples_ready: false,
+                thermal_context_recorded: false,
+                measured_thermal_temperature_recorded: false,
+                candidate_routes: Vec::new(),
+                blockers: vec!["battery comparison evidence is missing".to_string()],
+                required_evidence: blocked_operator_ask_next_required_evidence("low_power"),
+            },
             low_power_route_count: 3,
             low_power_routes_remain_unpromoted: true,
             current_context_is_ac_only: true,
