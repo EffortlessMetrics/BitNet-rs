@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T14:20:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-037"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-037-post-reg015-audit"
+actor = "codex"
+summary = "Started the no-inference audit refresh after REG-015 and the live POWER-013 AC preflight."
+
+notes = [
+  "The refresh records #6243/#6244/#6245/#6246/#6247/#6248 as audit, receipt-identity, and default auto CPU ask regression coverage only.",
+  "The live POWER-013 preflight observed BatteryStatus=2, ac_power_inferred=true, and strict telemetry-context --require-battery failing closed; the target-only receipt is not promotion evidence.",
+  "Excellent support remains false because low_power still lacks benchmark-qualified power advantage and measured thermal readings.",
+  "No inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, measured-temperature claim, native accelerator claim, broad quality claim, Qwen3 promotion claim, or BitNet QK256/I2_S behavior-change claim is made.",
+]
