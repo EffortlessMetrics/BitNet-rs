@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T13:01:00Z"
+event = "merged"
+item = "LNL258V-REG-014"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6245
+head_sha = "03ea740139433f2bb88d36586ce771d72aa0c4ae"
+merge_sha = "b5deb5f2fa1f973a149cdb85a36b3db8ff73d81b"
+branch = "codex/lunar-lake/LNL258V-REG-014-operator-ask-hash-coverage"
+actor = "codex"
+summary = "Merged strict regression hardening for operator ask model hash coverage."
+
+notes = [
+  "PR #6245 merged after required checks were green and GitHub reported the branch mergeable.",
+  "Strict regression and operator comparison now record model_hash_or_explicit_gap and OpenVINO per-file SHA256 coverage for successful auto ask_short, ask_normal, and warm_resident ask receipts.",
+  "The closeout refresh corrects the REG-014 receipt and event timestamps to actual UTC run times while preserving no-inference and no-claim-boundary-change behavior.",
+]
