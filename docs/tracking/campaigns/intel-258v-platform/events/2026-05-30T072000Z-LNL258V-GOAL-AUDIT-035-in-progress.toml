@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T07:20:00Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-035"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-035-power-qualification-summary"
+actor = "codex"
+summary = "Started the no-inference audit refresh after the POWER-013 qualification-summary PR merged."
+
+notes = [
+  "The refresh records BitNet-rs PR #6233 as power_advantage_qualification reporting only.",
+  "POWER-013 remains blocked because benchmark-qualified low_power power advantage and measured thermal readings are still missing.",
+  "The audit refresh preserves no route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3, or BitNet QK256/I2_S behavior claim.",
+]
