@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T16:18:27Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-038"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-038-post-power017-audit"
+actor = "codex"
+summary = "Started the no-inference audit refresh after POWER-016/017 thermal preflight alignment."
+
+notes = [
+  "The current main head is 5db806356faa02dc5c6efe1dc861c2f0ce216a76 after POWER-017 closeout #6254.",
+  "The refresh records POWER-016/#6251 and POWER-017/#6253 as runbook and machine-readable low_power plan guidance only.",
+  "The host still reports BatteryStatus=2 on 2026-05-30, so POWER-013 remains AC-only blocked and no promotion evidence is committed.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]
