@@ -70,6 +70,21 @@ const BITNET_CPP_ANSWER_TEMPLATE: &str = "bitnetcpp-answer";
 const LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR";
 #[cfg(feature = "full-cli")]
 const LUNAR_LAKE_OPENVINO_PYTHON_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_PYTHON";
+#[cfg(feature = "full-cli")]
+const LUNAR_LAKE_OPENVINO_IR_MODEL_SHA256_GAP: &str = "OpenVINO IR directory receipts have no-local single model SHA256; per-file OpenVINO IR and tokenizer SHA256 records are required instead of a fake model hash.";
+#[cfg(feature = "full-cli")]
+const LUNAR_LAKE_OPENVINO_IR_REQUIRED_MODEL_FILES: &[&str] = &[
+    "openvino_model.xml",
+    "openvino_model.bin",
+    "openvino_tokenizer.xml",
+    "openvino_tokenizer.bin",
+    "openvino_detokenizer.xml",
+    "openvino_detokenizer.bin",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "generation_config.json",
+    "chat_template.jinja",
+];
 
 fn bitnet_version() -> &'static str {
     use std::sync::OnceLock;
@@ -11348,6 +11363,10 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         &["tokens.prompt", "prompt_policy.prompt_token_count"],
     );
     let source_known_gaps = ctx.source_run_receipt["known_gaps"].clone();
+    let model_sha256 = lunar_lake_source_value_at_any(ctx.source_run_receipt, &["model.sha256"]);
+    let model_hash_coverage =
+        lunar_lake_operator_ask_model_hash_coverage(ctx.source_run_receipt, &model_sha256);
+    let model_sha256_gap = model_hash_coverage["model_sha256_gap"].clone();
     let openvino_candidate_executed = ctx.route.runtime_api == "openvino_genai";
     let proof_stage = if openvino_candidate_executed {
         "operator_candidate_route_executed_through_lunar_lake_ask"
@@ -11447,7 +11466,9 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         },
         "model": {
             "path": lunar_lake_source_value_at_any(ctx.source_run_receipt, &["model.path", "model.local_model_dir", "inputs.model_dir"]),
-            "sha256": lunar_lake_source_value_at_any(ctx.source_run_receipt, &["model.sha256"]),
+            "sha256": model_sha256,
+            "sha256_gap": model_sha256_gap,
+            "hash_coverage": model_hash_coverage,
             "family": model_family,
             "architecture": model_architecture,
             "quant_format": quantization,
@@ -11492,6 +11513,115 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         },
         "source_receipt": ctx.source_run_receipt,
     })
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_operator_ask_model_hash_coverage(
+    source_run_receipt: &serde_json::Value,
+    model_sha256: &serde_json::Value,
+) -> serde_json::Value {
+    let model_sha256_present = lunar_lake_sha256_value(model_sha256).is_some();
+    let files = source_run_receipt
+        .get("model")
+        .and_then(|model| model.get("files"))
+        .and_then(|files| files.as_object());
+    let mut hashed_files = Vec::new();
+    if let Some(files) = files {
+        for (name, record) in files {
+            if record.get("sha256").and_then(lunar_lake_sha256_value).is_some() {
+                hashed_files.push(name.clone());
+            }
+        }
+    }
+    hashed_files.sort();
+
+    let mut missing_required_openvino_ir_files = Vec::new();
+    for required in LUNAR_LAKE_OPENVINO_IR_REQUIRED_MODEL_FILES {
+        let required_file_hashed = files
+            .and_then(|files| files.get(*required))
+            .and_then(|record| record.get("sha256"))
+            .and_then(lunar_lake_sha256_value)
+            .is_some();
+        if !required_file_hashed {
+            missing_required_openvino_ir_files.push((*required).to_string());
+        }
+    }
+
+    let required_openvino_ir_files_hashed =
+        files.is_some() && missing_required_openvino_ir_files.is_empty();
+    let openvino_ir_file_coverage_applicable = !model_sha256_present || files.is_some();
+    let model_hash_or_explicit_gap = model_sha256_present || required_openvino_ir_files_hashed;
+    let model_sha256_gap = if !model_sha256_present && required_openvino_ir_files_hashed {
+        serde_json::json!(LUNAR_LAKE_OPENVINO_IR_MODEL_SHA256_GAP)
+    } else {
+        serde_json::Value::Null
+    };
+    let identity_mode = if model_sha256_present {
+        "single_model_sha256"
+    } else if required_openvino_ir_files_hashed {
+        "openvino_ir_per_file_sha256"
+    } else {
+        "missing_model_hash_coverage"
+    };
+
+    serde_json::json!({
+        "identity_mode": identity_mode,
+        "model_sha256_present": model_sha256_present,
+        "model_sha256_source": if model_sha256_present {
+            serde_json::json!("source_run_receipt.model.sha256")
+        } else {
+            serde_json::Value::Null
+        },
+        "model_sha256_gap": model_sha256_gap,
+        "model_hash_or_explicit_gap": model_hash_or_explicit_gap,
+        "per_file_hashes_present": !hashed_files.is_empty(),
+        "per_file_hash_source": if hashed_files.is_empty() {
+            serde_json::Value::Null
+        } else {
+            serde_json::json!("source_run_receipt.model.files")
+        },
+        "hashed_file_count": hashed_files.len(),
+        "hashed_files": hashed_files,
+        "required_openvino_ir_files_hashed": if openvino_ir_file_coverage_applicable {
+            serde_json::json!(required_openvino_ir_files_hashed)
+        } else {
+            serde_json::Value::Null
+        },
+        "required_openvino_ir_files": if openvino_ir_file_coverage_applicable {
+            serde_json::json!(LUNAR_LAKE_OPENVINO_IR_REQUIRED_MODEL_FILES)
+        } else {
+            serde_json::Value::Null
+        },
+        "missing_required_openvino_ir_files": if openvino_ir_file_coverage_applicable {
+            serde_json::json!(missing_required_openvino_ir_files)
+        } else {
+            serde_json::json!([])
+        },
+        "primary_model_xml_sha256": lunar_lake_model_file_sha256(source_run_receipt, "openvino_model.xml"),
+        "primary_model_bin_sha256": lunar_lake_model_file_sha256(source_run_receipt, "openvino_model.bin"),
+        "model_binary_committed": source_run_receipt["model"]["model_binary_committed"].clone(),
+        "source_repo": source_run_receipt["model"]["repo"].clone(),
+    })
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_sha256_value(value: &serde_json::Value) -> Option<&str> {
+    let sha = value.as_str()?.trim();
+    if sha.len() == 64 && sha.chars().all(|c| c.is_ascii_hexdigit()) { Some(sha) } else { None }
+}
+
+#[cfg(feature = "full-cli")]
+fn lunar_lake_model_file_sha256(
+    source_run_receipt: &serde_json::Value,
+    file_name: &str,
+) -> Option<String> {
+    source_run_receipt
+        .get("model")?
+        .get("files")?
+        .get(file_name)?
+        .get("sha256")
+        .and_then(lunar_lake_sha256_value)
+        .map(str::to_string)
 }
 
 #[cfg(feature = "full-cli")]
@@ -11580,6 +11710,14 @@ fn validate_lunar_lake_ask_source_receipt(
         anyhow::bail!(
             "lunar-lake ask selected kernel `{selected_kernel}`, expected `{}`",
             route.selected_kernel_or_runtime
+        );
+    }
+    let model_sha256 = lunar_lake_source_value_at_any(source_run_receipt, &["model.sha256"]);
+    let model_hash_coverage =
+        lunar_lake_operator_ask_model_hash_coverage(source_run_receipt, &model_sha256);
+    if !model_hash_coverage["model_hash_or_explicit_gap"].as_bool().unwrap_or(false) {
+        anyhow::bail!(
+            "lunar-lake ask source receipt is missing model SHA256 or complete OpenVINO IR per-file SHA256 coverage"
         );
     }
     let dense_slm_or_openvino_qwen = source_run_receipt.get("dense_slm").is_some()
@@ -14801,7 +14939,7 @@ mod tests {
             "kernel": {"kernel_id": "dense-qwen-cpu-reference"},
             "model": {
                 "path": "models/qwen2.5.gguf",
-                "sha256": "abc",
+                "sha256": "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e",
                 "family": "qwen",
                 "architecture": "qwen2",
                 "quant_format": "Q8_0",
@@ -14872,6 +15010,13 @@ mod tests {
         assert_eq!(receipt["model_family"], "qwen");
         assert_eq!(receipt["model_architecture"], "qwen2");
         assert_eq!(receipt["quantization"], "Q8_0");
+        assert_eq!(
+            receipt["model"]["sha256"],
+            "ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e"
+        );
+        assert_eq!(receipt["model"]["sha256_gap"], serde_json::Value::Null);
+        assert_eq!(receipt["model"]["hash_coverage"]["identity_mode"], "single_model_sha256");
+        assert_eq!(receipt["model"]["hash_coverage"]["model_hash_or_explicit_gap"], true);
         assert_eq!(receipt["tokenizer_source"], "gguf_metadata");
         assert_eq!(receipt["prompt_template"], "qwen2.5");
         assert_eq!(receipt["answer_gate_passed"], true);
@@ -14938,7 +15083,71 @@ mod tests {
                 "decode_total_ms uses generation_wall_ms for the bounded generate call and is not a per-token CPU-style decode-step sum."
             ],
             "model": {
-                "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym"
+                "repo": "Qwen/Qwen2.5-0.5B-Instruct",
+                "local_model_dir": "models/openvino/qwen2.5-0.5b-instruct-int4-sym",
+                "model_binary_committed": false,
+                "files": {
+                    "openvino_model.xml": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.xml",
+                        "exists": true,
+                        "bytes": 2167169,
+                        "sha256": "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+                    },
+                    "openvino_model.bin": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_model.bin",
+                        "exists": true,
+                        "bytes": 321326157,
+                        "sha256": "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+                    },
+                    "openvino_tokenizer.xml": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.xml",
+                        "exists": true,
+                        "bytes": 27536,
+                        "sha256": "779af8438ed2689107ba0bacc939e81734085d3e1a3dbf403402d2ccc982fe1b"
+                    },
+                    "openvino_tokenizer.bin": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_tokenizer.bin",
+                        "exists": true,
+                        "bytes": 5588603,
+                        "sha256": "651d8b86c94c40710919f6089189a748ebf4ad1b0f0da728440454d14379b078"
+                    },
+                    "openvino_detokenizer.xml": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.xml",
+                        "exists": true,
+                        "bytes": 10030,
+                        "sha256": "a1d28ba5b537fd7a07771e2b019fbdbd29f8d3e57f3b928e6827dd5a1aff813d"
+                    },
+                    "openvino_detokenizer.bin": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/openvino_detokenizer.bin",
+                        "exists": true,
+                        "bytes": 2189639,
+                        "sha256": "3ca47601554a3b871c1e45e8f31aa6e17d726365c075fb430d1a2089484ae8d6"
+                    },
+                    "tokenizer.json": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer.json",
+                        "exists": true,
+                        "bytes": 11421896,
+                        "sha256": "9c5ae00e602b8860cbd784ba82a8aa14e8feecec692e7076590d014d7b7fdafa"
+                    },
+                    "tokenizer_config.json": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/tokenizer_config.json",
+                        "exists": true,
+                        "bytes": 4893,
+                        "sha256": "5fd4cea2574beb6b70ba31582179880d331b723f5b5119ee67c29d45b983f7be"
+                    },
+                    "generation_config.json": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/generation_config.json",
+                        "exists": true,
+                        "bytes": 256,
+                        "sha256": "b017173db4a82cfc6dc6e4368aee7f8f4eceeb380cdae840528833be24ac45c8"
+                    },
+                    "chat_template.jinja": {
+                        "path": "models/openvino/qwen2.5-0.5b-instruct-int4-sym/chat_template.jinja",
+                        "exists": true,
+                        "bytes": 2561,
+                        "sha256": "8aa40ce145adb73cb3a75194dc0224702a95850ec5275cabb728496bbd749fc6"
+                    }
+                }
             },
             "prompt_policy": {
                 "rendered_prompt": "<|im_start|>user\n2+2?<|im_end|>\n<|im_start|>assistant\n",
@@ -14979,6 +15188,15 @@ mod tests {
             }
         });
         validate_lunar_lake_ask_source_receipt(&source, &route)?;
+        let mut missing_hash_source = source.clone();
+        missing_hash_source["model"]["files"]["openvino_model.bin"]["sha256"] =
+            serde_json::Value::Null;
+        let err = validate_lunar_lake_ask_source_receipt(&missing_hash_source, &route)
+            .expect_err("OpenVINO ask source requires per-file model hash coverage");
+        assert!(
+            err.to_string()
+                .contains("model SHA256 or complete OpenVINO IR per-file SHA256 coverage")
+        );
         let answer = lunar_lake_source_answer_text(&source);
         let normalized = lunar_lake_source_normalized_answer(&source, &answer);
         let gate = evaluate_lunar_lake_answer_gate(&normalized, Some("4"));
@@ -15013,6 +15231,27 @@ mod tests {
         assert_eq!(receipt["model_family"], "qwen");
         assert_eq!(receipt["model_architecture"], "qwen2");
         assert_eq!(receipt["quantization"], "INT4_SYM");
+        assert_eq!(receipt["model"]["sha256"], serde_json::Value::Null);
+        assert_eq!(receipt["model"]["sha256_gap"], LUNAR_LAKE_OPENVINO_IR_MODEL_SHA256_GAP);
+        assert_eq!(
+            receipt["model"]["hash_coverage"]["identity_mode"],
+            "openvino_ir_per_file_sha256"
+        );
+        assert_eq!(receipt["model"]["hash_coverage"]["model_hash_or_explicit_gap"], true);
+        assert_eq!(receipt["model"]["hash_coverage"]["required_openvino_ir_files_hashed"], true);
+        assert_eq!(
+            receipt["model"]["hash_coverage"]["primary_model_xml_sha256"],
+            "92079df4e311238df5a3cd94848fc84730eefbce08e59f053d8a0aeaa7fb39f4"
+        );
+        assert_eq!(
+            receipt["model"]["hash_coverage"]["primary_model_bin_sha256"],
+            "a15e9535aaf4c8286b7b45f0490dca593cc751450c3b832416ad377bb190b2a9"
+        );
+        assert!(
+            receipt["model"]["hash_coverage"]["missing_required_openvino_ir_files"]
+                .as_array()
+                .is_some_and(|items| items.is_empty())
+        );
         assert_eq!(receipt["tokenizer_source"], "hf_tokenizer_export");
         assert_eq!(receipt["prompt"]["token_ids"], serde_json::json!([1, 2, 3]));
         assert_eq!(receipt["tokens"]["generated_count"], 9);
