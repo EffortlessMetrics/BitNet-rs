@@ -13017,6 +13017,66 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-GOAL-AUDIT-040"
+status = "pr_open"
+pr = 6259
+head_sha = "49078d931428d126b16a8a501059937d941ac813"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-040-power006-wording-guard"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-039"]
+acceptance = "Add a campaign check guard that rejects stale no-inference objective-artifact wording which makes POWER-006 the current low_power blocker after POWER-013 has become the active blocker. Scope the guard to the intel-258v-platform audit/checklist artifacts, keep POWER-006 historical evidence wording allowed, and preserve no inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, measured-temperature claim, native accelerator proof, broad quality claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "Get-CimInstance -ClassName Win32_Battery | Select-Object Name,BatteryStatus,EstimatedChargeRemaining,PowerManagementSupported | Format-List # observed BatteryStatus=2 and EstimatedChargeRemaining=100 on 2026-05-30",
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 xtask/src/campaign.rs",
+  "cargo test --locked -p xtask --no-default-features --bin xtask campaign::tests::campaign_rejects_stale_power006_current_blocker_artifact_wording -- --exact --nocapture",
+  "rg -n 'POWER-006 remains the active low_power battery-mode blocker|until POWER-006 battery-mode evidence|until POWER-006 has real battery-mode telemetry' ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json # expected no matches",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "xtask/src/campaign.rs",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/hardware/intel-258v/2026-05-08/**",
+]
+may_claim = [
+  "campaign check now rejects stale current-blocker wording in intel-258v objective artifacts when those artifacts make POWER-006 the active low_power blocker.",
+  "POWER-006 historical battery-mode telemetry, energy-proxy, and CPU/GPU/NPU candidate ask evidence wording remains allowed.",
+  "POWER-013 remains the active low_power blocker until benchmark-qualified battery-mode power advantage and preserved thermal context exist.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted or demoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Runtime or sidecar behavior changed for Lunar Lake.",
+  "Qwen3 is promoted on Lunar Lake.",
+  "Source promotion is complete.",
+  "Model binaries are committed or required by this PR.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-013"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-013-low-power-power-advantage"

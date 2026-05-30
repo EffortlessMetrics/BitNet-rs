@@ -1,0 +1,14 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T17:35:11Z"
+event = "in_progress"
+item = "LNL258V-GOAL-AUDIT-040"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-040-power006-wording-guard"
+actor = "codex"
+summary = "Started a campaign-check guard for stale POWER-006 current-blocker wording."
+
+notes = [
+  "The live host still reports BatteryStatus=2 on 2026-05-30, so POWER-013 remains AC-only blocked.",
+  "This item adds automated enforcement after GOAL-AUDIT-039 so objective artifacts keep POWER-013 as the active low_power blocker.",
+  "POWER-006 remains allowed as historical battery-mode telemetry, energy-proxy, and CPU/GPU/NPU candidate ask evidence.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]
