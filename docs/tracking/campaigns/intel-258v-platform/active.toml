@@ -12802,9 +12802,10 @@ must_not_claim = [
 
 [[work_item]]
 id = "LNL258V-POWER-017"
-status = "pr_open"
+status = "merged"
 pr = 6253
-head_sha = "693b10d68a46b90a2bf7f8943746ac3d6acfddb4"
+head_sha = "fb38fface723e968c052e6d6aca373e307ec2c53"
+merge_sha = "7f16728b6902ff96cd4f1781d541ae33a2d4b5e3"
 branch = "codex/lunar-lake/LNL258V-POWER-017-low-power-plan-thermal-preflight"
 stackable = false
 review_mode = "codex_premerge"

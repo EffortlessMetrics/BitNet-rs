@@ -1,0 +1,19 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T16:02:42Z"
+event = "merged"
+item = "LNL258V-POWER-017"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6253
+head_sha = "fb38fface723e968c052e6d6aca373e307ec2c53"
+merge_sha = "7f16728b6902ff96cd4f1781d541ae33a2d4b5e3"
+branch = "codex/lunar-lake/LNL258V-POWER-017-low-power-plan-thermal-preflight"
+actor = "codex"
+summary = "Merged the low_power battery plan thermal preflight alignment."
+
+notes = [
+  "PR #6253 merged after live checks were green and GitHub reported the branch mergeable.",
+  "The machine-readable low_power battery plan now includes MSAcpi and Windows thermal-zone counter preflight commands.",
+  "The plan preserves MSAcpi access-denied and CookedValue=0 as thermal-unavailable blockers and keeps measured_temperature_claim=false.",
+  "POWER-013 remains blocked until benchmark-qualified battery-mode low_power power advantage and preserved thermal context exist.",
+]
