@@ -12595,6 +12595,85 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-REG-015"
+status = "pr_open"
+pr = 6247
+head_sha = "a3529497ff75b0e30e36a996554bfb0a58a0dabe"
+branch = "codex/lunar-lake/LNL258V-REG-015-default-auto-cpu-ask"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-REG-014", "LNL258V-ASK-003"]
+acceptance = "Make strict Lunar Lake regression index the successful default auto CPU operator ask receipt so regress and compare expose that bitnet lunar-lake ask auto selects dense_slm_default_cpu for ask_normal with selected_backend=cpu-rust, runtime_api=cpu, fallback_used=false, answer_gate_passed=true, generated-token evidence, and GGUF model SHA256 coverage. Refresh regression-v2 and operator-comparison artifacts without running inference or changing route promotion, fallback behavior, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3, or BitNet QK256/I2_S behavior claims."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::default_auto_cpu_ask_receipt_is_regression_ready -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::regression_bundle_v2_indexes_default_auto_cpu_ask_receipt -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::ask_short_auto_gpu_ask_receipt_is_regression_ready -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli commands::lunar_lake::tests::operator_ask_regression_requires_model_hash_coverage -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake regress --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --answer-corpus-v2 ci/quality/lunar-lake-answer-corpus-v2.yaml --route-profile-comparison lunar-lake-route-profile-comparison.json --cold-warm-benchmark lunar-lake-cold-warm-profile-benchmark.json --durability-bundle lunar-lake-durability-bundle.json --bitnet-semantic-intake lunar-lake-bitnet-semantic-intake.json --power-profile-evidence lunar-lake-power-profile-evidence.json --thermal-temperature-availability lunar-lake-thermal-temperature-availability.json --default-auto-ask-receipt lunar-lake-operator-ask-auto-math-brief.json --ask-short-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-short-math-brief.json --ask-normal-ask-receipt lunar-lake-operator-ask-auto-gpu-ask-normal-math-brief.json --warm-resident-ask-receipt lunar-lake-operator-ask-auto-npu-warm-resident-math-brief.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json --created-utc 2026-05-30T13:25:00Z --strict",
+  "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc 2026-05-30T13:25:10Z --strict",
+  "powershell -NoProfile -Command \"$r = Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json -Raw | ConvertFrom-Json; if (-not $r.default_auto_ask_receipt.regression_ready) { throw 'default auto ask missing from regression' }; if (-not $r.regression_surface.default_auto_ask_ready) { throw 'default auto ask missing from regression surface' }; $c = Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json -Raw | ConvertFrom-Json; if (-not $c.default_auto_ask_receipt.regression_ready) { throw 'default auto ask missing from comparison' }; if (-not $c.regression_surface.default_auto_ask_ready) { throw 'default auto ask missing from comparison surface' }\"",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-cold-warm-profile-benchmark.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-energy-proxy.json",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "Strict Lunar Lake regression now indexes the successful default auto CPU ask receipt.",
+  "The default auto ask summary proves auto/auto ask_normal selected dense_slm_default_cpu with selected_backend=cpu-rust, runtime_api=cpu, fallback_used=false, answer_gate_passed=true, generated-token evidence, and GGUF model SHA256 coverage.",
+  "The operator comparison carries the default auto CPU ask summary and regression-surface readiness bit.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted or demoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Runtime or sidecar behavior changed for Lunar Lake.",
+  "Qwen3 is promoted on Lunar Lake.",
+  "Source promotion is complete.",
+  "Model binaries are committed or required by this PR.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-013"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-013-low-power-power-advantage"
