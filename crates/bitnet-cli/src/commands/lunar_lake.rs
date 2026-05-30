@@ -2660,6 +2660,19 @@ pub struct PowerProfileClaimBoundary {
     pub hidden_fallback_allowed: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct LowPowerBatteryPlanClaimBoundary {
+    pub new_inference_executed: bool,
+    pub route_promotion_changed: bool,
+    pub speedup_claim: bool,
+    pub power_advantage_claim: bool,
+    pub measured_temperature_claim: bool,
+    pub acceleration_claim: bool,
+    pub native_npu_inference_claim: bool,
+    pub bitnet_qk256_i2s_behavior_changed: bool,
+    pub hidden_fallback_allowed: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LunarLakeLowPowerEnergyProxy {
     pub schema_version: String,
@@ -2707,7 +2720,7 @@ pub struct LunarLakeLowPowerBatteryPlan {
     pub required_artifacts: Vec<String>,
     pub command_sequence: Vec<LowPowerBatteryPlanCommand>,
     pub promotion_rule: Vec<String>,
-    pub claim_boundary: PowerProfileClaimBoundary,
+    pub claim_boundary: LowPowerBatteryPlanClaimBoundary,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -9525,11 +9538,12 @@ pub fn build_low_power_battery_plan_with_created_utc(
         && blocked_runbook.as_deref() == Some(LOW_POWER_BATTERY_RUNBOOK)
         && power_mentions_low_power_next_gate
         && blocked_mentions_low_power_next_gate;
-    let claim_boundary = PowerProfileClaimBoundary {
+    let claim_boundary = LowPowerBatteryPlanClaimBoundary {
         new_inference_executed: false,
         route_promotion_changed: false,
         speedup_claim: false,
         power_advantage_claim: false,
+        measured_temperature_claim: false,
         acceleration_claim: false,
         native_npu_inference_claim: false,
         bitnet_qk256_i2s_behavior_changed: false,
@@ -9540,6 +9554,7 @@ pub fn build_low_power_battery_plan_with_created_utc(
         && !claim_boundary.route_promotion_changed
         && !claim_boundary.speedup_claim
         && !claim_boundary.power_advantage_claim
+        && !claim_boundary.measured_temperature_claim
         && !claim_boundary.acceleration_claim
         && !claim_boundary.native_npu_inference_claim
         && !claim_boundary.bitnet_qk256_i2s_behavior_changed
@@ -9620,6 +9635,7 @@ fn low_power_battery_plan_promotion_rule() -> Vec<String> {
         "timing is stable for the sampled profile",
         "before and after telemetry receipts are valid battery-mode samples",
         "power-profile evidence records benchmark-qualified power advantage",
+        "thermal context is preserved, with measured temperatures recorded only when the OS exposes usable readings",
         "strict regression and operator comparison preserve the same decision",
     ]
     .into_iter()
@@ -9640,6 +9656,22 @@ fn low_power_battery_plan_commands() -> Vec<LowPowerBatteryPlanCommand> {
             stop_if: vec!["BatteryStatus=2 or telemetry-context --require-battery reports ac_power_inferred=true".to_string()],
         },
         LowPowerBatteryPlanCommand {
+            step: "thermal_preflight".to_string(),
+            purpose: "Check whether Windows exposes usable thermal readings before collecting low_power route samples.".to_string(),
+            command: vec![
+                "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object InstanceName, CurrentTemperature, CriticalTripPoint | Format-List".to_string(),
+                "Get-Counter '\\Thermal Zone Information(*)\\Temperature' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty CounterSamples | Select-Object Path, CookedValue, Status | Format-List".to_string(),
+            ],
+            continue_if: vec![
+                "usable readings are recorded as measured thermal temperatures, or unavailable state is preserved explicitly as a blocker".to_string(),
+                "MSAcpi access-denied and thermal-zone CookedValue=0 are not treated as measured temperatures".to_string(),
+            ],
+            stop_if: vec![
+                "a zero or unavailable thermal reading would be recorded as a measured temperature".to_string(),
+                "any refreshed artifact would set measured_temperature_claim=true without usable readings".to_string(),
+            ],
+        },
+        LowPowerBatteryPlanCommand {
             step: "battery_start_receipt".to_string(),
             purpose: "Capture the before telemetry sample with strict battery enforcement.".to_string(),
             command: vec![
@@ -9650,6 +9682,7 @@ fn low_power_battery_plan_commands() -> Vec<LowPowerBatteryPlanCommand> {
                 "capture_requirements.battery_mode_sample_recorded=true".to_string(),
                 "capture_requirements.requirement_satisfied=true".to_string(),
                 "power.ac_power_inferred=false".to_string(),
+                "thermal fields are present; if no usable temperature exists, the receipt keeps the thermal-unavailable blocker explicit".to_string(),
             ],
             stop_if: vec!["strict mode fails after writing a blocked receipt".to_string()],
         },
@@ -9696,7 +9729,7 @@ fn low_power_battery_plan_commands() -> Vec<LowPowerBatteryPlanCommand> {
                 "target/debug/bitnet.exe lunar-lake compare --artifact-root ci/hardware/intel-258v/2026-05-08 --operator-receipt lunar-lake-operator-readiness.json --regression-bundle lunar-lake-regression-bundle-v2.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json --created-utc <battery-run-end-utc> --strict".to_string(),
             ],
             continue_if: vec!["power-profile, regression, and comparison preserve fallback=false and the same route decision".to_string()],
-            stop_if: vec!["any refreshed artifact claims promotion, speedup, power advantage, native accelerator execution, or BitNet QK256/I2_S behavior without explicit promotion-lane proof".to_string()],
+            stop_if: vec!["any refreshed artifact claims promotion, speedup, power advantage, measured temperature, native accelerator execution, or BitNet QK256/I2_S behavior without explicit promotion-lane proof".to_string()],
         },
     ]
 }
@@ -21585,6 +21618,23 @@ mod tests {
                     .any(|command| command.contains("telemetry-context --artifact-root"))
                 && step.command.iter().any(|command| command.contains("--require-battery"))
         }));
+        let thermal_step = receipt
+            .command_sequence
+            .iter()
+            .find(|step| step.step == "thermal_preflight")
+            .context("missing thermal_preflight step")?;
+        assert!(
+            thermal_step
+                .command
+                .iter()
+                .any(|command| command.contains("MSAcpi_ThermalZoneTemperature"))
+        );
+        assert!(thermal_step.command.iter().any(|command| {
+            command.contains("Thermal Zone Information") && command.contains("CookedValue")
+        }));
+        assert!(thermal_step.continue_if.iter().any(|condition| {
+            condition.contains("unavailable state is preserved explicitly as a blocker")
+        }));
         let route_sample_step = receipt
             .command_sequence
             .iter()
@@ -21628,7 +21678,12 @@ mod tests {
         assert!(!receipt.claim_boundary.new_inference_executed);
         assert!(!receipt.claim_boundary.route_promotion_changed);
         assert!(!receipt.claim_boundary.power_advantage_claim);
+        assert!(!receipt.claim_boundary.measured_temperature_claim);
         assert!(!receipt.claim_boundary.bitnet_qk256_i2s_behavior_changed);
+        assert!(receipt.promotion_rule.iter().any(|rule| {
+            rule.contains("thermal context is preserved")
+                && rule.contains("measured temperatures recorded only when")
+        }));
         Ok(())
     }
 

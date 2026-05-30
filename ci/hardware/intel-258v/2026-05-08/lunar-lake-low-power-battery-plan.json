@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_low_power_battery_plan",
   "proof_stage": "low_power_battery_operator_plan_no_evidence_no_promotion_change",
-  "created_utc": "2026-05-30T10:28:27Z",
+  "created_utc": "2026-05-30T15:36:32Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
@@ -45,6 +45,22 @@
       ]
     },
     {
+      "step": "thermal_preflight",
+      "purpose": "Check whether Windows exposes usable thermal readings before collecting low_power route samples.",
+      "command": [
+        "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature | Select-Object InstanceName, CurrentTemperature, CriticalTripPoint | Format-List",
+        "Get-Counter '\\Thermal Zone Information(*)\\Temperature' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty CounterSamples | Select-Object Path, CookedValue, Status | Format-List"
+      ],
+      "continue_if": [
+        "usable readings are recorded as measured thermal temperatures, or unavailable state is preserved explicitly as a blocker",
+        "MSAcpi access-denied and thermal-zone CookedValue=0 are not treated as measured temperatures"
+      ],
+      "stop_if": [
+        "a zero or unavailable thermal reading would be recorded as a measured temperature",
+        "any refreshed artifact would set measured_temperature_claim=true without usable readings"
+      ]
+    },
+    {
       "step": "battery_start_receipt",
       "purpose": "Capture the before telemetry sample with strict battery enforcement.",
       "command": [
@@ -54,7 +70,8 @@
         "capture_requirements.battery_mode_required=true",
         "capture_requirements.battery_mode_sample_recorded=true",
         "capture_requirements.requirement_satisfied=true",
-        "power.ac_power_inferred=false"
+        "power.ac_power_inferred=false",
+        "thermal fields are present; if no usable temperature exists, the receipt keeps the thermal-unavailable blocker explicit"
       ],
       "stop_if": [
         "strict mode fails after writing a blocked receipt"
@@ -116,7 +133,7 @@
         "power-profile, regression, and comparison preserve fallback=false and the same route decision"
       ],
       "stop_if": [
-        "any refreshed artifact claims promotion, speedup, power advantage, native accelerator execution, or BitNet QK256/I2_S behavior without explicit promotion-lane proof"
+        "any refreshed artifact claims promotion, speedup, power advantage, measured temperature, native accelerator execution, or BitNet QK256/I2_S behavior without explicit promotion-lane proof"
       ]
     }
   ],
@@ -126,6 +143,7 @@
     "timing is stable for the sampled profile",
     "before and after telemetry receipts are valid battery-mode samples",
     "power-profile evidence records benchmark-qualified power advantage",
+    "thermal context is preserved, with measured temperatures recorded only when the OS exposes usable readings",
     "strict regression and operator comparison preserve the same decision"
   ],
   "claim_boundary": {
@@ -133,6 +151,7 @@
     "route_promotion_changed": false,
     "speedup_claim": false,
     "power_advantage_claim": false,
+    "measured_temperature_claim": false,
     "acceleration_claim": false,
     "native_npu_inference_claim": false,
     "bitnet_qk256_i2s_behavior_changed": false,

@@ -1,0 +1,13 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T15:36:32Z"
+event = "in_progress"
+item = "LNL258V-POWER-017"
+branch = "codex/lunar-lake/LNL258V-POWER-017-low-power-plan-thermal-preflight"
+actor = "codex"
+summary = "Started the machine-readable low_power plan thermal preflight follow-up."
+
+notes = [
+  "The follow-up aligns the low_power battery plan generator and committed JSON with the POWER-016 thermal preflight runbook.",
+  "The plan must include MSAcpi and Windows thermal-zone counter commands while preserving MSAcpi access-denied and CookedValue=0 as thermal-unavailable blockers, not measured temperatures.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]

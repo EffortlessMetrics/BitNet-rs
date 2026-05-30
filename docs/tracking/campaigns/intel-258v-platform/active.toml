@@ -12801,6 +12801,82 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-POWER-017"
+status = "pr_open"
+pr = 6253
+head_sha = "693b10d68a46b90a2bf7f8943746ac3d6acfddb4"
+branch = "codex/lunar-lake/LNL258V-POWER-017-low-power-plan-thermal-preflight"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-POWER-016", "LNL258V-POWER-010"]
+acceptance = "Update the machine-readable Lunar Lake low_power battery plan so the generated plan mirrors the POWER-016 runbook thermal preflight: include MSAcpi and Windows thermal-zone counter commands, treat MSAcpi access-denied and CookedValue=0 as thermal-unavailable blockers rather than measured-temperature evidence, add an explicit measured_temperature_claim=false boundary, refresh the committed low-power plan JSON, and preserve no new inference, no route promotion, no speedup claim, no power-advantage claim, no measured-temperature claim, no native accelerator proof, no broad quality claim, no Qwen3 Lunar Lake promotion, and no BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "cargo fmt --check -p bitnet-cli",
+  "cargo test -p bitnet-cli --no-default-features --features cpu,full-cli low_power_battery_plan -- --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake low-power-plan --artifact-root ci/hardware/intel-258v/2026-05-08 --power-profile-evidence lunar-lake-power-profile-evidence.json --blocked-ask-receipt lunar-lake-operator-ask-auto-low-power-blocked.json --battery-telemetry-context lunar-lake-low-power-battery-telemetry-blocked.json --json-out ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-plan.json --created-utc 2026-05-30T15:36:32Z --strict",
+  "powershell -NoProfile -Command '$p = Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-plan.json -Raw | ConvertFrom-Json; $thermal = $p.command_sequence | Where-Object step -eq thermal_preflight; if (-not $thermal) { throw \"missing thermal_preflight\" }; if (-not (($thermal.command -join \"`n\") -match \"MSAcpi_ThermalZoneTemperature\")) { throw \"missing MSAcpi preflight\" }; if (-not (($thermal.command -join \"`n\") -match \"Thermal Zone Information\")) { throw \"missing thermal-zone counter preflight\" }; if ($p.claim_boundary.measured_temperature_claim) { throw \"measured temperature claim leaked\" }; if (-not (($p.promotion_rule -join \"`n\") -match \"thermal context is preserved\")) { throw \"missing thermal promotion rule\" }'",
+  "rg -n '\"measured_temperature_claim\": true|\"power_advantage_claim\": true|\"route_promotion_changed\": true|\"speedup_claim\": true|\"acceleration_claim\": true|\"native_npu_inference_claim\": true|\"bitnet_qk256_i2s_behavior_changed\": true' ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-plan.json # expected no matches",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-plan.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+may_claim = [
+  "The low_power battery plan generator now surfaces the POWER-016 thermal preflight commands and blocker handling.",
+  "The committed low_power battery plan records MSAcpi access-denied and zero-valued thermal-zone counters as thermal-unavailable blockers rather than measured-temperature evidence.",
+  "The low_power battery plan now has an explicit measured_temperature_claim=false boundary.",
+  "low_power remains unpromoted until benchmark-qualified battery-mode power advantage and usable thermal context exist.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted or demoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Runtime or sidecar behavior changed for Lunar Lake.",
+  "Qwen3 is promoted on Lunar Lake.",
+  "Source promotion is complete.",
+  "Model binaries are committed or required by this PR.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-013"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-013-low-power-power-advantage"
