@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T12:02:24Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-036"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6243
+head_sha = "d5b2d941b0440c1f1d84d755bbf15fe24fe5eeca"
+merge_sha = "a622e50826d1de8c2defda9615d01f66c50c2797"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-036-power015-audit-refresh"
+actor = "codex"
+summary = "Merged the no-inference audit refresh after POWER-015 comparative energy-proxy coverage landed."
+
+notes = [
+  "PR #6243 merged after required checks were green and GitHub reported the branch mergeable.",
+  "The merged audit/checklist refresh records PR #6241 and closeout #6242 as comparative low_power energy-proxy coverage plumbing only.",
+  "POWER-013 remains blocked until benchmark-qualified low_power power advantage and measured thermal readings exist.",
+]
