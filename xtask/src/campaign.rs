@@ -9,6 +9,16 @@ use std::process::Command;
 const CAMPAIGNS_DIR: &str = "docs/tracking/campaigns";
 const GENERATED_DIR: &str = "docs/tracking/generated";
 const GENERATED_HEADER: &str = "<!-- GENERATED: do not edit by hand. Run cargo run -p xtask --no-default-features -- campaign generate. -->\n";
+const INTEL_258V_CAMPAIGN_ID: &str = "intel-258v-platform";
+const INTEL_258V_GOAL_ARTIFACTS: &[&str] = &[
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+    "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+];
+const INTEL_258V_STALE_POWER006_CURRENT_BLOCKER_PHRASES: &[&str] = &[
+    "POWER-006 remains the active low_power battery-mode blocker",
+    "until POWER-006 battery-mode evidence",
+    "until POWER-006 has real battery-mode telemetry",
+];
 
 const WORK_ITEM_STATUSES: &[&str] =
     &["proposed", "ready", "in_progress", "pr_open", "blocked", "merged", "superseded"];
@@ -275,7 +285,8 @@ fn cmd_next(root: &Path, campaign_id: &str) -> Result<()> {
 
 fn cmd_check(root: &Path, campaign_id: &str) -> Result<()> {
     let campaign = load_campaign(root, campaign_id)?;
-    let problems = validate_campaign(&campaign);
+    let mut problems = validate_campaign(&campaign);
+    problems.extend(validate_campaign_repository_artifacts(root, &campaign));
     print_problems(&problems);
     fail_on_errors(&problems)?;
     println!("campaign check passed: {campaign_id}");
@@ -326,6 +337,7 @@ fn cmd_doctor(root: &Path) -> Result<()> {
 
     for campaign in &campaigns {
         problems.extend(validate_campaign(campaign));
+        problems.extend(validate_campaign_repository_artifacts(root, campaign));
         for item in &campaign.manifest.work_items {
             item_ids.entry(&item.id).or_default().push(&campaign.manifest.id);
             if !item.branch.trim().is_empty() {
@@ -643,6 +655,45 @@ fn validate_campaign(campaign: &LoadedCampaign) -> Vec<Problem> {
     }
 
     problems
+}
+
+fn validate_campaign_repository_artifacts(root: &Path, campaign: &LoadedCampaign) -> Vec<Problem> {
+    if campaign.manifest.id != INTEL_258V_CAMPAIGN_ID {
+        return Vec::new();
+    }
+
+    validate_intel_258v_goal_artifact_wording(root)
+}
+
+fn validate_intel_258v_goal_artifact_wording(root: &Path) -> Vec<Problem> {
+    let mut problems = Vec::new();
+    for artifact in INTEL_258V_GOAL_ARTIFACTS {
+        let path = root.join(artifact);
+        let raw = match fs::read_to_string(&path) {
+            Ok(raw) => raw,
+            Err(error) => {
+                problems.push(Problem::error(format!(
+                    "intel-258v objective artifact `{artifact}` could not be read: {error}"
+                )));
+                continue;
+            }
+        };
+
+        for phrase in stale_power006_current_blocker_phrases(&raw) {
+            problems.push(Problem::error(format!(
+                "intel-258v objective artifact `{artifact}` contains stale POWER-006 current-blocker wording `{phrase}`; POWER-013 must remain the active low_power blocker and POWER-006 must be historical evidence"
+            )));
+        }
+    }
+    problems
+}
+
+fn stale_power006_current_blocker_phrases(raw: &str) -> Vec<&'static str> {
+    INTEL_258V_STALE_POWER006_CURRENT_BLOCKER_PHRASES
+        .iter()
+        .copied()
+        .filter(|phrase| raw.contains(phrase))
+        .collect()
 }
 
 fn item_map(manifest: &CampaignManifest) -> BTreeMap<&str, &WorkItem> {
@@ -1297,7 +1348,8 @@ fn fail_on_errors(problems: &[Problem]) -> Result<()> {
 mod tests {
     use super::{
         CampaignManifest, LoadedCampaign, Severity, TextList, WorkItem, current_item,
-        normalize_newlines, parse_pull_request_ref, text_contains_item_token, validate_campaign,
+        normalize_newlines, parse_pull_request_ref, stale_power006_current_blocker_phrases,
+        text_contains_item_token, validate_campaign,
     };
     use std::path::PathBuf;
 
@@ -1332,6 +1384,26 @@ mod tests {
             "M4-001"
         ));
         assert!(!text_contains_item_token("Work item: SLM-M4-001", "M4-001"));
+    }
+
+    #[test]
+    fn campaign_rejects_stale_power006_current_blocker_artifact_wording() {
+        assert_eq!(
+            stale_power006_current_blocker_phrases(
+                "POWER-006 remains the active low_power battery-mode blocker; low_power remains incomplete until POWER-006 battery-mode evidence exists and until POWER-006 has real battery-mode telemetry"
+            ),
+            vec![
+                "POWER-006 remains the active low_power battery-mode blocker",
+                "until POWER-006 battery-mode evidence",
+                "until POWER-006 has real battery-mode telemetry"
+            ]
+        );
+        assert_eq!(
+            stale_power006_current_blocker_phrases(
+                "POWER-006 remains recorded as historical battery-mode telemetry evidence."
+            ),
+            Vec::<&'static str>::new()
+        );
     }
 
     #[test]
