@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-30T04:15:00Z",
+  "created_utc": "2026-05-30T05:03:10Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -158,7 +158,8 @@
   ],
   "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
   "next_required_evidence": [
-    "record thermal temperatures if available; current thermal evidence is zone visibility only",
+    "collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion",
+    "record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker",
     "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
   ],
   "claim_boundary": {
