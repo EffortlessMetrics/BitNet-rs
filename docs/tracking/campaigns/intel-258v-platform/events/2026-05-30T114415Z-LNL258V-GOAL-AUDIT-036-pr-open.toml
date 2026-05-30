@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T11:44:15Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-036"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6243
+head_sha = "a214cae25046954d590240471f27d735c25f8f0d"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-036-power015-audit-refresh"
+actor = "codex"
+summary = "Opened the no-inference audit refresh after POWER-015 comparative energy-proxy coverage."
+
+notes = [
+  "PR #6243 records POWER-015 PR #6241 and closeout #6242 as comparative low_power energy-proxy coverage plumbing only.",
+  "The audit/checklist now point at current main 75ac79a4a67913c22112adb4e085d78679c1ed61 while preserving low_power blocked state.",
+  "The PR makes no inference, route-promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3, or BitNet QK256/I2_S behavior claim.",
+]
