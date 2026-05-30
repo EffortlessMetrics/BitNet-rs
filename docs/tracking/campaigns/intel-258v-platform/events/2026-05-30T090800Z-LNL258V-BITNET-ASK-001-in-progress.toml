@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T09:08:00Z"
+event = "in_progress"
+item = "LNL258V-BITNET-ASK-001"
+previous_status = "none"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-BITNET-ASK-001-strict-cpu-reference-ask"
+actor = "codex"
+summary = "Started strict CPU BitNet reference support for Lunar Lake ask."
+
+notes = [
+  "The work item enables explicit bitnet_reference_cpu execution through bitnet lunar-lake ask with strict CPU receipt validation.",
+  "The scope preserves dense Qwen CPU as the default route and leaves OpenVINO GPU/NPU promotion unchanged.",
+  "A bounded live 258V math ask receipt will be committed without speedup, power, acceleration, broad quality, or BitNet behavior-change claims.",
+]

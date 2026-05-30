@@ -11488,15 +11488,12 @@ pub fn load_operator_ask_route(
         .iter()
         .find(|route| route.route_id == route_id)
         .with_context(|| format!("operator route `{route_id}` not found"))?;
-    if route.workload == "bitnet_strict" {
-        bail!(
-            "Lunar Lake ask keeps route `{}` as a BitNet CPU reference-only route; use `bitnet lunar-lake validate`, `regress`, or `compare` for bitnet_strict_reference evidence until executable BitNet ask support is separately implemented",
-            route.route_id
-        );
-    }
     if !matches!(
         route.workload.as_str(),
-        "ask" | "dense_slm_acceleration_candidate" | "dense_slm_static_graph_candidate"
+        "ask"
+            | "dense_slm_acceleration_candidate"
+            | "dense_slm_static_graph_candidate"
+            | "bitnet_strict"
     ) {
         bail!("Lunar Lake ask route has unexpected workload `{}`", route.workload);
     }
@@ -11542,6 +11539,7 @@ fn validate_lunar_lake_ask_route_runtime(route: &OperatorRoute) -> Result<()> {
             "openvino_genai",
             "openvino-genai-llmpipeline-npu",
         ) => Ok(()),
+        ("bitnet_reference_cpu", "intel-258v-cpu-avx2", "cpu", "qk256/i2_s-cpu") => Ok(()),
         _ => bail!(
             "Lunar Lake ask route `{}` has unsupported runtime identity {}/{}/{}",
             route.route_id,
@@ -11947,8 +11945,14 @@ fn validate_operator_ask_requested_device(
     }
 
     let normalized = requested_device.to_ascii_lowercase();
-    let route_is_cpu = route.selected_backend == "cpu-rust" && route.runtime_api == "cpu";
-    if route_is_cpu && matches!(normalized.as_str(), "cpu" | "cpu-rust" | DEFAULT_ASK_ROUTE) {
+    let route_is_cpu = route.runtime_api == "cpu"
+        && matches!(route.selected_backend.as_str(), "cpu-rust" | "intel-258v-cpu-avx2");
+    if route_is_cpu
+        && matches!(
+            normalized.as_str(),
+            "cpu" | "cpu-rust" | "intel-258v-cpu-avx2" | DEFAULT_ASK_ROUTE | "bitnet_reference_cpu"
+        )
+    {
         return Ok(());
     }
     if route.selected_backend == "openvino-gpu"
@@ -22566,7 +22570,7 @@ mod tests {
     }
 
     #[test]
-    fn ask_route_rejects_bitnet_reference_with_boundary_message() -> Result<()> {
+    fn ask_route_loads_bitnet_reference_cpu() -> Result<()> {
         let temp = tempfile::tempdir()?;
         write_minimal_receipts(temp.path(), false)?;
         let operator = build_operator_readiness_receipt_with_created_utc(
@@ -22575,18 +22579,18 @@ mod tests {
         )?;
         fs::write(temp.path().join(OPERATOR_READINESS), serde_json::to_vec_pretty(&operator)?)?;
 
-        let err = load_operator_ask_route(
+        let route = load_operator_ask_route(
             temp.path(),
             Path::new(OPERATOR_READINESS),
             "bitnet_reference_cpu",
-        )
-        .unwrap_err()
-        .to_string();
+        )?;
 
-        assert!(err.contains("BitNet CPU reference-only route"), "got: {err}");
-        assert!(err.contains("validate"), "got: {err}");
-        assert!(err.contains("regress"), "got: {err}");
-        assert!(err.contains("compare"), "got: {err}");
+        assert_eq!(route.route_id, "bitnet_reference_cpu");
+        assert_eq!(route.workload, "bitnet_strict");
+        assert_eq!(route.selected_backend, "intel-258v-cpu-avx2");
+        assert_eq!(route.runtime_api, "cpu");
+        assert_eq!(route.selected_kernel_or_runtime, "qk256/i2_s-cpu");
+        assert!(!route.acceleration_claim);
         Ok(())
     }
 
@@ -22731,6 +22735,32 @@ mod tests {
             reason.contains("route status is `candidate`")
                 || reason.contains("route is not promoted for profile")
         }));
+        Ok(())
+    }
+
+    #[test]
+    fn auto_ask_selects_bitnet_reference_for_strict_profile() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        write_auto_ask_selection_artifacts(temp.path())?;
+
+        let selection = resolve_operator_ask_route_selection(
+            temp.path(),
+            Path::new(OPERATOR_READINESS),
+            Path::new(ROUTE_PROMOTION_LEDGER),
+            Some(Path::new(ROUTE_PROFILE_COMPARISON)),
+            "auto",
+            "auto",
+            "bitnet_strict_reference",
+        )?;
+
+        assert_eq!(selection.selection_source, "promotion_ledger_auto");
+        assert_eq!(selection.selected_route, "bitnet_reference_cpu");
+        assert_eq!(selection.promotion_status, "promoted");
+        assert_eq!(selection.selected_backend, "intel-258v-cpu-avx2");
+        assert_eq!(selection.runtime_api, "cpu");
+        assert_eq!(selection.route_profile_status.as_deref(), Some("promoted_route_ready"));
+        assert!(selection.route_profile_blockers.is_empty());
+        assert!(selection.route_reason.contains("BitNet CPU"));
         Ok(())
     }
 
