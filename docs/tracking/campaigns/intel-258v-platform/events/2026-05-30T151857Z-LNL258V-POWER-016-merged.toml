@@ -1,0 +1,19 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T15:18:57Z"
+event = "merged"
+item = "LNL258V-POWER-016"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6251
+head_sha = "eb8dc4cec315a86c125fa4d654cd6a0bed895c56"
+merge_sha = "0ff8b7b95061b738a355ce7d4964b7f3c608c2a3"
+branch = "codex/lunar-lake/LNL258V-POWER-016-low-power-thermal-preflight"
+actor = "codex"
+summary = "Merged the low_power thermal preflight runbook clarification."
+
+notes = [
+  "PR #6251 merged after required checks were green and GitHub reported the branch mergeable.",
+  "The runbook now tells operators how to preflight MSAcpi thermal access and Windows thermal-zone counter values before the physical POWER-013 battery matrix.",
+  "MSAcpi access-denied and zero-valued thermal-zone counters remain thermal-unavailable blockers, not measured-temperature evidence.",
+  "POWER-013 remains blocked until benchmark-qualified battery-mode low_power power advantage exists.",
+]
