@@ -69,6 +69,10 @@ const BITNET_CPP_ANSWER_TEMPLATE: &str = "bitnetcpp-answer";
 #[cfg(feature = "full-cli")]
 const LUNAR_LAKE_OPENVINO_MODEL_DIR_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_MODEL_DIR";
 #[cfg(feature = "full-cli")]
+const LUNAR_LAKE_BITNET_MODEL_ENV: &str = "BITNET_LUNAR_LAKE_BITNET_MODEL";
+#[cfg(feature = "full-cli")]
+const LUNAR_LAKE_BITNET_TOKENIZER_ENV: &str = "BITNET_LUNAR_LAKE_BITNET_TOKENIZER";
+#[cfg(feature = "full-cli")]
 const LUNAR_LAKE_OPENVINO_PYTHON_ENV: &str = "BITNET_LUNAR_LAKE_OPENVINO_PYTHON";
 #[cfg(feature = "full-cli")]
 const LUNAR_LAKE_OPENVINO_IR_MODEL_SHA256_GAP: &str = "OpenVINO IR directory receipts have no-local single model SHA256; per-file OpenVINO IR and tokenizer SHA256 records are required instead of a fake model hash.";
@@ -10783,6 +10787,7 @@ async fn run_lunar_lake_ask(
     };
     let route = route_selection.route.clone();
     let model = resolve_lunar_lake_ask_model_path(&artifact_root, &route, model.as_deref())?;
+    let tokenizer = resolve_lunar_lake_ask_tokenizer_path(&route, &model, tokenizer.as_deref())?;
     let source_run_path = source_run_receipt_path(&receipt_path);
 
     let operator_receipt_path = if operator_receipt.is_absolute() || operator_receipt.exists() {
@@ -10806,6 +10811,50 @@ async fn run_lunar_lake_ask(
             expect_contains: expect_contains.as_deref(),
             json_out: &source_run_path,
         })?;
+    } else if route.route_id == "bitnet_reference_cpu" {
+        run_simple_generation(
+            "cpu",
+            model,
+            "auto".to_string(),
+            None,
+            tokenizer,
+            question.clone(),
+            max_new_tokens,
+            0.0,
+            0,
+            1.0,
+            1.1,
+            None,
+            false,
+            false,
+            true,
+            true,
+            Some(source_run_path.clone()),
+            None,
+            None,
+            false,
+            false,
+            true,
+            true,
+            0,
+            BITNET_CPP_ANSWER_TEMPLATE.to_string(),
+            false,
+            None,
+            vec!["<|eot_id|>".to_string(), "<|end_of_text|>".to_string()],
+            Vec::new(),
+            None,
+            10,
+            false,
+            None,
+            None,
+            false,
+            None,
+            false,
+            Some("lunar_lake_bitnet_strict_reference_ask".to_string()),
+            false,
+            false,
+        )
+        .await?;
     } else {
         run_simple_generation(
             "cpu",
@@ -10929,6 +10978,9 @@ fn default_lunar_lake_ask_model_path_candidates(
     artifact_root: &std::path::Path,
     route: &commands::lunar_lake::OperatorRoute,
 ) -> Result<Vec<std::path::PathBuf>> {
+    if route.route_id == "bitnet_reference_cpu" {
+        return Ok(default_lunar_lake_bitnet_model_candidates(artifact_root));
+    }
     match route.runtime_api.as_str() {
         "openvino_genai" => Ok(default_lunar_lake_openvino_model_candidates(artifact_root)),
         "cpu" => Ok(default_lunar_lake_cpu_model_candidates(artifact_root)),
@@ -10938,6 +10990,30 @@ fn default_lunar_lake_ask_model_path_candidates(
             runtime
         ),
     }
+}
+
+#[cfg(feature = "full-cli")]
+fn resolve_lunar_lake_ask_tokenizer_path(
+    route: &commands::lunar_lake::OperatorRoute,
+    model: &std::path::Path,
+    explicit_tokenizer: Option<&std::path::Path>,
+) -> Result<Option<std::path::PathBuf>> {
+    if route.route_id != "bitnet_reference_cpu" {
+        return Ok(explicit_tokenizer.map(std::path::Path::to_path_buf));
+    }
+    if let Some(tokenizer) = explicit_tokenizer {
+        return Ok(Some(tokenizer.to_path_buf()));
+    }
+
+    let candidates = default_lunar_lake_bitnet_tokenizer_candidates(model);
+    if let Some(path) = candidates.iter().find(|path| path.exists()) {
+        return Ok(Some(path.clone()));
+    }
+    let candidate_list =
+        candidates.iter().map(|path| path.display().to_string()).collect::<Vec<_>>().join(", ");
+    anyhow::bail!(
+        "lunar-lake BitNet strict reference ask requires --tokenizer or {LUNAR_LAKE_BITNET_TOKENIZER_ENV}=<tokenizer.json>; checked: {candidate_list}"
+    )
 }
 
 #[cfg(feature = "full-cli")]
@@ -10966,6 +11042,49 @@ fn default_lunar_lake_openvino_model_candidates_with_override(
         candidates.push(std::path::PathBuf::from(path));
     }
     candidates.push(std::path::PathBuf::from("models/openvino/qwen2.5-0.5b-instruct-int4-sym"));
+    dedupe_paths(candidates)
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_bitnet_model_candidates(
+    artifact_root: &std::path::Path,
+) -> Vec<std::path::PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(path) = non_empty_env_path(std::env::var_os(LUNAR_LAKE_BITNET_MODEL_ENV)) {
+        candidates.push(path);
+    }
+    if let Some(path) = non_empty_env_path(std::env::var_os("BITNET_MODEL_PATH")) {
+        candidates.push(path);
+    }
+
+    let reference_run = artifact_root
+        .join("cpu-answer-corpus-avx2-bitnetcpp-template-full-post-mechanics-runs")
+        .join("math_2_plus_2.json");
+    if let Some(run) = read_optional_json(&reference_run)
+        && let Some(path) = json_pointer_string(&run, "/model/path")
+    {
+        candidates.push(std::path::PathBuf::from(path));
+    }
+
+    candidates.push(std::path::PathBuf::from("models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf"));
+    candidates
+        .push(std::path::PathBuf::from("models/microsoft-bitnet-b1.58-2B-4T/ggml-model-i2_s.gguf"));
+    dedupe_paths(candidates)
+}
+
+#[cfg(feature = "full-cli")]
+fn default_lunar_lake_bitnet_tokenizer_candidates(
+    model: &std::path::Path,
+) -> Vec<std::path::PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(path) = non_empty_env_path(std::env::var_os(LUNAR_LAKE_BITNET_TOKENIZER_ENV)) {
+        candidates.push(path);
+    }
+    if let Some(parent) = model.parent() {
+        candidates.push(parent.join("tokenizer.json"));
+    }
+    candidates.push(std::path::PathBuf::from("models/microsoft-bitnet-b1.58-2B-4T/tokenizer.json"));
+    candidates.push(std::path::PathBuf::from("models/BitNet-b1.58-2B-4T/tokenizer.json"));
     dedupe_paths(candidates)
 }
 
@@ -11145,7 +11264,13 @@ fn lunar_lake_source_normalized_answer(source: &serde_json::Value, answer: &str)
 
 #[cfg(feature = "full-cli")]
 fn normalize_lunar_lake_answer(answer: &str) -> String {
-    answer.replace("<|im_end|>", "").replace("<|endoftext|>", "").trim().to_string()
+    answer
+        .replace("<|im_end|>", "")
+        .replace("<|eot_id|>", "")
+        .replace("<|end_of_text|>", "")
+        .replace("<|endoftext|>", "")
+        .trim()
+        .to_string()
 }
 
 #[cfg(feature = "full-cli")]
@@ -11332,19 +11457,24 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
     );
     let quantization = lunar_lake_source_value_at_any(
         ctx.source_run_receipt,
-        &["model.quant_format", "quantization"],
+        &[
+            "model.quant_format",
+            "quantization",
+            "strict_provenance.quant_format",
+            "bitnet.kernel_format",
+        ],
     );
     let tokenizer_source = lunar_lake_source_value_at_any(
         ctx.source_run_receipt,
-        &["model.tokenizer", "tokenizer_source"],
+        &["model.tokenizer", "tokenizer_source", "tokenizer.source"],
     );
     let prompt_template = lunar_lake_source_value_at_any(
         ctx.source_run_receipt,
-        &["prompt_template", "prompt_policy.prompt_template"],
+        &["prompt_template", "prompt_policy.prompt_template", "prompt_render.template_family"],
     );
     let prompt_render = lunar_lake_source_value_at_any(
         ctx.source_run_receipt,
-        &["prompt_render", "prompt_policy.rendered_prompt"],
+        &["prompt_policy.rendered_prompt", "prompt_render.rendered_text", "prompt_render"],
     );
     let prompt_token_ids = lunar_lake_source_value_at_any(
         ctx.source_run_receipt,
@@ -11368,8 +11498,13 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         lunar_lake_operator_ask_model_hash_coverage(ctx.source_run_receipt, &model_sha256);
     let model_sha256_gap = model_hash_coverage["model_sha256_gap"].clone();
     let openvino_candidate_executed = ctx.route.runtime_api == "openvino_genai";
+    let bitnet_strict_reference_executed = ctx.route.route_id == "bitnet_reference_cpu";
+    let dense_cpu_default_route_executed =
+        ctx.route.route_id == commands::lunar_lake::DEFAULT_ASK_ROUTE;
     let proof_stage = if openvino_candidate_executed {
         "operator_candidate_route_executed_through_lunar_lake_ask"
+    } else if bitnet_strict_reference_executed {
+        "bitnet_strict_reference_executed_through_lunar_lake_ask"
     } else {
         "operator_default_route_executed"
     };
@@ -11434,6 +11569,8 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
         "bitnet_qk256_i2s_claim": false,
         "arc_or_npu_execution_claim": false,
         "openvino_candidate_route_executed": openvino_candidate_executed,
+        "bitnet_strict_reference_route_executed": bitnet_strict_reference_executed,
+        "dense_cpu_default_route_executed": dense_cpu_default_route_executed,
         "known_gaps": if source_known_gaps.is_null() {
             serde_json::json!([])
         } else {
@@ -11498,17 +11635,20 @@ fn build_lunar_lake_operator_ask_receipt(ctx: LunarLakeAskReceiptContext<'_>) ->
             "selected_kernel_or_runtime": selected_kernel_or_runtime,
         },
         "dense_slm": ctx.source_run_receipt["dense_slm"].clone(),
+        "bitnet": ctx.source_run_receipt["bitnet"].clone(),
         "execution_coverage": ctx.source_run_receipt["execution_coverage"].clone(),
         "timing": ctx.source_run_receipt["timing"].clone(),
         "profile": ctx.source_run_receipt["profile"].clone(),
         "claim_boundary": {
-            "cpu_default_route_only": !openvino_candidate_executed,
+            "cpu_default_route_only": dense_cpu_default_route_executed,
             "openvino_candidate_route_executed": openvino_candidate_executed,
+            "bitnet_strict_reference_route_executed": bitnet_strict_reference_executed,
             "default_route_changed": false,
             "fallback_used": false,
             "acceleration_claim": false,
             "broad_dense_slm_quality_claim": false,
             "bitnet_qk256_i2s_claim": false,
+            "bitnet_qk256_i2s_behavior_changed": false,
             "arc_or_npu_acceleration_claim": false,
         },
         "source_receipt": ctx.source_run_receipt,
@@ -11690,13 +11830,18 @@ fn validate_lunar_lake_ask_source_receipt(
     let requested_backend_ok = if route.selected_backend == "cpu-rust" && route.runtime_api == "cpu"
     {
         matches!(requested_backend, "cpu" | "cpu-rust")
+    } else if route.route_id == "bitnet_reference_cpu" && route.runtime_api == "cpu" {
+        matches!(requested_backend, "cpu" | "cpu-rust" | "intel-258v-cpu-avx2")
     } else {
         requested_backend == route.selected_backend
     };
-    if !requested_backend_ok
-        || selected_backend != route.selected_backend
-        || runtime_api != route.runtime_api
-    {
+    let selected_backend_ok =
+        if route.route_id == "bitnet_reference_cpu" && route.runtime_api == "cpu" {
+            matches!(selected_backend, "cpu-rust" | "intel-258v-cpu-avx2")
+        } else {
+            selected_backend == route.selected_backend
+        };
+    if !requested_backend_ok || !selected_backend_ok || runtime_api != route.runtime_api {
         anyhow::bail!(
             "lunar-lake ask did not preserve route `{}`: requested_backend={requested_backend}, selected_backend={selected_backend}, runtime_api={runtime_api}",
             route.route_id
@@ -11720,6 +11865,18 @@ fn validate_lunar_lake_ask_source_receipt(
             "lunar-lake ask source receipt is missing model SHA256 or complete OpenVINO IR per-file SHA256 coverage"
         );
     }
+    let bitnet_reference_route = route.route_id == "bitnet_reference_cpu";
+    let bitnet_reference_source = source_run_receipt.get("bitnet").is_some();
+    if bitnet_reference_route {
+        if !bitnet_reference_source {
+            anyhow::bail!(
+                "lunar-lake BitNet strict reference source receipt is missing BitNet provenance"
+            );
+        }
+        validate_strict_cpu_ask_receipt(source_run_receipt)?;
+        return Ok(());
+    }
+
     let dense_slm_or_openvino_qwen = source_run_receipt.get("dense_slm").is_some()
         || (route.runtime_api == "openvino_genai"
             && source_run_receipt["model_family"].as_str() == Some("qwen")
@@ -11727,7 +11884,7 @@ fn validate_lunar_lake_ask_source_receipt(
     if !dense_slm_or_openvino_qwen {
         anyhow::bail!("lunar-lake ask source receipt is missing dense SLM provenance");
     }
-    if source_run_receipt.get("bitnet").is_some() {
+    if bitnet_reference_source {
         anyhow::bail!("lunar-lake ask source receipt unexpectedly contains BitNet provenance");
     }
     Ok(())
@@ -11738,6 +11895,8 @@ fn lunar_lake_source_kernel_matches_route(source_kernel: &str, route_kernel: &st
     source_kernel == route_kernel
         || (source_kernel == "openvino-genai-llmpipeline-gpu0"
             && route_kernel == "openvino-genai-llmpipeline-gpu")
+        || (route_kernel == "qk256/i2_s-cpu"
+            && matches!(source_kernel, "i2_s-avx2-reference" | "i2_s-scalar-reference"))
 }
 
 fn default_log_level_for_command(command: Option<&Commands>) -> Option<&'static str> {
@@ -15260,6 +15419,153 @@ mod tests {
         assert!(receipt["timing"]["known_gaps"].as_array().is_some_and(|items| !items.is_empty()));
         assert!(receipt["known_gaps"].as_array().is_some_and(|items| !items.is_empty()));
         assert_eq!(receipt["answer"]["normalized_text"], "2 + 2 equals 4.");
+        Ok(())
+    }
+
+    #[cfg(feature = "full-cli")]
+    #[test]
+    fn lunar_lake_operator_ask_receipt_accepts_bitnet_reference_source_shape() -> anyhow::Result<()>
+    {
+        let route = commands::lunar_lake::OperatorRoute {
+            route_id: "bitnet_reference_cpu".to_string(),
+            workload: "bitnet_strict".to_string(),
+            selected_model: "microsoft/bitnet-b1.58-2B-4T GGUF I2_S".to_string(),
+            selected_backend: "intel-258v-cpu-avx2".to_string(),
+            runtime_api: "cpu".to_string(),
+            selected_kernel_or_runtime: "qk256/i2_s-cpu".to_string(),
+            fallback_policy: "strict_no_fallback".to_string(),
+            route_reason: "strict BitNet CPU reference route".to_string(),
+            answer_gate_evidence: Some("cpu-reference-bundle-after-semantic-fix.json".to_string()),
+            phase_evidence: Some("cpu-bitnet-perf-003-i2s-applied-thread-matrix.json".to_string()),
+            acceleration_claim: false,
+        };
+        let route_selection = commands::lunar_lake::OperatorAskRouteSelection {
+            requested_device: "cpu".to_string(),
+            requested_route: "bitnet_reference_cpu".to_string(),
+            profile_id: "bitnet_strict_reference".to_string(),
+            selected_route: "bitnet_reference_cpu".to_string(),
+            selected_backend: "intel-258v-cpu-avx2".to_string(),
+            runtime_api: "cpu".to_string(),
+            promotion_status: "direct_route_validated".to_string(),
+            selection_source: "operator_receipt_direct".to_string(),
+            route_reason: "strict BitNet CPU reference route".to_string(),
+            why_not_cpu: vec!["CPU route was explicitly requested and validated".to_string()],
+            why_not_gpu: vec!["auto routing was not requested".to_string()],
+            why_not_npu: vec!["auto routing was not requested".to_string()],
+            candidate_routes: vec![],
+            promotion_ledger: None,
+            route_profile_comparison: Some("lunar-lake-route-profile-comparison.json".to_string()),
+            route_profile_status: Some("promoted_route_ready".to_string()),
+            route_profile_blockers: vec![],
+            route: route.clone(),
+        };
+        let source = serde_json::json!({
+            "requested_backend": "cpu",
+            "selected_backend": "cpu-rust",
+            "runtime_api": "cpu",
+            "fallback_used": false,
+            "fallback_reason": null,
+            "backend_lane": "bitnet_cpu",
+            "kernel": {"kernel_id": "i2_s-avx2-reference"},
+            "loader": {"mode": "real_gguf"},
+            "model": {
+                "path": "models/BitNet-b1.58-2B-4T/ggml-model-i2_s.gguf",
+                "sha256": "4221b252fdd5fd25e15847adfeb5ee88886506ba50b8a34548374492884c2162",
+                "family": "bitnet",
+                "architecture": "bitnet_b1_58",
+                "format": "gguf",
+                "file": "ggml-model-i2_s.gguf",
+                "repo": "microsoft/bitnet-b1.58-2B-4T-gguf",
+                "loader_mode": "real_gguf",
+                "fallback_loader_used": false,
+                "tokenizer": "llama3",
+                "vocab_size": 128256
+            },
+            "strict_provenance": {
+                "quant_format": "I2_S",
+                "requested_backend": "cpu",
+                "selected_backend": "cpu-rust",
+                "selected_kernel": "i2_s-avx2-reference",
+                "fallback_used": false,
+                "tokenizer_source": "explicit",
+                "tokenizer_strict": true
+            },
+            "bitnet": {
+                "kernel_family": "i2_s",
+                "kernel_format": "i2_s",
+                "quantization": "W1.58A8",
+                "weights_uploaded_once": false,
+                "per_token_weight_upload": false
+            },
+            "tokenizer": {
+                "source": "explicit",
+                "strict": true,
+                "type": "llama3"
+            },
+            "prompt_render": {
+                "template_family": "bitnetcpp-answer",
+                "rendered_text": "User: What is 2+2?<|eot_id|>Assistant:",
+                "parse_special": true,
+                "stop_token_ids": [128009, 128001]
+            },
+            "tokens": {
+                "prompt_ids": [128000, 1502, 25],
+                "generated_ids": [220, 19, 128009],
+                "generated": 3,
+                "prompt": 3
+            },
+            "execution_coverage": {
+                "execution_claim": "cpu_reference",
+                "bitnet_linear_layers_cpu_fallback": 0
+            },
+            "timing": {
+                "first_token_ms": 31.0,
+                "prefill_ms": 29.0,
+                "decode_total_ms": 2.0,
+                "total_ms": 33.0
+            },
+            "profile": {"phase": "decode"},
+            "text": " 4<|eot_id|>"
+        });
+        validate_lunar_lake_ask_source_receipt(&source, &route)?;
+        let answer = lunar_lake_source_answer_text(&source);
+        let normalized = lunar_lake_source_normalized_answer(&source, &answer);
+        assert_eq!(normalized, "4");
+        let gate = evaluate_lunar_lake_answer_gate(&normalized, Some("4"));
+        let receipt = build_lunar_lake_operator_ask_receipt(LunarLakeAskReceiptContext {
+            artifact_root: std::path::Path::new("ci/hardware/intel-258v/2026-05-08"),
+            operator_receipt_path: std::path::Path::new("lunar-lake-operator-readiness.json"),
+            source_run_path: std::path::Path::new("lunar-lake-bitnet-reference-source-run.json"),
+            route: &route,
+            route_selection: &route_selection,
+            question: "What is 2+2?",
+            answer: &answer,
+            normalized_answer: &normalized,
+            answer_gate: &gate,
+            expect_contains: Some("4"),
+            source_run_receipt: &source,
+        });
+
+        assert_eq!(
+            receipt["proof_stage"],
+            "bitnet_strict_reference_executed_through_lunar_lake_ask"
+        );
+        assert_eq!(receipt["route_id"], "bitnet_reference_cpu");
+        assert_eq!(receipt["selected_backend"], "cpu-rust");
+        assert_eq!(receipt["route"]["selected_backend"], "intel-258v-cpu-avx2");
+        assert_eq!(receipt["selected_kernel_or_runtime"], "i2_s-avx2-reference");
+        assert_eq!(receipt["prompt_template"], "bitnetcpp-answer");
+        assert_eq!(receipt["quantization"], "I2_S");
+        assert_eq!(receipt["openvino_candidate_route_executed"], false);
+        assert_eq!(receipt["bitnet_strict_reference_route_executed"], true);
+        assert_eq!(receipt["dense_cpu_default_route_executed"], false);
+        assert_eq!(receipt["claim_boundary"]["cpu_default_route_only"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_strict_reference_route_executed"], true);
+        assert_eq!(receipt["claim_boundary"]["bitnet_qk256_i2s_claim"], false);
+        assert_eq!(receipt["claim_boundary"]["bitnet_qk256_i2s_behavior_changed"], false);
+        assert_eq!(receipt["dense_slm"], serde_json::Value::Null);
+        assert!(receipt["bitnet"].is_object());
+        assert_eq!(receipt["answer"]["normalized_text"], "4");
         Ok(())
     }
 

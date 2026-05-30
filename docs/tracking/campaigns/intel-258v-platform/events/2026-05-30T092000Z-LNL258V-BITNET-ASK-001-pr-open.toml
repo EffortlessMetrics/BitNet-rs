@@ -1,0 +1,17 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T09:20:00Z"
+event = "pr_open"
+item = "LNL258V-BITNET-ASK-001"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6239
+head_sha = "1472ead06080df2e9aafaf0dbb646ff2158e669f"
+branch = "codex/lunar-lake/LNL258V-BITNET-ASK-001-strict-cpu-reference-ask"
+actor = "codex"
+summary = "Opened the strict CPU BitNet reference ask PR."
+
+notes = [
+  "PR #6239 enables bitnet_reference_cpu execution through bitnet lunar-lake ask for the bitnet_strict_reference profile.",
+  "The PR commits a bounded live 258V BitNet ask receipt and source-run receipt with fallback_used=false and an answer gate pass.",
+  "Dense Qwen CPU remains the default route and OpenVINO GPU/NPU promotion boundaries are unchanged.",
+]

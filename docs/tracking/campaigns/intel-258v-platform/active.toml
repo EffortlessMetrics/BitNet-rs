@@ -8280,6 +8280,73 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-BITNET-ASK-001"
+status = "pr_open"
+pr = 6239
+head_sha = "1472ead06080df2e9aafaf0dbb646ff2158e669f"
+branch = "codex/lunar-lake/LNL258V-BITNET-ASK-001-strict-cpu-reference-ask"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["CPU-BITNET-REF-001", "LNL258V-ROUTE-002"]
+acceptance = "Allow `bitnet lunar-lake ask` to execute the promoted bitnet_strict_reference CPU route explicitly or through the bitnet_strict_reference profile auto route, using the strict BitNet CPU prompt/template/tokenizer path, model hash, fallback=false source receipt validation, route/profile receipt wrapping, and a committed bounded live 258V BitNet math ask receipt. Preserve dense Qwen CPU as the default user-facing route, preserve OpenVINO GPU/NPU promotion boundaries, and make no speedup, power, Arc/NPU, accelerator BitNet, packed QK256 accelerator decode, broad BitNet quality, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "rustfmt --check --config skip_children=true,newline_style=Unix --edition 2024 crates/bitnet-cli/src/main.rs crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::ask_route_loads_bitnet_reference_cpu -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet tests::lunar_lake_operator_ask_receipt_accepts_bitnet_reference_source_shape -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet tests::lunar_lake_operator_ask_receipt_has_top_level_identity -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet tests::lunar_lake_operator_ask_receipt_accepts_openvino_source_shape -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::auto_ask_selects_promoted_cpu_route_from_ledger -- --exact --nocapture",
+  "cargo test --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet commands::lunar_lake::tests::auto_ask_selects_bitnet_reference_for_strict_profile -- --exact --nocapture",
+  "cargo build --locked -p bitnet-cli --no-default-features --features cpu,full-cli --bin bitnet",
+  "target/debug/bitnet.exe lunar-lake ask --device cpu --route bitnet_reference_cpu --profile bitnet_strict_reference --model C:\\Code\\Models\\BitNet-b1.58-2B-4T\\ggml-model-i2_s.gguf --tokenizer C:\\Code\\Models\\BitNet-b1.58-2B-4T\\tokenizer.json --question \"What is 2+2? Answer with only the number.\" --max-new-tokens 3 --expect-contains 4 --json-out ci\\hardware\\intel-258v\\2026-05-08\\lunar-lake-operator-ask-bitnet-strict-reference-math-brief.json",
+  "python -c \"import json,pathlib; r=json.loads(pathlib.Path('ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-bitnet-strict-reference-math-brief.json').read_text()); assert r['proof_stage']=='bitnet_strict_reference_executed_through_lunar_lake_ask'; assert r['route_id']=='bitnet_reference_cpu'; assert r['answer_gate_passed'] is True; assert r['fallback_used'] is False; assert r['bitnet_strict_reference_route_executed'] is True; assert r['openvino_candidate_route_executed'] is False\"",
+  "rg -n '\"(speedup_claim|acceleration_claim|power_advantage_claim|native_npu_inference_claim|route_promotion_changed|bitnet_qk256_i2s_behavior_changed|arc_or_npu_execution_claim)\": true' ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-bitnet-strict-reference-math-brief.json ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-bitnet-strict-reference-math-brief-source-run.json # expected no matches",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "crates/bitnet-cli/src/main.rs",
+  "crates/bitnet-cli/src/commands/lunar_lake.rs",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-bitnet-strict-reference-math-brief.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-ask-bitnet-strict-reference-math-brief-source-run.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "crates/bitnet-models/**",
+  "crates/bitnet-tokenizers/**",
+  "crates/bitnet-quantization/**",
+  "crates/bitnet-qk256-layout-core/**",
+  "crates/bitnet-qk256-dispatch/**",
+  "crates/bitnet-kernels/**",
+  "crates/bitnet-inference/**",
+  "crates/bitnet-server/**",
+]
+may_claim = [
+  "`bitnet lunar-lake ask` can now execute the strict BitNet CPU reference route for bitnet_strict_reference profile requests.",
+  "The committed 258V BitNet ask receipt records model hash, strict tokenizer/template evidence, fallback_used=false, generated-token IDs, timing, route reason, and answer gate pass.",
+  "Dense Qwen CPU remains the default user-facing route and OpenVINO GPU/NPU promotion boundaries are unchanged.",
+]
+must_not_claim = [
+  "Dense Qwen CPU default routing changed.",
+  "OpenVINO GPU or NPU promotion changed.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Arc 140V or Intel NPU BitNet execution is proven.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Broad BitNet answer quality is proven.",
+  "BitNet QK256/I2_S behavior changed.",
+  "The strict BitNet ask receipt proves dense SLM behavior.",
+]
+
+[[work_item]]
 id = "LNL258V-BITNET-INTAKE-002"
 status = "merged"
 pr = 5947
