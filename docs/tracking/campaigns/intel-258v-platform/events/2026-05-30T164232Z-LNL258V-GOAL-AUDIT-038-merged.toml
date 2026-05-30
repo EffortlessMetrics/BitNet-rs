@@ -1,0 +1,19 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T16:42:32Z"
+event = "merged"
+item = "LNL258V-GOAL-AUDIT-038"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6255
+head_sha = "5b6bf1f9dc8e8cac99e8cada0f9b00c875ad28ce"
+merge_sha = "96debf7f57ca9dddcd08588701497200455b7c6e"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-038-post-power017-audit"
+actor = "codex"
+summary = "Merged the no-inference audit refresh after POWER-017."
+
+notes = [
+  "PR #6255 merged after required checks were green and GitHub reported the branch mergeable.",
+  "The Lunar Lake excellence audit and goal artifact checklist now record current main through 5db806356faa02dc5c6efe1dc861c2f0ce216a76.",
+  "POWER-016 and POWER-017 are recorded as low_power thermal preflight runbook guidance and machine-readable plan alignment only.",
+  "POWER-013 remains blocked until benchmark-qualified battery-mode low_power power advantage and preserved thermal context exist.",
+]
