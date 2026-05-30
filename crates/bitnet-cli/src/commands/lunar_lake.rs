@@ -720,20 +720,25 @@ pub enum LunarLakeAction {
 
         /// Telemetry receipt captured before the repeated low_power run.
         /// Relative paths are resolved under artifact-root.
-        #[arg(long)]
+        #[arg(long, visible_alias = "before-telemetry-context")]
         before_telemetry: PathBuf,
 
         /// Telemetry receipt captured after the repeated low_power run.
         /// Relative paths are resolved under artifact-root.
-        #[arg(long)]
+        #[arg(long, visible_alias = "after-telemetry-context")]
         after_telemetry: PathBuf,
 
         /// Route ID sampled by the repeated low_power run.
-        #[arg(long, default_value = "dense_slm_openvino_npu_candidate")]
+        #[arg(long, visible_alias = "route", default_value = "dense_slm_openvino_npu_candidate")]
         route_id: String,
 
+        /// Low-power candidate route covered by the same before/after battery-drain window.
+        /// Repeat for comparative CPU/GPU/NPU matrix evidence. Defaults to route-id when omitted.
+        #[arg(long = "covered-route")]
+        covered_routes: Vec<String>,
+
         /// Profile ID sampled by the repeated low_power run.
-        #[arg(long, default_value = "low_power")]
+        #[arg(long, visible_alias = "profile", default_value = "low_power")]
         profile_id: String,
 
         /// Number of repeated asks or iterations covered by the sample.
@@ -2622,6 +2627,8 @@ pub struct LunarLakeLowPowerEnergyProxy {
     pub before_telemetry_context_receipt: String,
     pub after_telemetry_context_receipt: String,
     pub route_id: String,
+    #[serde(default)]
+    pub covered_candidate_routes: Vec<String>,
     pub profile_id: String,
     pub sample_count: u64,
     pub before_battery_status: Option<String>,
@@ -3301,6 +3308,7 @@ impl LunarLakeCommand {
                 before_telemetry,
                 after_telemetry,
                 route_id,
+                covered_routes,
                 profile_id,
                 sample_count,
                 json_out,
@@ -3316,6 +3324,7 @@ impl LunarLakeCommand {
                     before_telemetry,
                     after_telemetry,
                     route_id.clone(),
+                    covered_routes.clone(),
                     profile_id.clone(),
                     *sample_count,
                     created_utc,
@@ -9059,6 +9068,7 @@ pub fn build_low_power_energy_proxy_with_created_utc(
     before_telemetry: &Path,
     after_telemetry: &Path,
     route_id: String,
+    covered_routes: Vec<String>,
     profile_id: String,
     sample_count: u64,
     created_utc: String,
@@ -9081,10 +9091,20 @@ pub fn build_low_power_energy_proxy_with_created_utc(
     let battery_mode_sample_recorded =
         before_ac_power_inferred == Some(false) && after_ac_power_inferred == Some(false);
     let energy_proxy_recorded = sample_count > 0 && charge_delta_percent.is_some();
+    let covered_candidate_routes =
+        normalize_low_power_energy_proxy_covered_routes(&route_id, covered_routes);
 
     let mut gaps = Vec::new();
     if route_id.trim().is_empty() {
         gaps.push("route_id is empty".to_string());
+    }
+    if covered_candidate_routes.is_empty() {
+        gaps.push("covered_candidate_routes is empty".to_string());
+    }
+    for covered_route in &covered_candidate_routes {
+        if !LOW_POWER_BATTERY_ROUTE_IDS.contains(&covered_route.as_str()) {
+            gaps.push(format!("covered route `{covered_route}` is not a low_power candidate"));
+        }
     }
     if profile_id != "low_power" {
         gaps.push(format!("energy proxy is for profile `{profile_id}`, expected low_power"));
@@ -9115,6 +9135,7 @@ pub fn build_low_power_energy_proxy_with_created_utc(
         before_telemetry_context_receipt: path_string(&before_path),
         after_telemetry_context_receipt: path_string(&after_path),
         route_id,
+        covered_candidate_routes,
         profile_id,
         sample_count,
         before_battery_status,
@@ -9138,6 +9159,22 @@ pub fn build_low_power_energy_proxy_with_created_utc(
             hidden_fallback_allowed: false,
         },
     })
+}
+
+fn normalize_low_power_energy_proxy_covered_routes(
+    route_id: &str,
+    covered_routes: Vec<String>,
+) -> Vec<String> {
+    let source_routes =
+        if covered_routes.is_empty() { vec![route_id.to_string()] } else { covered_routes };
+    let mut normalized = source_routes
+        .into_iter()
+        .map(|route| route.trim().to_string())
+        .filter(|route| !route.is_empty())
+        .collect::<Vec<_>>();
+    normalized.sort();
+    normalized.dedup();
+    normalized
 }
 
 pub fn build_low_power_battery_plan_with_created_utc(
@@ -9390,7 +9427,7 @@ fn low_power_battery_plan_commands() -> Vec<LowPowerBatteryPlanCommand> {
             step: "energy_proxy".to_string(),
             purpose: "Build the battery-drain proxy only from battery-mode before/after telemetry.".to_string(),
             command: vec![
-                "target/debug/bitnet.exe lunar-lake energy-proxy --artifact-root ci/hardware/intel-258v/2026-05-08 --before-telemetry-context lunar-lake-low-power-battery-before.json --after-telemetry-context lunar-lake-low-power-battery-after.json --route dense_slm_openvino_npu_candidate --profile low_power --sample-count <battery-run-sample-count> --json-out lunar-lake-low-power-energy-proxy.json --created-utc <battery-run-end-utc> --strict".to_string(),
+                "target/debug/bitnet.exe lunar-lake energy-proxy --artifact-root ci/hardware/intel-258v/2026-05-08 --before-telemetry-context lunar-lake-low-power-battery-before.json --after-telemetry-context lunar-lake-low-power-battery-after.json --route dense_slm_openvino_npu_candidate --covered-route dense_slm_default_cpu --covered-route dense_slm_openvino_gpu_candidate --covered-route dense_slm_openvino_npu_candidate --profile low_power --sample-count <battery-run-sample-count> --json-out lunar-lake-low-power-energy-proxy.json --created-utc <battery-run-end-utc> --strict".to_string(),
             ],
             continue_if: vec!["energy_proxy_recorded=true and battery_mode_sample_recorded=true".to_string()],
             stop_if: vec!["before or after telemetry is not a battery-mode sample".to_string()],
@@ -9622,14 +9659,35 @@ fn power_profile_energy_proxy_qualification(
         bool_at_any(proxy, &["battery_mode_sample_recorded"]) == Some(true);
     let energy_proxy_recorded = bool_at_any(proxy, &["energy_proxy_recorded"]) == Some(true);
 
+    let explicit_covered_candidate_routes =
+        non_empty_string_array_at_any(proxy, &["covered_candidate_routes", "covered_routes"]);
+    let candidate_routes_from_proxy = if explicit_covered_candidate_routes.is_empty() {
+        route_id.iter().cloned().collect::<Vec<_>>()
+    } else {
+        explicit_covered_candidate_routes
+    };
+
     if let Some(route) = route_id.as_deref() {
-        if LOW_POWER_BATTERY_ROUTE_IDS.contains(&route) {
-            covered_candidate_routes.push(route.to_string());
-        } else {
+        if !LOW_POWER_BATTERY_ROUTE_IDS.contains(&route) {
             blockers.push(format!("energy proxy route `{route}` is not a low_power candidate"));
+        } else if !candidate_routes_from_proxy.iter().any(|covered| covered == route) {
+            blockers
+                .push(format!("energy proxy covered_candidate_routes omits route_id `{route}`"));
         }
     } else {
         blockers.push("energy proxy route_id is missing".to_string());
+    }
+    if candidate_routes_from_proxy.is_empty() {
+        blockers.push("energy proxy covered_candidate_routes is missing".to_string());
+    }
+    for covered_route in candidate_routes_from_proxy {
+        if LOW_POWER_BATTERY_ROUTE_IDS.contains(&covered_route.as_str()) {
+            covered_candidate_routes.push(covered_route);
+        } else {
+            blockers.push(format!(
+                "energy proxy covered route `{covered_route}` is not a low_power candidate"
+            ));
+        }
     }
 
     if profile_id.as_deref() != Some("low_power") {
@@ -21048,6 +21106,79 @@ mod tests {
             "{:?}",
             receipt.next_required_evidence
         );
+
+        write_json(
+            temp.path(),
+            "energy-proxy.json",
+            json!({
+                "schema_version": "1.0.0",
+                "artifact_kind": "lunar_lake_low_power_energy_proxy",
+                "route_id": "dense_slm_openvino_npu_candidate",
+                "covered_candidate_routes": [
+                    "dense_slm_default_cpu",
+                    "dense_slm_openvino_gpu_candidate",
+                    "dense_slm_openvino_npu_candidate"
+                ],
+                "profile_id": "low_power",
+                "energy_proxy_recorded": true,
+                "battery_mode_sample_recorded": true,
+                "charge_delta_percent": -1.0,
+                "sample_count": 10,
+                "claim_boundary": {
+                    "power_advantage_claim": false
+                }
+            }),
+        )?;
+        let comparative_receipt = build_power_profile_evidence_with_created_utc(
+            temp.path(),
+            Path::new(ROUTE_PROFILE_COMPARISON),
+            Path::new(COLD_WARM_PROFILE_BENCHMARK_FILE),
+            Path::new(POWER_THERMAL_CONTEXT_FILE),
+            Some(Path::new("battery-telemetry.json")),
+            Some(Path::new("energy-proxy.json")),
+            &[
+                PathBuf::from("cpu-low-power-ask.json"),
+                PathBuf::from("gpu-low-power-ask.json"),
+                PathBuf::from("npu-low-power-ask.json"),
+            ],
+            "2026-05-19T10:16:00Z".to_string(),
+        )?;
+        assert!(comparative_receipt.power_profile_index_ready);
+        assert_eq!(
+            comparative_receipt.power_advantage_qualification.energy_proxy_qualification.status,
+            "accepted_comparative_proxy"
+        );
+        assert!(
+            comparative_receipt
+                .power_advantage_qualification
+                .energy_proxy_qualification
+                .accepted_for_power_advantage
+        );
+        assert_eq!(
+            comparative_receipt
+                .power_advantage_qualification
+                .energy_proxy_qualification
+                .covered_candidate_route_count,
+            3
+        );
+        assert!(!comparative_receipt.low_power_promotion_ready);
+        assert!(!comparative_receipt.power_advantage_proven);
+        assert!(
+            !comparative_receipt
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("accepted comparative low_power energy proxy")),
+            "{:?}",
+            comparative_receipt.next_required_evidence
+        );
+        assert!(
+            comparative_receipt
+                .next_required_evidence
+                .iter()
+                .any(|item| item.contains("benchmark-qualified low_power power-advantage evidence")),
+            "{:?}",
+            comparative_receipt.next_required_evidence
+        );
         Ok(())
     }
 
@@ -21104,6 +21235,7 @@ mod tests {
             Path::new("before-telemetry.json"),
             Path::new("after-telemetry.json"),
             "dense_slm_openvino_npu_candidate".to_string(),
+            Vec::new(),
             "low_power".to_string(),
             10,
             "2026-05-19T10:30:00Z".to_string(),
@@ -21114,11 +21246,39 @@ mod tests {
         assert_eq!(receipt.before_charge_percent, Some(96));
         assert_eq!(receipt.after_charge_percent, Some(94));
         assert_eq!(receipt.charge_delta_percent, Some(-2));
+        assert_eq!(
+            receipt.covered_candidate_routes,
+            vec!["dense_slm_openvino_npu_candidate".to_string()]
+        );
         assert!(receipt.gaps.is_empty(), "{:?}", receipt.gaps);
         assert!(!receipt.claim_boundary.new_inference_executed);
         assert!(!receipt.claim_boundary.route_promotion_changed);
         assert!(!receipt.claim_boundary.power_advantage_claim);
         assert!(!receipt.claim_boundary.acceleration_claim);
+
+        let comparative_receipt = build_low_power_energy_proxy_with_created_utc(
+            temp.path(),
+            Path::new("before-telemetry.json"),
+            Path::new("after-telemetry.json"),
+            "dense_slm_openvino_npu_candidate".to_string(),
+            vec![
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+                "dense_slm_default_cpu".to_string(),
+            ],
+            "low_power".to_string(),
+            10,
+            "2026-05-19T10:31:00Z".to_string(),
+        )?;
+        assert_eq!(
+            comparative_receipt.covered_candidate_routes,
+            vec![
+                "dense_slm_default_cpu".to_string(),
+                "dense_slm_openvino_gpu_candidate".to_string(),
+                "dense_slm_openvino_npu_candidate".to_string(),
+            ]
+        );
+        assert!(comparative_receipt.gaps.is_empty(), "{:?}", comparative_receipt.gaps);
         Ok(())
     }
 

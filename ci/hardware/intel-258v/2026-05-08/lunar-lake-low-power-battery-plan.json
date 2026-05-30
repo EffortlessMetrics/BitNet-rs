@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_low_power_battery_plan",
   "proof_stage": "low_power_battery_operator_plan_no_evidence_no_promotion_change",
-  "created_utc": "2026-05-30T08:05:00Z",
+  "created_utc": "2026-05-30T10:28:27Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
@@ -95,7 +95,7 @@
       "step": "energy_proxy",
       "purpose": "Build the battery-drain proxy only from battery-mode before/after telemetry.",
       "command": [
-        "target/debug/bitnet.exe lunar-lake energy-proxy --artifact-root ci/hardware/intel-258v/2026-05-08 --before-telemetry-context lunar-lake-low-power-battery-before.json --after-telemetry-context lunar-lake-low-power-battery-after.json --route dense_slm_openvino_npu_candidate --profile low_power --sample-count <battery-run-sample-count> --json-out lunar-lake-low-power-energy-proxy.json --created-utc <battery-run-end-utc> --strict"
+        "target/debug/bitnet.exe lunar-lake energy-proxy --artifact-root ci/hardware/intel-258v/2026-05-08 --before-telemetry-context lunar-lake-low-power-battery-before.json --after-telemetry-context lunar-lake-low-power-battery-after.json --route dense_slm_openvino_npu_candidate --covered-route dense_slm_default_cpu --covered-route dense_slm_openvino_gpu_candidate --covered-route dense_slm_openvino_npu_candidate --profile low_power --sample-count <battery-run-sample-count> --json-out lunar-lake-low-power-energy-proxy.json --created-utc <battery-run-end-utc> --strict"
       ],
       "continue_if": [
         "energy_proxy_recorded=true and battery_mode_sample_recorded=true"
