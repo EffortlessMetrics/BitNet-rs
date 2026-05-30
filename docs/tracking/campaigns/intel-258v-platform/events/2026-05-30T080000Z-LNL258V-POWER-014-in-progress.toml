@@ -1,0 +1,15 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T08:00:00Z"
+event = "in_progress"
+item = "LNL258V-POWER-014"
+previous_status = "ready"
+new_status = "in_progress"
+branch = "codex/lunar-lake/LNL258V-POWER-014-energy-proxy-qualification"
+actor = "codex"
+summary = "Started no-inference low_power energy-proxy qualification reporting."
+
+notes = [
+  "POWER-013 remains blocked; this item only distinguishes a recorded energy proxy from an accepted comparative power-advantage qualification.",
+  "The committed POWER-006 energy proxy currently covers the NPU candidate route only and must remain unaccepted for low_power promotion.",
+  "The work preserves no inference, no route promotion, no speedup claim, no power-advantage claim, no measured-temperature claim, and no BitNet QK256/I2_S behavior change.",
+]

@@ -2,7 +2,7 @@
   "schema_version": "1.0.0",
   "artifact_kind": "lunar_lake_power_profile_evidence",
   "proof_stage": "low_power_evidence_indexed_no_promotion_change",
-  "created_utc": "2026-05-30T06:32:00Z",
+  "created_utc": "2026-05-30T08:05:00Z",
   "machine_id": "intel-258v",
   "artifact_root": "ci/hardware/intel-258v/2026-05-08",
   "route_profile_comparison_receipt": "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
@@ -159,6 +159,29 @@
     "benchmark_qualified_power_advantage": false,
     "battery_mode_sample_recorded": true,
     "energy_proxy_recorded": true,
+    "energy_proxy_qualification": {
+      "status": "recorded_not_comparative",
+      "accepted_for_power_advantage": false,
+      "route_id": "dense_slm_openvino_npu_candidate",
+      "profile_id": "low_power",
+      "sample_count": 3,
+      "charge_delta_percent": -1,
+      "battery_mode_sample_recorded": true,
+      "energy_proxy_recorded": true,
+      "required_candidate_routes": [
+        "dense_slm_default_cpu",
+        "dense_slm_openvino_gpu_candidate",
+        "dense_slm_openvino_npu_candidate"
+      ],
+      "covered_candidate_routes": [
+        "dense_slm_openvino_npu_candidate"
+      ],
+      "candidate_route_count": 3,
+      "covered_candidate_route_count": 1,
+      "blockers": [
+        "energy proxy is single-route or incomplete; missing comparative candidate routes [dense_slm_default_cpu,dense_slm_openvino_gpu_candidate]"
+      ]
+    },
     "low_power_battery_route_samples_ready": true,
     "thermal_context_recorded": true,
     "measured_thermal_temperature_recorded": false,
@@ -219,10 +242,12 @@
       }
     ],
     "blockers": [
+      "energy proxy is not accepted for promotion: energy proxy is single-route or incomplete; missing comparative candidate routes [dense_slm_default_cpu,dense_slm_openvino_gpu_candidate]",
       "measured thermal temperatures are unavailable; thermal-unavailable remains an explicit blocker",
       "no low_power route has benchmark-qualified power advantage"
     ],
     "required_evidence": [
+      "collect an accepted comparative low_power energy proxy covering CPU, GPU, and NPU candidate routes before promotion",
       "collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion",
       "record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker",
       "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
@@ -233,6 +258,7 @@
   ],
   "operator_runbook": "docs/hardware/intel-258v-low-power-battery-runbook.md",
   "next_required_evidence": [
+    "collect an accepted comparative low_power energy proxy covering CPU, GPU, and NPU candidate routes before promotion",
     "collect benchmark-qualified low_power power-advantage evidence from battery-mode route samples or accepted energy proxy before promotion",
     "record measured thermal temperatures if available or preserve thermal-unavailable as an explicit blocker",
     "only promote low_power after answer gates, fallback=false, stable timing, and power advantage all pass"
