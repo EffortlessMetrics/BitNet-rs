@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T16:24:46Z"
+event = "pr_open"
+item = "LNL258V-GOAL-AUDIT-038"
+previous_status = "in_progress"
+new_status = "pr_open"
+pr = 6255
+head_sha = "91443b196ca7ced310dc0e3e4c7c7e08cafe4cfc"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-038-post-power017-audit"
+actor = "codex"
+summary = "Opened PR #6255 for the no-inference audit refresh after POWER-017."
+
+notes = [
+  "PR #6255 refreshes the Lunar Lake excellence audit and goal artifact checklist to current main 5db806356faa02dc5c6efe1dc861c2f0ce216a76.",
+  "The PR records POWER-016/#6251/#6252 and POWER-017/#6253/#6254 as low_power thermal preflight runbook guidance and machine-readable plan alignment only.",
+  "POWER-013 remains blocked on this host because the live preflight still reports BatteryStatus=2, with no benchmark-qualified low_power power advantage or measured thermal readings committed as promotion evidence.",
+  "No inference, model load, fallback behavior change, route promotion, speedup, power-advantage, measured-temperature, native accelerator, broad quality, Qwen3 promotion, or BitNet QK256/I2_S behavior-change claim is made.",
+]
