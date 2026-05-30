@@ -12947,6 +12947,75 @@ must_not_claim = [
 ]
 
 [[work_item]]
+id = "LNL258V-GOAL-AUDIT-039"
+status = "pr_open"
+pr = 6257
+head_sha = "eb698f47b2f54ddf4bfecf4fc9ec7f84b7d6e6a9"
+branch = "codex/lunar-lake/LNL258V-GOAL-AUDIT-039-power013-blocker-wording"
+stackable = false
+review_mode = "codex_premerge"
+merge_policy = "automerge_when_green"
+human_gate = "on_blocker_only"
+blocked_by = ["LNL258V-GOAL-AUDIT-038"]
+acceptance = "Clean up stale no-inference Lunar Lake objective-artifact wording after GOAL-AUDIT-038/#6255 plus closeout #6256 so current blocker text consistently says POWER-013 is the active low_power blocker, while historical POWER-006 evidence remains described as already collected. Refresh audit/checklist source_revision to 0aa8e2adb5a064213b7c31097db7685391f1d253, record the live 2026-05-30 battery preflight as still AC-only blocked, and preserve excellent_support_ready=false plus no inference, model load, fallback behavior change, route promotion, speedup claim, power-advantage claim, measured-temperature claim, native accelerator proof, broad quality claim, Qwen3 Lunar Lake promotion, or BitNet QK256/I2_S behavior-change claim."
+commands = [
+  "Get-CimInstance -ClassName Win32_Battery | Select-Object Name,BatteryStatus,EstimatedChargeRemaining,PowerManagementSupported | Format-List # observed BatteryStatus=2 and EstimatedChargeRemaining=100 on 2026-05-30",
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | ConvertFrom-Json | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | ConvertFrom-Json | Out-Null\"",
+  "powershell -NoProfile -Command \"Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json -Raw | Select-String 'POWER-013 remains the active low_power battery-mode blocker' | Out-Null; Get-Content ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json -Raw | Select-String 'post_6256_power013_blocker_wording_delta' | Out-Null\"",
+  "rg -n 'POWER-006 remains the active low_power battery-mode blocker|until POWER-006 battery-mode evidence|until POWER-006 has real battery-mode telemetry' ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json # expected no matches",
+  "rg -n '\"(power_advantage_claim|low_power_promotion_ready|power_advantage_proven|route_promotion_changed|speedup_claim|acceleration_claim|native_npu_inference_claim|bitnet_qk256_i2s_behavior_changed|measured_temperature_claim|excellent_support_ready)\": true' ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json # expected no matches",
+  "cargo run --locked -p xtask --no-default-features -- campaign check intel-258v-platform",
+  "cargo run --locked -p xtask --no-default-features -- campaign generate --check",
+  "git diff --check",
+]
+allowed_paths = [
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-excellence-audit.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-goal-artifact-checklist.json",
+  "docs/tracking/campaigns/intel-258v-platform/**",
+  "docs/tracking/generated/**",
+]
+forbidden_paths = [
+  "crates/**",
+  "scripts/**",
+  "ci/quality/**",
+  "ci/model-artifacts/**",
+  "models/**",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-power-profile-evidence.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-low-power-battery-plan.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-readiness.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-regression-bundle-v2.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-operator-comparison.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-promotion.json",
+  "ci/hardware/intel-258v/2026-05-08/lunar-lake-route-profile-comparison.json",
+]
+may_claim = [
+  "Current no-inference objective artifacts now identify POWER-013, not POWER-006, as the active low_power blocker.",
+  "POWER-006 remains recorded as historical battery-mode telemetry, energy-proxy, and CPU/GPU/NPU candidate ask evidence.",
+  "The live POWER-013 preflight on this host remains AC-only blocked and is not committed as promotion evidence.",
+  "Excellent support remains not complete while low_power lacks benchmark-qualified power advantage and measured thermal readings.",
+]
+must_not_claim = [
+  "New inference was run by this PR.",
+  "Any model was loaded by this PR.",
+  "Any fallback behavior changed.",
+  "Any route is promoted or demoted by this PR.",
+  "OpenVINO GPU or NPU speedup is claimed by this PR.",
+  "OpenVINO GPU or NPU power advantage is proven.",
+  "Measured temperature readings are now available.",
+  "OpenVINO GPU evidence proves native OpenCL execution.",
+  "OpenVINO NPU evidence proves native NPU inference outside OpenVINO GenAI.",
+  "Arc or NPU acceleration is proven.",
+  "Dense SLM receipts prove BitNet QK256/I2_S behavior.",
+  "Full BitNet inference works on Arc or NPU.",
+  "Packed QK256 decode works on Arc or NPU.",
+  "Runtime or sidecar behavior changed for Lunar Lake.",
+  "Qwen3 is promoted on Lunar Lake.",
+  "Source promotion is complete.",
+  "Model binaries are committed or required by this PR.",
+  "BitNet QK256/I2_S behavior changed.",
+]
+
+[[work_item]]
 id = "LNL258V-POWER-013"
 status = "blocked"
 branch = "codex/lunar-lake/LNL258V-POWER-013-low-power-power-advantage"
