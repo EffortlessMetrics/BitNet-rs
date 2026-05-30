@@ -1,0 +1,18 @@
+campaign = "intel-258v-platform"
+timestamp = "2026-05-30T10:04:35Z"
+event = "merged"
+item = "LNL258V-BITNET-ASK-001"
+previous_status = "pr_open"
+new_status = "merged"
+pr = 6239
+head_sha = "05cdc1dba153b4741bb5c7ba8dd2d95b328f8aa1"
+merge_sha = "ee44b62c6dc171f0325dd4410960d8a692836c4b"
+branch = "codex/lunar-lake/LNL258V-BITNET-ASK-001-strict-cpu-reference-ask"
+actor = "codex"
+summary = "Merged the BitNet strict reference lunar-lake ask route PR."
+
+notes = [
+  "PR #6239 merged after required checks were green and GitHub reported it mergeable.",
+  "The merged route executes the promoted bitnet_strict_reference CPU path through `bitnet lunar-lake ask` with fallback=false source receipt validation.",
+  "The committed live 258V math ask receipt preserves dense Qwen default behavior and makes no speedup, power, Arc/NPU, accelerator BitNet, packed QK256 accelerator decode, broad BitNet quality, or BitNet QK256/I2_S behavior-change claim.",
+]
