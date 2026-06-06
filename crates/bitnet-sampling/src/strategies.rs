@@ -278,8 +278,10 @@ impl RepetitionPenaltyConfig {
 
             // Count penalty: multiplicative
             if self.count_penalty.to_bits() != 1.0f32.to_bits() {
-                let count = i32::try_from(count).unwrap_or(i32::MAX);
-                let penalty = self.count_penalty.powi(count);
+                let mut penalty = 1.0f32;
+                for _ in 0..count {
+                    penalty *= self.count_penalty;
+                }
 
                 if logits[idx] > 0.0 {
                     logits[idx] /= penalty;
