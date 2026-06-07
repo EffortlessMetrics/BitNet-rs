@@ -130,8 +130,16 @@ mod typical_filter {
     }
 
     pub(super) fn collect_deviations(probs: &[f32]) -> Option<Vec<TypicalEntry>> {
+        // Optimization: typical sampling often operates on highly sparse distributions
+        // after top-k. By counting positive probabilities first, we avoid allocating
+        // a vector for the entire vocabulary size in the hot path.
+        let positive_count = probs.iter().filter(|&&p| p > 0.0).count();
+        if positive_count == 0 {
+            return None;
+        }
+
         let mut entropy = 0.0f64;
-        let mut entries: Vec<TypicalEntry> = Vec::with_capacity(probs.len());
+        let mut entries: Vec<TypicalEntry> = Vec::with_capacity(positive_count);
 
         for (index, &probability) in probs.iter().enumerate() {
             if probability <= 0.0 {
