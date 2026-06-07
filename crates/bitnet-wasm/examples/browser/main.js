@@ -22,8 +22,57 @@ let copyFeedbackTimeout = null;
 // Initialize the application
 async function initApp() {
     try {
-        // Setup keyboard navigation for tabs
+
+// Setup keyboard shortcuts
+function setupKeyboardShortcuts() {
+    // Basic text generation
+    const promptArea = document.getElementById('prompt');
+    if (promptArea) {
+        promptArea.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                const generateBtn = document.getElementById('generate');
+                if (generateBtn && !generateBtn.disabled) {
+                    generateBtn.click();
+                }
+            }
+        });
+    }
+
+    // Streaming text generation
+    const streamingPromptArea = document.getElementById('streaming-prompt');
+    if (streamingPromptArea) {
+        streamingPromptArea.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                const startStreamingBtn = document.getElementById('start-streaming');
+                if (startStreamingBtn && !startStreamingBtn.disabled) {
+                    startStreamingBtn.click();
+                }
+            }
+        });
+    }
+
+    // Worker text generation
+    const workerPromptArea = document.getElementById('worker-prompt');
+    if (workerPromptArea) {
+        workerPromptArea.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                const workerGenerateBtn = document.getElementById('worker-generate');
+                if (workerGenerateBtn && !workerGenerateBtn.disabled) {
+                    workerGenerateBtn.click();
+                }
+            }
+        });
+    }
+}
+
+// Setup keyboard navigation for tabs
         setupTabNavigation();
+
+        // Setup keyboard shortcuts
+        setupKeyboardShortcuts();
 
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
