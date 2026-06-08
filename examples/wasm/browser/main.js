@@ -25,6 +25,9 @@ async function initApp() {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
 
+        // Setup prompt shortcuts
+        setupPromptShortcuts();
+
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
 
@@ -687,6 +690,27 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+// Setup shortcuts for prompts
+function setupPromptShortcuts() {
+    const handleShortcut = (id, generateFunction, buttonId) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                const btn = document.getElementById(buttonId);
+                if (btn && !btn.disabled) {
+                    e.preventDefault();
+                    generateFunction();
+                }
+            }
+        });
+    };
+
+    handleShortcut('prompt', generateText, 'generate');
+    handleShortcut('streaming-prompt', startStreaming, 'start-streaming');
+    handleShortcut('worker-prompt', workerGenerate, 'worker-generate');
+}
 
 // Setup keyboard navigation for tabs
 function setupTabNavigation() {
