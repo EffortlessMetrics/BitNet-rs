@@ -278,13 +278,17 @@ impl RepetitionPenaltyConfig {
 
             // Count penalty: multiplicative
             if self.count_penalty.to_bits() != 1.0f32.to_bits() {
-                let count = i32::try_from(count).unwrap_or(i32::MAX);
-                let penalty = self.count_penalty.powi(count);
+                // ⚡ Bolt: Iterative multiplication logit *= inv_penalty replaces
+                // .powi(count) and division, improving hot-path efficiency
+                // and eliminating division overhead.
+                let inv_penalty = 1.0 / self.count_penalty;
 
-                if logits[idx] > 0.0 {
-                    logits[idx] /= penalty;
-                } else {
-                    logits[idx] *= penalty;
+                for _ in 0..count {
+                    if logits[idx] > 0.0 {
+                        logits[idx] *= inv_penalty;
+                    } else {
+                        logits[idx] *= self.count_penalty;
+                    }
                 }
             }
         }
