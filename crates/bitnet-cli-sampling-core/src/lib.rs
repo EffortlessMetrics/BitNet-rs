@@ -116,20 +116,36 @@ impl Sampler {
             return;
         }
 
-        let mut indexed: Vec<(usize, f32)> =
-            logits.iter().copied().enumerate().filter(|&(_, v)| !v.is_nan()).collect();
-        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        // Optimization: Filter out NEG_INFINITY and NaN before collecting to reduce sort size.
+        // Omit allocations of `keep` vectors.
+        let mut indexed: Vec<(usize, f32)> = logits
+            .iter()
+            .copied()
+            .enumerate()
+            .filter(|&(_, v)| !v.is_nan() && v > f32::NEG_INFINITY)
+            .collect();
 
-        let mut keep = vec![false; logits.len()];
-        for (idx, val) in indexed.iter().take(self.top_k.min(indexed.len())) {
-            keep[*idx] = true;
-            logits[*idx] = *val;
+        if indexed.len() <= self.top_k {
+            // All finite elements fit in top_k, no need to filter further.
+            // But we still need to mask NaN and NEG_INFINITY.
+            for logit in logits.iter_mut() {
+                if logit.is_nan() || *logit <= f32::NEG_INFINITY {
+                    *logit = f32::NEG_INFINITY;
+                }
+            }
+            return;
         }
 
-        for (idx, logit) in logits.iter_mut().enumerate() {
-            if !keep[idx] {
-                *logit = f32::NEG_INFINITY;
-            }
+        indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Mask everything
+        for logit in logits.iter_mut() {
+            *logit = f32::NEG_INFINITY;
+        }
+
+        // Restore the kept items
+        for (idx, val) in indexed.iter().take(self.top_k) {
+            logits[*idx] = *val;
         }
     }
 
@@ -139,14 +155,34 @@ impl Sampler {
             return;
         }
 
-        let sanitized: Vec<f32> =
-            logits.iter().map(|&v| if v.is_nan() { f32::NEG_INFINITY } else { v }).collect();
+        // Optimization: Handle NaN and NEG_INFINITY without allocating a full `sanitized` vector.
+        // Omit allocations of `keep` vectors.
+        let mut indexed: Vec<(usize, f32)> = logits
+            .iter()
+            .copied()
+            .enumerate()
+            .filter(|&(_, v)| !v.is_nan() && v > f32::NEG_INFINITY)
+            .collect();
 
-        let mut indexed: Vec<(usize, f32)> = sanitized.iter().copied().enumerate().collect();
+        if indexed.is_empty() {
+            return;
+        }
+
         indexed.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        let probs = softmax(&sanitized);
-        let sorted_probs: Vec<_> = indexed.iter().map(|&(i, _)| probs[i]).collect();
+        // Softmax computation for just the filtered values
+        let max_logit = indexed.first().map(|&(_, v)| v).unwrap_or(f32::NEG_INFINITY);
+        let mut exp_sum = 0.0;
+        let mut sorted_probs = Vec::with_capacity(indexed.len());
+        for &(_, logit) in &indexed {
+            let exp_val = (logit - max_logit).exp();
+            sorted_probs.push(exp_val);
+            exp_sum += exp_val;
+        }
+
+        for prob in &mut sorted_probs {
+            *prob /= exp_sum;
+        }
 
         let mut cumsum = 0.0;
         let mut cutoff_idx = sorted_probs.len();
@@ -158,16 +194,14 @@ impl Sampler {
             }
         }
 
-        let mut keep = vec![false; logits.len()];
-        for (idx, val) in indexed.iter().take(cutoff_idx) {
-            keep[*idx] = true;
-            logits[*idx] = *val;
+        // Mask everything
+        for logit in logits.iter_mut() {
+            *logit = f32::NEG_INFINITY;
         }
 
-        for (idx, logit) in logits.iter_mut().enumerate() {
-            if !keep[idx] {
-                *logit = f32::NEG_INFINITY;
-            }
+        // Restore the kept items
+        for (idx, val) in indexed.iter().take(cutoff_idx) {
+            logits[*idx] = *val;
         }
     }
 
