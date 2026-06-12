@@ -24,6 +24,7 @@ async function initApp() {
     try {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
+        setupKeyboardShortcuts();
 
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
@@ -722,6 +723,29 @@ function setupTabNavigation() {
             const nextTab = tabs[nextIndex];
             nextTab.focus();
             nextTab.click(); // Activate the tab
+        }
+    });
+}
+
+function setupKeyboardShortcuts() {
+    const textareas = [
+        { id: 'prompt', btnId: 'generate' },
+        { id: 'streaming-prompt', btnId: 'start-streaming' },
+        { id: 'worker-prompt', btnId: 'worker-generate' }
+    ];
+
+    textareas.forEach(({ id, btnId }) => {
+        const textarea = document.getElementById(id);
+        if (textarea) {
+            textarea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    const btn = document.getElementById(btnId);
+                    if (btn && !btn.disabled) {
+                        btn.click();
+                    }
+                }
+            });
         }
     });
 }
