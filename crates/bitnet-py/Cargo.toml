@@ -41,7 +41,7 @@ thiserror = "2.0.17"
 tracing = "0.1.41"
 
 [build-dependencies]
-pyo3-build-config = "0.27.1"
+pyo3-build-config = "0.28.3"
 
 [features]
 integration-tests = []
