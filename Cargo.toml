@@ -497,7 +497,7 @@ opentelemetry_sdk = { version = "0.31.0", features = ["trace", "metrics", "rt-to
 prometheus = "0.14.0"
 tonic = "0.14.2"
 tracing-appender = "0.2.3"
-tracing-opentelemetry = "0.32.0"
+tracing-opentelemetry = "0.33.0"
 uuid = { version = "1.18.1", features = ["v4"] }
 
 # FFI and bindings
