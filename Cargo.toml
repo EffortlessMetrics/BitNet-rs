@@ -472,7 +472,7 @@ safetensors = "0.7.0"
 
 # CLI and configuration
 clap = { version = "4.5.51", features = ["derive", "env"] }
-clap_complete = "4.5.60"
+clap_complete = "4.6.5"
 console = "0.16.1"
 crossterm = "0.29.0"
 dirs = "6.0.0"
