@@ -24,6 +24,7 @@ async function initApp() {
     try {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
+        setupKeyboardShortcuts();
 
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
@@ -724,6 +725,34 @@ function setupTabNavigation() {
             nextTab.click(); // Activate the tab
         }
     });
+}
+
+// Setup keyboard shortcuts
+function setupKeyboardShortcuts() {
+    const handleShortcut = (e, buttonId) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            const button = document.getElementById(buttonId);
+            if (button && !button.disabled) {
+                button.click();
+            }
+        }
+    };
+
+    const promptTextarea = document.getElementById('prompt');
+    if (promptTextarea) {
+        promptTextarea.addEventListener('keydown', (e) => handleShortcut(e, 'generate'));
+    }
+
+    const streamingPromptTextarea = document.getElementById('streaming-prompt');
+    if (streamingPromptTextarea) {
+        streamingPromptTextarea.addEventListener('keydown', (e) => handleShortcut(e, 'start-streaming'));
+    }
+
+    const workerPromptTextarea = document.getElementById('worker-prompt');
+    if (workerPromptTextarea) {
+        workerPromptTextarea.addEventListener('keydown', (e) => handleShortcut(e, 'worker-generate'));
+    }
 }
 
 // Make functions globally available
