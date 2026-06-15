@@ -279,12 +279,15 @@ impl RepetitionPenaltyConfig {
             // Count penalty: multiplicative
             if self.count_penalty.to_bits() != 1.0f32.to_bits() {
                 let count = i32::try_from(count).unwrap_or(i32::MAX);
-                let penalty = self.count_penalty.powi(count);
+
+                // Optimization: Pre-calculate the inverse base to eliminate division overhead.
+                // Using an iterative multiplication by the inverse power is faster.
+                let inv_penalty = 1.0 / self.count_penalty;
 
                 if logits[idx] > 0.0 {
-                    logits[idx] /= penalty;
+                    logits[idx] *= inv_penalty.powi(count);
                 } else {
-                    logits[idx] *= penalty;
+                    logits[idx] *= self.count_penalty.powi(count);
                 }
             }
         }

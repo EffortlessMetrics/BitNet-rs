@@ -5,3 +5,6 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+## 2026-03-05 - Lazy Evaluation in Conditional Hot Paths
+**Learning:** Computing values unconditionally before a conditional block (e.g. `if logit > 0.0 { logit *= inv_penalty.powi(count) } else { logit *= penalty.powi(count) }`) can introduce significant performance regressions if the computations are expensive (like `powi`), as you end up performing operations that might not be used.
+**Action:** When optimizing conditional logic, ensure expensive operations are evaluated lazily inside their respective branches rather than pre-calculated unconditionally.
