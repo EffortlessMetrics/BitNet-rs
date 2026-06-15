@@ -25,6 +25,9 @@ async function initApp() {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
 
+        // Setup keyboard shortcuts for form submission
+        setupKeyboardShortcuts();
+
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
 
@@ -722,6 +725,31 @@ function setupTabNavigation() {
             const nextTab = tabs[nextIndex];
             nextTab.focus();
             nextTab.click(); // Activate the tab
+        }
+    });
+}
+
+// Setup keyboard shortcuts for prompt submission
+function setupKeyboardShortcuts() {
+    const shortcuts = [
+        { inputId: 'prompt', buttonId: 'generate' },
+        { inputId: 'streaming-prompt', buttonId: 'start-streaming' },
+        { inputId: 'worker-prompt', buttonId: 'worker-generate' }
+    ];
+
+    shortcuts.forEach(({ inputId, buttonId }) => {
+        const input = document.getElementById(inputId);
+        const button = document.getElementById(buttonId);
+
+        if (input && button) {
+            input.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!button.disabled) {
+                        button.click();
+                    }
+                }
+            });
         }
     });
 }
