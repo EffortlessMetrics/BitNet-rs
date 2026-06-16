@@ -677,6 +677,10 @@ impl BitNetServer {
 
         // Add comprehensive middleware stack
         app = app
+            // 🛡️ Sentinel: Enforce strict body limit to prevent DoS via chunked transfer encoding bypassing content-length checks
+            .layer(axum::extract::DefaultBodyLimit::max(
+                self.config.security.max_prompt_length * 2,
+            ))
             .layer(middleware::from_fn(security_headers_middleware))
             .layer(middleware::from_fn_with_state(
                 self.security_validator.clone(),
