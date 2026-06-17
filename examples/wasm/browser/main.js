@@ -25,6 +25,9 @@ async function initApp() {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
 
+        // Setup keyboard shortcuts
+        setupKeyboardShortcuts();
+
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
 
@@ -687,6 +690,28 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+// Setup keyboard shortcuts for textareas
+function setupKeyboardShortcuts() {
+    const handleShortcut = (e, buttonId) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById(buttonId);
+            if (btn && !btn.disabled) {
+                btn.click();
+            }
+        }
+    };
+
+    const prompt = document.getElementById('prompt');
+    if (prompt) prompt.addEventListener('keydown', (e) => handleShortcut(e, 'generate'));
+
+    const streamingPrompt = document.getElementById('streaming-prompt');
+    if (streamingPrompt) streamingPrompt.addEventListener('keydown', (e) => handleShortcut(e, 'start-streaming'));
+
+    const workerPrompt = document.getElementById('worker-prompt');
+    if (workerPrompt) workerPrompt.addEventListener('keydown', (e) => handleShortcut(e, 'worker-generate'));
+}
 
 // Setup keyboard navigation for tabs
 function setupTabNavigation() {
