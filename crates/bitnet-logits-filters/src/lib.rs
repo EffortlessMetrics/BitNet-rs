@@ -50,16 +50,20 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
         return;
     }
 
-    let positive_count = probs.iter().filter(|&&p| p > 0.0).count();
-    if positive_count <= 1 {
-        return;
-    }
-
-    let mut indexed = Vec::with_capacity(positive_count);
+    // ⚡ Bolt: Single pass vector allocation for Top-P.
+    // Instead of pre-counting (which requires a full O(N) pass over the slice),
+    // we allocate dynamically in a single pass. For sparse distributions (e.g.
+    // after Top-K), this reduces pass overhead significantly without meaningful
+    // allocation costs.
+    let mut indexed = Vec::new();
     for (idx, &probability) in probs.iter().enumerate() {
         if probability > 0.0 {
             indexed.push((idx, probability));
         }
+    }
+
+    if indexed.len() <= 1 {
+        return;
     }
 
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
@@ -74,8 +78,8 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
         }
     }
 
-    for (_, (idx, _)) in indexed.iter().enumerate().skip(cutoff) {
-        probs[*idx] = 0.0;
+    for &(idx, _) in indexed.iter().skip(cutoff) {
+        probs[idx] = 0.0;
     }
 }
 
