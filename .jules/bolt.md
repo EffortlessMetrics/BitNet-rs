@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2026-03-05 - Anti-pattern: Double-pass pre-allocation for sparse vectors
+**Learning:** Pre-counting non-zero elements to initialize vectors with capacity is an O(N) double-pass anti-pattern for sparse distributions (like after Top-K filtering). In sampling contexts where vocabulary sizes are large, dynamic Vec allocation in a single pass is significantly faster.
+**Action:** In token sampling logic, avoid O(N) double-pass operations or pre-allocations based on the full vocabulary size. Use a single pass with dynamic `Vec` allocation instead.

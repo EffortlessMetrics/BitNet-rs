@@ -14,16 +14,21 @@ use std::cmp::Ordering;
 /// Returns the number of non-`NEG_INFINITY` entries remaining.
 /// If `top_k == 0` or `top_k >= logits.len()`, the slice is unchanged.
 pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
-    let unmasked = logits.iter().filter(|&&x| x > f32::NEG_INFINITY).count();
-    if top_k == 0 || top_k >= logits.len() || unmasked <= top_k {
-        return unmasked;
+    if top_k == 0 || top_k >= logits.len() {
+        return logits.iter().filter(|&&x| x > f32::NEG_INFINITY).count();
     }
 
-    let mut vals = Vec::with_capacity(unmasked);
+    // ⚡ Bolt: Use single pass with dynamic allocation to avoid O(N) double-pass on sparse distributions
+    let mut vals = Vec::new();
     for &logit in logits.iter() {
         if logit > f32::NEG_INFINITY {
             vals.push(logit);
         }
+    }
+
+    let unmasked = vals.len();
+    if unmasked <= top_k {
+        return unmasked;
     }
 
     let partition_idx = vals.len() - top_k;
@@ -50,16 +55,16 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
         return;
     }
 
-    let positive_count = probs.iter().filter(|&&p| p > 0.0).count();
-    if positive_count <= 1 {
-        return;
-    }
-
-    let mut indexed = Vec::with_capacity(positive_count);
+    // ⚡ Bolt: Use single pass with dynamic allocation to avoid O(N) double-pass on sparse distributions
+    let mut indexed = Vec::new();
     for (idx, &probability) in probs.iter().enumerate() {
         if probability > 0.0 {
             indexed.push((idx, probability));
         }
+    }
+
+    if indexed.len() <= 1 {
+        return;
     }
 
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
@@ -131,7 +136,8 @@ mod typical_filter {
 
     pub(super) fn collect_deviations(probs: &[f32]) -> Option<Vec<TypicalEntry>> {
         let mut entropy = 0.0f64;
-        let mut entries: Vec<TypicalEntry> = Vec::with_capacity(probs.len());
+        // ⚡ Bolt: Avoid pre-allocating for full vocab size (O(N)) on sparse distributions
+        let mut entries: Vec<TypicalEntry> = Vec::new();
 
         for (index, &probability) in probs.iter().enumerate() {
             if probability <= 0.0 {
