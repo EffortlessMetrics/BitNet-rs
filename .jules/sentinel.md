@@ -23,3 +23,8 @@
 **Vulnerability:** The `validate_model_request` function bypassed directory checks entirely when `allowed_model_directories` was empty. This allowed attackers to specify absolute paths (e.g., `/etc/passwd.gguf`) and bypass path restrictions.
 **Learning:** Checking for `..` and `~` is insufficient for path safety because absolute paths don't contain them. When an allowlist is intentionally empty, it is critical to explicitly deny absolute paths or deny all requests, rather than allowing any path.
 **Prevention:** Explicitly deny absolute paths if no specific allowed directories are configured.
+
+## 2025-06-03 - Payload Size Limit Bypass via Chunked Encoding
+**Vulnerability:** The `request_sanitization_middleware` relied solely on the `content-length` header to enforce maximum payload size. An attacker could bypass this by using `Transfer-Encoding: chunked` and omitting `Content-Length`, potentially causing a Denial of Service (DoS) due to unbounded memory allocation during payload parsing.
+**Learning:** Checking HTTP headers for payload size is insufficient if chunked encoding is permitted without strict downstream limits.
+**Prevention:** If restricting sizes via middleware based on headers, explicitly reject requests that use chunked encoding without a `Content-Length` header by returning `411 Length Required`. Alternatively, use framework-level body limiters (like Axum's `DefaultBodyLimit`).
