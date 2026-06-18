@@ -494,13 +494,20 @@ pub async fn request_sanitization_middleware(
     // This middleware focuses on general request sanitization
 
     // Check request size
-    if let Some(content_length) = request.headers().get("content-length")
-        && let Ok(length_str) = content_length.to_str()
-        && let Ok(length) = length_str.parse::<usize>()
-        && length > validator.config.max_prompt_length * 2
-    {
-        warn!(content_length = length, "Request too large");
-        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    // 🛡️ Sentinel: Fix payload size limit bypass. Reject requests with missing content-length but chunked encoding, or requests exceeding the size limit.
+    if let Some(content_length) = request.headers().get("content-length") {
+        if let Ok(length_str) = content_length.to_str()
+            && let Ok(length) = length_str.parse::<usize>()
+            && length > validator.config.max_prompt_length * 2
+        {
+            warn!(content_length = length, "Request too large");
+            return Err(StatusCode::PAYLOAD_TOO_LARGE);
+        }
+    } else if request.headers().contains_key("transfer-encoding") {
+        warn!(
+            "Chunked transfer encoding without content-length is not allowed for size verification"
+        );
+        return Err(StatusCode::LENGTH_REQUIRED);
     }
 
     // Check Content-Type for JSON endpoints
