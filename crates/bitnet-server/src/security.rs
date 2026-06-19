@@ -503,6 +503,14 @@ pub async fn request_sanitization_middleware(
         return Err(StatusCode::PAYLOAD_TOO_LARGE);
     }
 
+    // 🛡️ Sentinel: Reject chunked requests without content-length to prevent unbounded memory consumption (DoS risk)
+    if request.headers().get("content-length").is_none()
+        && request.headers().get("transfer-encoding").is_some()
+    {
+        warn!("Rejecting chunked request without content-length to prevent DoS");
+        return Err(StatusCode::LENGTH_REQUIRED);
+    }
+
     // Check Content-Type for JSON endpoints
     let content_type = request.headers().get("content-type").and_then(|ct| ct.to_str().ok());
 
