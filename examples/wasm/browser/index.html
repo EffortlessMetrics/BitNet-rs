@@ -261,6 +261,29 @@
         .tab-content.active {
             display: block;
         }
+
+        kbd {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            color: #495057;
+            font-family: inherit;
+            font-size: 11px;
+            padding: 2px 6px;
+            white-space: nowrap;
+        }
+
+        .label-with-shortcut {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 5px;
+        }
+
+        .label-with-shortcut label {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -298,8 +321,11 @@
             </div>
 
             <div class="input-group">
-                <label for="prompt">Prompt:</label>
-                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+                <div class="label-with-shortcut">
+                    <label for="prompt">Prompt:</label>
+                    <span aria-hidden="true" title="Press Ctrl+Enter or Cmd+Enter to generate"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>
+                </div>
+                <textarea id="prompt" placeholder="Enter your prompt here..." aria-keyshortcuts="Control+Enter">Hello, I am a BitNet model running in your browser!</textarea>
             </div>
 
             <div class="controls">
@@ -343,8 +369,11 @@
             <h3>Streaming Text Generation</h3>
 
             <div class="input-group">
-                <label for="streaming-prompt">Prompt:</label>
-                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <div class="label-with-shortcut">
+                    <label for="streaming-prompt">Prompt:</label>
+                    <span aria-hidden="true" title="Press Ctrl+Enter or Cmd+Enter to start streaming"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>
+                </div>
+                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming..." aria-keyshortcuts="Control+Enter">Once upon a time, in a world where AI models run in browsers,</textarea>
             </div>
 
             <div class="controls">
@@ -392,8 +421,11 @@
             </div>
 
             <div class="input-group">
-                <label for="worker-prompt">Prompt:</label>
-                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <div class="label-with-shortcut">
+                    <label for="worker-prompt">Prompt:</label>
+                    <span aria-hidden="true" title="Press Ctrl+Enter or Cmd+Enter to generate"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>
+                </div>
+                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing..." aria-keyshortcuts="Control+Enter">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
             </div>
 
             <div class="input-group">

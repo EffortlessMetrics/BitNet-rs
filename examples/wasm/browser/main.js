@@ -25,6 +25,9 @@ async function initApp() {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
 
+        // Setup keyboard shortcuts for textareas
+        setupKeyboardShortcuts();
+
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
 
@@ -687,6 +690,34 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+// Setup keyboard shortcuts for prompt textareas
+function setupKeyboardShortcuts() {
+    const textareas = [
+        { id: 'prompt', buttonId: 'generate' },
+        { id: 'streaming-prompt', buttonId: 'start-streaming' },
+        { id: 'worker-prompt', buttonId: 'worker-generate' }
+    ];
+
+    textareas.forEach(({ id, buttonId }) => {
+        const textarea = document.getElementById(id);
+        const button = document.getElementById(buttonId);
+
+        if (textarea && button) {
+            textarea.addEventListener('keydown', (e) => {
+                // Check for Ctrl+Enter or Cmd+Enter
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault(); // Prevent default new line behavior if any
+
+                    // Only trigger if the button is not disabled
+                    if (!button.disabled) {
+                        button.click();
+                    }
+                }
+            });
+        }
+    });
+}
 
 // Setup keyboard navigation for tabs
 function setupTabNavigation() {
