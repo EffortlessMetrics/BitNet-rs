@@ -22,3 +22,7 @@
 ## 2024-05-24 - Confirm Destructive Actions
 **Learning:** Destructive actions that result in data loss or immediate page reloads (like resetting settings) must have a confirmation prompt to prevent accidental activation and poor UX.
 **Action:** Always add a confirmation step (e.g., using `confirm()`) or a custom confirmation modal before executing destructive actions or operations that force a full page reload.
+
+## 2024-05-24 - Keyboard Shortcuts for Form Inputs
+**Learning:** Adding visual keyboard shortcuts (like <kbd> tags) next to labels improves discoverability, but these visual hints must be hidden from screen readers (`aria-hidden="true"`) while adding the actual `aria-keyshortcuts` attribute to the input element itself to maintain accessibility.
+**Action:** When implementing submit shortcuts like Ctrl+Enter for textareas, visually place the hint near the label using flexbox, hide the visual hint from screen readers, and attach the aria-keyshortcuts attribute to the interactive element.
