@@ -343,6 +343,8 @@ impl ConcurrencyManager {
 
     /// Get or create rate limiter for IP
     async fn get_or_create_ip_limiter(&self, ip: IpAddr, limit: u64) -> Arc<RateLimitBucket> {
+        // 🛡️ Sentinel: Fix TOCTOU vulnerability during concurrent rate limiter initialization
+        // using the double-checked locking pattern to maintain fast read paths.
         {
             let limiters = self.per_ip_rate_limiters.read().await;
             if let Some(limiter) = limiters.get(&ip) {
@@ -350,13 +352,10 @@ impl ConcurrencyManager {
             }
         }
 
-        let new_limiter = Arc::new(RateLimitBucket::new(limit, limit));
-        {
-            let mut limiters = self.per_ip_rate_limiters.write().await;
-            limiters.insert(ip, Arc::clone(&new_limiter));
-        }
-
-        new_limiter
+        let mut limiters = self.per_ip_rate_limiters.write().await;
+        Arc::clone(
+            limiters.entry(ip).or_insert_with(|| Arc::new(RateLimitBucket::new(limit, limit))),
+        )
     }
 
     /// Record successful request completion
