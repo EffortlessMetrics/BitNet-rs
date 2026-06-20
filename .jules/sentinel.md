@@ -23,3 +23,8 @@
 **Vulnerability:** The `validate_model_request` function bypassed directory checks entirely when `allowed_model_directories` was empty. This allowed attackers to specify absolute paths (e.g., `/etc/passwd.gguf`) and bypass path restrictions.
 **Learning:** Checking for `..` and `~` is insufficient for path safety because absolute paths don't contain them. When an allowlist is intentionally empty, it is critical to explicitly deny absolute paths or deny all requests, rather than allowing any path.
 **Prevention:** Explicitly deny absolute paths if no specific allowed directories are configured.
+
+## 2024-06-20 - TOCTOU in Rate Limiter Initialization
+**Vulnerability:** A Time-of-Check to Time-of-Use (TOCTOU) vulnerability existed in `get_or_create_ip_limiter`. Multiple concurrent requests from the same IP could bypass the initial read lock check, drop the lock, and then acquire a write lock to insert a new `RateLimitBucket`. This led to concurrent overwrites, leaking memory and resetting the rate limit state repeatedly under high concurrency.
+**Learning:** Using a separate read-lock block and write-lock block without re-checking the condition under the write lock creates a race condition window where state can change.
+**Prevention:** Use the double-checked locking pattern (check with read lock, acquire write lock, and then use `entry().or_insert_with()`) to safely initialize shared state under concurrent access without sacrificing fast-path read performance.
