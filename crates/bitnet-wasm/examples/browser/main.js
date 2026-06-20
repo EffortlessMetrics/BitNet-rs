@@ -24,6 +24,7 @@ async function initApp() {
     try {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
+        setupKeyboardShortcuts();
 
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
@@ -687,6 +688,30 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+function setupKeyboardShortcuts() {
+    const prompts = [
+        { id: 'prompt', buttonId: 'generate' },
+        { id: 'streaming-prompt', buttonId: 'start-streaming' },
+        { id: 'worker-prompt', buttonId: 'worker-generate' }
+    ];
+
+    prompts.forEach(({ id, buttonId }) => {
+        const textarea = document.getElementById(id);
+        const button = document.getElementById(buttonId);
+
+        if (textarea && button) {
+            textarea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!button.disabled) {
+                        button.click();
+                    }
+                }
+            });
+        }
+    });
+}
 
 // Setup keyboard navigation for tabs
 function setupTabNavigation() {
