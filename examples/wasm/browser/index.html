@@ -98,6 +98,19 @@
             font-weight: 500;
         }
 
+        kbd.shortcut {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            color: #495057;
+            font-family: inherit;
+            font-size: 0.8em;
+            padding: 1px 5px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
         .output:focus-visible,
         .streaming-output:focus-visible {
             outline: 2px solid #0066cc;
@@ -298,8 +311,8 @@
             </div>
 
             <div class="input-group">
-                <label for="prompt">Prompt:</label>
-                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+                <label for="prompt">Prompt: <kbd class="shortcut" aria-hidden="true">Ctrl+Enter</kbd></label>
+                <textarea id="prompt" aria-keyshortcuts="Control+Enter" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
             </div>
 
             <div class="controls">
@@ -343,8 +356,8 @@
             <h3>Streaming Text Generation</h3>
 
             <div class="input-group">
-                <label for="streaming-prompt">Prompt:</label>
-                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <label for="streaming-prompt">Prompt: <kbd class="shortcut" aria-hidden="true">Ctrl+Enter</kbd></label>
+                <textarea id="streaming-prompt" aria-keyshortcuts="Control+Enter" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
             </div>
 
             <div class="controls">
@@ -392,8 +405,8 @@
             </div>
 
             <div class="input-group">
-                <label for="worker-prompt">Prompt:</label>
-                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <label for="worker-prompt">Prompt: <kbd class="shortcut" aria-hidden="true">Ctrl+Enter</kbd></label>
+                <textarea id="worker-prompt" aria-keyshortcuts="Control+Enter" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
             </div>
 
             <div class="input-group">
