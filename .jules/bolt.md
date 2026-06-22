@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2026-03-05 - Optimizing Repetition Penalty Division
+**Learning:** In the `apply` hot loop for repetition penalty, division (`logits[idx] /= penalty`) is significantly slower than multiplication. Since `penalty` is `count_penalty.powi(count)`, we can avoid division by pre-calculating the inverse base (`1.0 / count_penalty`) outside the loop, raising it to the `count` power (`inv_base.powi(count)`), and multiplying (`logits[idx] *= inv_penalty`).
+**Action:** When applying a sequence of divisions in a hot loop where the divisor is a power of a constant base, calculate the inverse base entirely outside the loop and multiply by the inverse power to safely eliminate division overhead.
