@@ -494,14 +494,22 @@ pub async fn request_sanitization_middleware(
     // This middleware focuses on general request sanitization
 
     // Check request size
-    if let Some(content_length) = request.headers().get("content-length")
-        && let Ok(length_str) = content_length.to_str()
-        && let Ok(length) = length_str.parse::<usize>()
-        && length > validator.config.max_prompt_length * 2
-    {
-        warn!(content_length = length, "Request too large");
-        return Err(StatusCode::PAYLOAD_TOO_LARGE);
-    }
+    let content_length = request.headers().get("content-length");
+    if let Some(cl) = content_length {
+        if let Ok(length_str) = cl.to_str()
+            && let Ok(length) = length_str.parse::<usize>()
+            && length > validator.config.max_prompt_length * 2
+        {
+            warn!(content_length = length, "Request too large");
+            return Err(StatusCode::PAYLOAD_TOO_LARGE);
+        }
+    } else if let Some(te) = request.headers().get("transfer-encoding")
+        && let Ok(te_str) = te.to_str()
+            && te_str.contains("chunked") {
+                // 🛡️ Sentinel: Explicitly reject requests that include transfer-encoding: chunked if they lack a defined content length to prevent unbounded payload DoS attacks.
+                warn!("Chunked transfer encoding without content length is not allowed");
+                return Err(StatusCode::LENGTH_REQUIRED);
+            }
 
     // Check Content-Type for JSON endpoints
     let content_type = request.headers().get("content-type").and_then(|ct| ct.to_str().ok());

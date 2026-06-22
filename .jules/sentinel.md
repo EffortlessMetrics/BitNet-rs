@@ -23,3 +23,8 @@
 **Vulnerability:** The `validate_model_request` function bypassed directory checks entirely when `allowed_model_directories` was empty. This allowed attackers to specify absolute paths (e.g., `/etc/passwd.gguf`) and bypass path restrictions.
 **Learning:** Checking for `..` and `~` is insufficient for path safety because absolute paths don't contain them. When an allowlist is intentionally empty, it is critical to explicitly deny absolute paths or deny all requests, rather than allowing any path.
 **Prevention:** Explicitly deny absolute paths if no specific allowed directories are configured.
+
+## 2026-06-05 - Unbounded Payload DoS via Transfer-Encoding: chunked
+**Vulnerability:** The API middleware in `request_sanitization_middleware` validated payload sizes via the `content-length` header. However, if an attacker sent a request with `transfer-encoding: chunked` and no `content-length` header, they could bypass this size check entirely, potentially uploading infinite amounts of data and exhausting server resources (Denial of Service).
+**Learning:** Depending solely on the `content-length` header for payload size limits is insufficient and dangerous because modern HTTP allows chunked transfer encoding, where the length is not known upfront.
+**Prevention:** Explicitly reject requests that include `transfer-encoding: chunked` if they lack a defined content length, or implement a streaming body reader that enforces a hard size limit during the read phase.
