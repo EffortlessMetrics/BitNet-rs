@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2026-03-08 - Floating Point Powi Optimization
+**Learning:** `f32::powi` within hot loops inside iteration paths can be significantly optimized when the base is constant. Calculating the inverse base (`1.0 / base`) ahead of the loop, then computing `powi(count)` of the inverse to use multiplication instead of division (`logit *= inv_base.powi(count)`) avoids costly float division operations.
+**Action:** When a constant base is raised to dynamic powers and used as a divisor inside a hot loop, calculate the inverse base once outside the loop and use multiplication by the exponentiated inverse.
