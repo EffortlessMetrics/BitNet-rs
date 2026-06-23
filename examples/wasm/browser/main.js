@@ -22,6 +22,9 @@ let copyFeedbackTimeout = null;
 // Initialize the application
 async function initApp() {
     try {
+        // Setup keyboard shortcuts
+        setupKeyboardShortcuts();
+
         // Setup keyboard navigation for tabs
         setupTabNavigation();
 
@@ -687,6 +690,31 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+// Setup keyboard shortcuts for text generation
+function setupKeyboardShortcuts() {
+    const shortcuts = [
+        { textareaId: 'prompt', buttonId: 'generate' },
+        { textareaId: 'streaming-prompt', buttonId: 'start-streaming' },
+        { textareaId: 'worker-prompt', buttonId: 'worker-generate' }
+    ];
+
+    shortcuts.forEach(({ textareaId, buttonId }) => {
+        const textarea = document.getElementById(textareaId);
+        const button = document.getElementById(buttonId);
+
+        if (textarea && button) {
+            textarea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!button.disabled) {
+                        button.click();
+                    }
+                }
+            });
+        }
+    });
+}
 
 // Setup keyboard navigation for tabs
 function setupTabNavigation() {
