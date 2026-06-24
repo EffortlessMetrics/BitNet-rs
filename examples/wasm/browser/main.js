@@ -44,6 +44,9 @@ async function initApp() {
         loadSettings();
         updateProgress(90);
 
+        // Setup keyboard shortcuts
+        setupKeyboardShortcuts();
+
         updateStatus('WebAssembly module initialized successfully!', 'success');
         updateProgress(100);
 
@@ -687,6 +690,42 @@ document.getElementById('temperature').addEventListener('input', function() {
 document.getElementById('top-p').addEventListener('input', function() {
     document.getElementById('top-p-value').textContent = this.value;
 });
+
+// Setup keyboard shortcuts for textareas
+function setupKeyboardShortcuts() {
+    const handleShortcut = (e, buttonId) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById(buttonId);
+            if (btn && !btn.disabled) {
+                btn.click();
+            }
+        }
+    };
+
+    const promptTextarea = document.getElementById('prompt');
+    if (promptTextarea) {
+        promptTextarea.addEventListener('keydown', (e) => handleShortcut(e, 'generate'));
+    }
+
+    const streamingPromptTextarea = document.getElementById('streaming-prompt');
+    if (streamingPromptTextarea) {
+        streamingPromptTextarea.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                const startBtn = document.getElementById('start-streaming');
+                if (startBtn && !startBtn.disabled) {
+                    startBtn.click();
+                }
+            }
+        });
+    }
+
+    const workerPromptTextarea = document.getElementById('worker-prompt');
+    if (workerPromptTextarea) {
+        workerPromptTextarea.addEventListener('keydown', (e) => handleShortcut(e, 'worker-generate'));
+    }
+}
 
 // Setup keyboard navigation for tabs
 function setupTabNavigation() {
