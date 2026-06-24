@@ -23,3 +23,13 @@
 **Vulnerability:** The `validate_model_request` function bypassed directory checks entirely when `allowed_model_directories` was empty. This allowed attackers to specify absolute paths (e.g., `/etc/passwd.gguf`) and bypass path restrictions.
 **Learning:** Checking for `..` and `~` is insufficient for path safety because absolute paths don't contain them. When an allowlist is intentionally empty, it is critical to explicitly deny absolute paths or deny all requests, rather than allowing any path.
 **Prevention:** Explicitly deny absolute paths if no specific allowed directories are configured.
+
+## 2024-05-24 - Unbounded Chunked Requests
+**Vulnerability:** The request sanitization middleware failed to properly bound request sizes if a request lacked a `content-length` header and used `Transfer-Encoding: chunked`. This could allow attackers to send unbounded payloads, potentially causing a Denial of Service (DoS) by exhausting server memory or processing resources.
+**Learning:** Checking the `content-length` header is insufficient for enforcing request size limits because HTTP allows chunked transfer encoding which omits this header. Security middleware must explicitly handle or reject chunked requests if it relies on predetermined lengths.
+**Prevention:** Explicitly reject requests with `transfer-encoding: chunked` that lack a defined content length, or implement a streaming parser that enforces a maximum size limit during consumption.
+
+## 2024-05-24 - Unbounded Chunked Requests & HTTP Smuggling
+**Vulnerability:** The request sanitization middleware attempted to prevent unbounded payload DoS by requiring a `Content-Length` header on requests with `Transfer-Encoding: chunked`.
+**Learning:** Demanding both `Transfer-Encoding` and `Content-Length` headers is an HTTP protocol violation (RFC 9112) and is the primary vector for HTTP Request Smuggling.
+**Prevention:** If an API relies on predetermined lengths for security, it must reject `Transfer-Encoding: chunked` outright with `411 Length Required` rather than demanding a conflicting header combination. Alternatively, enforce global body size limits during stream consumption (e.g., `axum::extract::DefaultBodyLimit`).
