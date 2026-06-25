@@ -20,10 +20,25 @@ let benchmarkSuite = null;
 let copyFeedbackTimeout = null;
 
 // Initialize the application
+function setupKeyboardShortcuts() {
+    const handleShortcut = (e, btnId) => {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById(btnId);
+            if (!btn.disabled) btn.click();
+        }
+    };
+
+    document.getElementById('prompt')?.addEventListener('keydown', (e) => handleShortcut(e, 'generate'));
+    document.getElementById('streaming-prompt')?.addEventListener('keydown', (e) => handleShortcut(e, 'start-streaming'));
+    document.getElementById('worker-prompt')?.addEventListener('keydown', (e) => handleShortcut(e, 'worker-generate'));
+}
+
 async function initApp() {
     try {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
+        setupKeyboardShortcuts();
 
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
