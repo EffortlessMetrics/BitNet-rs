@@ -258,6 +258,15 @@
             display: none;
         }
 
+        kbd.shortcut {
+            font-family: monospace;
+            background-color: rgba(0, 0, 0, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-left: 6px;
+        }
+
         .tab-content.active {
             display: block;
         }
@@ -299,12 +308,12 @@
 
             <div class="input-group">
                 <label for="prompt">Prompt:</label>
-                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+                <textarea id="prompt" placeholder="Enter your prompt here..." aria-keyshortcuts="Control+Enter">Hello, I am a BitNet model running in your browser!</textarea>
             </div>
 
             <div class="controls">
                 <button id="load-model" onclick="loadModel()">Load Model</button>
-                <button id="generate" onclick="generateText()" disabled title="Load a model first">Generate Text</button>
+                <button id="generate" onclick="generateText()" disabled title="Load a model first">Generate Text <kbd class="shortcut" aria-hidden="true">Ctrl+Enter</kbd></button>
                 <button id="clear-output" onclick="clearOutput()">Clear Output</button>
             </div>
 
@@ -344,11 +353,11 @@
 
             <div class="input-group">
                 <label for="streaming-prompt">Prompt:</label>
-                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming..." aria-keyshortcuts="Control+Enter">Once upon a time, in a world where AI models run in browsers,</textarea>
             </div>
 
             <div class="controls">
-                <button id="start-streaming" onclick="startStreaming()" disabled title="Load a model first">Start Streaming</button>
+                <button id="start-streaming" onclick="startStreaming()" disabled title="Load a model first">Start Streaming <kbd class="shortcut" aria-hidden="true">Ctrl+Enter</kbd></button>
                 <button id="stop-streaming" onclick="stopStreaming()" disabled title="No stream is running">Stop Streaming</button>
                 <button id="clear-streaming" onclick="clearStreaming()">Clear</button>
             </div>
@@ -387,13 +396,13 @@
 
             <div class="controls">
                 <button id="init-worker" onclick="initWorker()">Initialize Worker</button>
-                <button id="worker-generate" onclick="workerGenerate()" disabled title="Initialize the worker first">Generate in Worker</button>
+                <button id="worker-generate" onclick="workerGenerate()" disabled title="Initialize the worker first">Generate in Worker <kbd class="shortcut" aria-hidden="true">Ctrl+Enter</kbd></button>
                 <button id="terminate-worker" onclick="terminateWorker()" disabled title="Initialize the worker first">Terminate Worker</button>
             </div>
 
             <div class="input-group">
                 <label for="worker-prompt">Prompt:</label>
-                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing..." aria-keyshortcuts="Control+Enter">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
             </div>
 
             <div class="input-group">
