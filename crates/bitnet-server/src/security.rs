@@ -494,6 +494,12 @@ pub async fn request_sanitization_middleware(
     // This middleware focuses on general request sanitization
 
     // Check request size
+    // 🛡️ Sentinel: Reject chunked transfer encoding as it bypasses the content-length limit check, leading to potential DoS.
+    if request.headers().contains_key("transfer-encoding") {
+        warn!("Chunked transfer encoding is not allowed");
+        return Err(StatusCode::LENGTH_REQUIRED);
+    }
+
     if let Some(content_length) = request.headers().get("content-length")
         && let Ok(length_str) = content_length.to_str()
         && let Ok(length) = length_str.parse::<usize>()
