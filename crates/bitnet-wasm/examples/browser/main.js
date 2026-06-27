@@ -747,5 +747,25 @@ window.resetSettings = resetSettings;
 window.exportSettings = exportSettings;
 window.importSettings = importSettings;
 
+// Setup keyboard shortcuts for textareas
+function setupKeyboardShortcuts() {
+    const handleShortcut = (e, btnId, actionFn) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            const btn = document.getElementById(btnId);
+            if (btn && !btn.disabled) {
+                actionFn();
+            }
+        }
+    };
+
+    document.getElementById('prompt')?.addEventListener('keydown', (e) => handleShortcut(e, 'generate', generateText));
+    document.getElementById('streaming-prompt')?.addEventListener('keydown', (e) => handleShortcut(e, 'start-streaming', startStreaming));
+    document.getElementById('worker-prompt')?.addEventListener('keydown', (e) => handleShortcut(e, 'worker-generate', workerGenerate));
+}
+
 // Initialize the application when the page loads
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+    setupKeyboardShortcuts();
+});

@@ -92,6 +92,25 @@
             margin: 15px 0;
         }
 
+        .helper-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        kbd {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            color: #495057;
+            font-size: 11px;
+            padding: 2px 4px;
+            font-family: monospace;
+        }
+
         label, .container-label {
             display: block;
             margin-bottom: 5px;
@@ -299,7 +318,8 @@
 
             <div class="input-group">
                 <label for="prompt">Prompt:</label>
-                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+                <textarea id="prompt" placeholder="Enter your prompt here..." aria-describedby="prompt-help">Hello, I am a BitNet model running in your browser!</textarea>
+                <div id="prompt-help" class="helper-text">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to generate</div>
             </div>
 
             <div class="controls">
@@ -344,7 +364,8 @@
 
             <div class="input-group">
                 <label for="streaming-prompt">Prompt:</label>
-                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming..." aria-describedby="streaming-prompt-help">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <div id="streaming-prompt-help" class="helper-text">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to start streaming</div>
             </div>
 
             <div class="controls">
@@ -393,7 +414,8 @@
 
             <div class="input-group">
                 <label for="worker-prompt">Prompt:</label>
-                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing..." aria-describedby="worker-prompt-help">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <div id="worker-prompt-help" class="helper-text">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to generate in worker</div>
             </div>
 
             <div class="input-group">
