@@ -22,3 +22,6 @@
 ## 2024-05-24 - Confirm Destructive Actions
 **Learning:** Destructive actions that result in data loss or immediate page reloads (like resetting settings) must have a confirmation prompt to prevent accidental activation and poor UX.
 **Action:** Always add a confirmation step (e.g., using `confirm()`) or a custom confirmation modal before executing destructive actions or operations that force a full page reload.
+## 2025-02-23 - Keyboard Shortcuts in LLM Interfaces
+**Learning:** Text generation interfaces inherently trap keyboard focus in textareas, forcing users to reach for the mouse or hit Tab multiple times just to submit a prompt. Providing a visual `Ctrl+Enter` keyboard shortcut hint linked via `aria-describedby` significantly improves both power-user UX and accessibility.
+**Action:** Always add and visually document keyboard shortcuts (like Ctrl+Enter) for primary actions when users are typing in textareas, using semantic `<kbd>` tags and `aria-describedby` to ensure screen reader visibility.
