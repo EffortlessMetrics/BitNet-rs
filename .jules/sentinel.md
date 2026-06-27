@@ -23,3 +23,8 @@
 **Vulnerability:** The `validate_model_request` function bypassed directory checks entirely when `allowed_model_directories` was empty. This allowed attackers to specify absolute paths (e.g., `/etc/passwd.gguf`) and bypass path restrictions.
 **Learning:** Checking for `..` and `~` is insufficient for path safety because absolute paths don't contain them. When an allowlist is intentionally empty, it is critical to explicitly deny absolute paths or deny all requests, rather than allowing any path.
 **Prevention:** Explicitly deny absolute paths if no specific allowed directories are configured.
+
+## 2024-11-13 - [Content-Length Limit Bypass via Chunked Transfer Encoding]
+**Vulnerability:** The request validation middleware relied solely on the `content-length` header to enforce maximum request payload sizes. A malicious client could send requests with `Transfer-Encoding: chunked`, omitting the `content-length` header and completely bypassing the size restrictions. This exposed the server to Denial of Service (DoS) attacks via memory exhaustion (OOM).
+**Learning:** When implementing request size limits in HTTP middleware, checking the `content-length` header is insufficient against chunked requests. Furthermore, demanding both `Transfer-Encoding: chunked` and `Content-Length` simultaneously is an HTTP protocol violation (RFC 9112) that enables Request Smuggling.
+**Prevention:** Either reject `Transfer-Encoding: chunked` outright if the API requires predetermined lengths, or enforce global body size limits using framework-provided mechanisms like `axum::extract::DefaultBodyLimit`.
