@@ -22,3 +22,7 @@
 ## 2024-05-24 - Confirm Destructive Actions
 **Learning:** Destructive actions that result in data loss or immediate page reloads (like resetting settings) must have a confirmation prompt to prevent accidental activation and poor UX.
 **Action:** Always add a confirmation step (e.g., using `confirm()`) or a custom confirmation modal before executing destructive actions or operations that force a full page reload.
+
+## 2024-06-28 - Keyboard Shortcuts for Text Generation
+**Learning:** Users naturally attempt to use `Ctrl+Enter` or `Cmd+Enter` to submit prompts in AI interfaces. Providing this shortcut along with visual hints in the UI creates a smoother, more efficient interaction loop than requiring a mouse click on the 'Generate' button.
+**Action:** Always map `Ctrl+Enter` / `Cmd+Enter` to the primary submission action within prompt textareas, and display a semantic `<kbd>` visual hint to teach users this shortcut.

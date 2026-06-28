@@ -139,6 +139,22 @@
             font-size: 12px;
         }
 
+        .text-hint {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: normal;
+        }
+
+        kbd {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            padding: 1px 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #495057;
+        }
+
         textarea {
             resize: vertical;
             min-height: 100px;
@@ -298,7 +314,10 @@
             </div>
 
             <div class="input-group">
-                <label for="prompt">Prompt:</label>
+                <div class="range-header">
+                    <label for="prompt">Prompt:</label>
+                    <span class="text-hint">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to generate</span>
+                </div>
                 <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
             </div>
 
@@ -343,7 +362,10 @@
             <h3>Streaming Text Generation</h3>
 
             <div class="input-group">
-                <label for="streaming-prompt">Prompt:</label>
+                <div class="range-header">
+                    <label for="streaming-prompt">Prompt:</label>
+                    <span class="text-hint">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to generate</span>
+                </div>
                 <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
             </div>
 
@@ -392,7 +414,10 @@
             </div>
 
             <div class="input-group">
-                <label for="worker-prompt">Prompt:</label>
+                <div class="range-header">
+                    <label for="worker-prompt">Prompt:</label>
+                    <span class="text-hint">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to generate</span>
+                </div>
                 <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
             </div>
 
