@@ -264,6 +264,9 @@ impl RepetitionPenaltyConfig {
     ///
     /// `token_counts` is a slice of `(token_id, occurrence_count)` pairs.
     pub fn apply(&self, logits: &mut [f32], token_counts: &[(u32, usize)]) {
+        // ⚡ Bolt: Hoist the inverse calculation outside the hot loop to avoid redundant divisions.
+        let inv_count_penalty = 1.0 / self.count_penalty;
+
         for &(token_id, count) in token_counts {
             let idx = token_id as usize;
             if idx >= logits.len() || count == 0 {
@@ -279,11 +282,13 @@ impl RepetitionPenaltyConfig {
             // Count penalty: multiplicative
             if self.count_penalty.to_bits() != 1.0f32.to_bits() {
                 let count = i32::try_from(count).unwrap_or(i32::MAX);
-                let penalty = self.count_penalty.powi(count);
 
+                // ⚡ Bolt: Compute expensive powi lazily inside respective branches.
                 if logits[idx] > 0.0 {
-                    logits[idx] /= penalty;
+                    let inv_penalty = inv_count_penalty.powi(count);
+                    logits[idx] *= inv_penalty;
                 } else {
+                    let penalty = self.count_penalty.powi(count);
                     logits[idx] *= penalty;
                 }
             }
