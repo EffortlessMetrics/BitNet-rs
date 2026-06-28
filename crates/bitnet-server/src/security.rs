@@ -493,6 +493,16 @@ pub async fn request_sanitization_middleware(
     // For inference requests, we'll validate in the handler
     // This middleware focuses on general request sanitization
 
+    // 🛡️ Sentinel: Reject chunked requests to prevent bypasses of our size checks,
+    // avoiding HTTP desync / request smuggling vulnerabilities.
+    if let Some(te) = request.headers().get("transfer-encoding")
+        && let Ok(te_str) = te.to_str()
+        && te_str.contains("chunked")
+    {
+        warn!("Chunked requests are not permitted");
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
     // Check request size
     if let Some(content_length) = request.headers().get("content-length")
         && let Ok(length_str) = content_length.to_str()

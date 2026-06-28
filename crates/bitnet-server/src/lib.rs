@@ -678,10 +678,8 @@ impl BitNetServer {
         // Add comprehensive middleware stack
         app = app
             .layer(middleware::from_fn(security_headers_middleware))
-            .layer(middleware::from_fn_with_state(
-                self.security_validator.clone(),
-                request_validation_middleware,
-            ))
+            // 🛡️ Sentinel: Enforce global body limit to protect against chunked request smuggling
+            .layer(axum::extract::DefaultBodyLimit::max(self.config.security.max_prompt_length * 2))
             .layer(middleware::from_fn_with_state(
                 self.config.security.clone(),
                 security::ip_blocking_middleware,
@@ -1940,25 +1938,6 @@ async fn enhanced_metrics_middleware(request: Request, next: Next) -> Response {
     }
 
     response
-}
-
-/// Request validation middleware
-async fn request_validation_middleware(
-    State(validator): State<Arc<SecurityValidator>>,
-    request: Request,
-    next: Next,
-) -> Result<Response, StatusCode> {
-    // Check request size limits
-    if let Some(content_length) = request.headers().get("content-length")
-        && let Ok(length_str) = content_length.to_str()
-        && let Ok(length) = length_str.parse::<usize>()
-        && length > validator.config().max_prompt_length * 2
-    {
-        warn!(content_length = length, "Request payload too large");
-        return Err(StatusCode::PAYLOAD_TOO_LARGE);
-    }
-
-    Ok(next.run(request).await)
 }
 
 /// Utility functions
