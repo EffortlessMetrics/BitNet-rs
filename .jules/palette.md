@@ -22,3 +22,7 @@
 ## 2024-05-24 - Confirm Destructive Actions
 **Learning:** Destructive actions that result in data loss or immediate page reloads (like resetting settings) must have a confirmation prompt to prevent accidental activation and poor UX.
 **Action:** Always add a confirmation step (e.g., using `confirm()`) or a custom confirmation modal before executing destructive actions or operations that force a full page reload.
+
+## 2026-06-29 - Keyboard Shortcuts in Prompt Textareas
+**Learning:** Adding keyboard shortcuts (Cmd/Ctrl+Enter) to submit forms from multi-line textareas greatly improves UX for power users, but it must be paired with visible hints and explicit `aria-describedby` links to ensure screen reader users are aware of the shortcut without cluttering the main label.
+**Action:** Always pair power-user shortcuts with accessible visual hints and ARIA descriptions when enhancing input fields.

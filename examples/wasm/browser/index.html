@@ -98,6 +98,23 @@
             font-weight: 500;
         }
 
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 5px;
+        }
+
+        .label-row label {
+            margin-bottom: 0;
+        }
+
+        .shortcut-hint {
+            font-size: 12px;
+            color: #6c757d;
+            font-weight: normal;
+        }
+
         .output:focus-visible,
         .streaming-output:focus-visible {
             outline: 2px solid #0066cc;
@@ -298,8 +315,11 @@
             </div>
 
             <div class="input-group">
-                <label for="prompt">Prompt:</label>
-                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+                <div class="label-row">
+                    <label for="prompt">Prompt:</label>
+                    <span id="prompt-hint" class="shortcut-hint">Cmd/Ctrl + Enter to generate</span>
+                </div>
+                <textarea id="prompt" aria-describedby="prompt-hint" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
             </div>
 
             <div class="controls">
@@ -343,8 +363,11 @@
             <h3>Streaming Text Generation</h3>
 
             <div class="input-group">
-                <label for="streaming-prompt">Prompt:</label>
-                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <div class="label-row">
+                    <label for="streaming-prompt">Prompt:</label>
+                    <span id="streaming-prompt-hint" class="shortcut-hint">Cmd/Ctrl + Enter to start</span>
+                </div>
+                <textarea id="streaming-prompt" aria-describedby="streaming-prompt-hint" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
             </div>
 
             <div class="controls">
@@ -392,8 +415,11 @@
             </div>
 
             <div class="input-group">
-                <label for="worker-prompt">Prompt:</label>
-                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <div class="label-row">
+                    <label for="worker-prompt">Prompt:</label>
+                    <span id="worker-prompt-hint" class="shortcut-hint">Cmd/Ctrl + Enter to generate</span>
+                </div>
+                <textarea id="worker-prompt" aria-describedby="worker-prompt-hint" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
             </div>
 
             <div class="input-group">
