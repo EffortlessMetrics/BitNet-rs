@@ -298,8 +298,13 @@
             </div>
 
             <div class="input-group">
-                <label for="prompt">Prompt:</label>
-                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px;">
+                    <label for="prompt" style="margin-bottom: 0;">Prompt:</label>
+                    <span id="prompt-hint" style="font-size: 0.75rem; color: #6c757d;">
+                        <kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Cmd</kbd>/<kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Ctrl</kbd> + <kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Enter</kbd> to generate
+                    </span>
+                </div>
+                <textarea id="prompt" placeholder="Enter your prompt here..." aria-describedby="prompt-hint">Hello, I am a BitNet model running in your browser!</textarea>
             </div>
 
             <div class="controls">
@@ -343,8 +348,13 @@
             <h3>Streaming Text Generation</h3>
 
             <div class="input-group">
-                <label for="streaming-prompt">Prompt:</label>
-                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px;">
+                    <label for="streaming-prompt" style="margin-bottom: 0;">Prompt:</label>
+                    <span id="streaming-hint" style="font-size: 0.75rem; color: #6c757d;">
+                        <kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Cmd</kbd>/<kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Ctrl</kbd> + <kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Enter</kbd> to generate
+                    </span>
+                </div>
+                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming..." aria-describedby="streaming-hint">Once upon a time, in a world where AI models run in browsers,</textarea>
             </div>
 
             <div class="controls">
@@ -392,8 +402,13 @@
             </div>
 
             <div class="input-group">
-                <label for="worker-prompt">Prompt:</label>
-                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px;">
+                    <label for="worker-prompt" style="margin-bottom: 0;">Prompt:</label>
+                    <span id="worker-hint" style="font-size: 0.75rem; color: #6c757d;">
+                        <kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Cmd</kbd>/<kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Ctrl</kbd> + <kbd style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; box-shadow: 0 1px 1px rgba(0,0,0,0.2); font-family: monospace; padding: 1px 4px;">Enter</kbd> to generate
+                    </span>
+                </div>
+                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing..." aria-describedby="worker-hint">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
             </div>
 
             <div class="input-group">
