@@ -493,6 +493,16 @@ pub async fn request_sanitization_middleware(
     // For inference requests, we'll validate in the handler
     // This middleware focuses on general request sanitization
 
+    // 🛡️ Sentinel: Reject chunked requests to prevent bypass of size limits which rely on Content-Length
+    if let Some(te) = request.headers().get(axum::http::header::TRANSFER_ENCODING) {
+        if let Ok(te_str) = te.to_str() {
+            if te_str.to_lowercase().contains("chunked") {
+                warn!("Chunked transfer encoding is not allowed");
+                return Err(StatusCode::LENGTH_REQUIRED);
+            }
+        }
+    }
+
     // Check request size
     if let Some(content_length) = request.headers().get("content-length")
         && let Ok(length_str) = content_length.to_str()
