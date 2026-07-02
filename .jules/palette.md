@@ -1,24 +1,3 @@
-# Palette's Journal - Critical Learnings
-
-## 2024-05-22 - Converting Interactive Divs to Buttons
-**Learning:** When converting interactive `div` elements (like tabs) to `button` elements for accessibility, user agent styles (background, border, padding, font) often override custom styles.
-**Action:** Always include a CSS reset for the new button class (e.g., `background: transparent; border: none; font: inherit;`) to maintain the original visual design while gaining semantic benefits.
-
-## 2024-05-22 - Mocking WASM for Frontend Verification
-**Learning:** Frontend code that imports WASM modules (like `pkg/bitnet_wasm.js`) fails to run in isolation if the WASM build artifacts are missing.
-**Action:** Create a mock JS file that exports the necessary functions and classes (even if empty) to allow the frontend logic to execute and be verified without a full WASM build.
-
-## 2024-05-22 - Keyboard Navigation in Custom Tabs
-**Learning:** Custom tab implementations using ARIA roles (`tablist`, `tab`) often miss the expected keyboard interaction pattern (arrow keys to navigate), making them inaccessible to keyboard users despite having semantic roles.
-**Action:** Always implement a `keydown` handler for custom tab components to support ArrowRight/ArrowLeft/Home/End navigation and automatic activation.
-
-## 2024-05-22 - Focus Visibility and Box Sizing
-**Learning:** Adding `box-sizing: border-box` to inputs prevents them from overflowing containers when padding is applied and `width: 100%` is used. Furthermore, relying on default browser focus rings is insufficient for accessibility; explicit `:focus-visible` styles with custom outlines ensure clear visual feedback for keyboard users across different platforms.
-**Action:** Always include `box-sizing: border-box` for standard form inputs and define clear `:focus-visible` styles for better keyboard navigation.
-
-## 2024-05-22 - Improved Range Slider Layout
-**Learning:** Range sliders with adjacent value readouts can suffer from poor layout and spacing when placed in standard `div` containers. The label and value span can become disjointed or visually misaligned with the slider.
-**Action:** Group the label and value span in a flex container (`display: flex; justify-content: space-between;`) above the range input to create a clear visual header for the slider control. Style the value readout distinctively (e.g., using a pill-shaped badge) to emphasize it as an interactive state value rather than static text.
-## 2024-05-24 - Confirm Destructive Actions
-**Learning:** Destructive actions that result in data loss or immediate page reloads (like resetting settings) must have a confirmation prompt to prevent accidental activation and poor UX.
-**Action:** Always add a confirmation step (e.g., using `confirm()`) or a custom confirmation modal before executing destructive actions or operations that force a full page reload.
+## 2024-07-02 - Keyboard Shortcuts in Plain JS
+**Learning:** When adding keyboard shortcuts like `Cmd/Ctrl+Enter` to a plain HTML/JS project without a complex framework, attaching `keydown` listeners to textareas and programmatically calling the corresponding button's `click()` method is the most robust approach. It correctly respects the button's `disabled` state and integrates natively without duplicating logic. Additionally, `aria-describedby` must be used to link the textarea to the visual shortcut hint for screen readers.
+**Action:** Always link visual shortcut hints with `aria-describedby` to the input they affect. Use button `click()` propagation for vanilla JS keyboard shortcut handlers instead of calling action functions directly.
