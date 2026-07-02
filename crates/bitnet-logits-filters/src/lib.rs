@@ -50,16 +50,16 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
         return;
     }
 
-    let positive_count = probs.iter().filter(|&&p| p > 0.0).count();
-    if positive_count <= 1 {
-        return;
-    }
-
-    let mut indexed = Vec::with_capacity(positive_count);
+    let mut indexed = Vec::with_capacity(std::cmp::min(1024, probs.len()));
     for (idx, &probability) in probs.iter().enumerate() {
         if probability > 0.0 {
-            indexed.push((idx, probability));
+            // ⚡ Bolt: Use u32 for index to reduce memory and sort overhead.
+            indexed.push((idx as u32, probability));
         }
+    }
+
+    if indexed.len() <= 1 {
+        return;
     }
 
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
@@ -75,7 +75,7 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
     }
 
     for (_, (idx, _)) in indexed.iter().enumerate().skip(cutoff) {
-        probs[*idx] = 0.0;
+        probs[*idx as usize] = 0.0;
     }
 }
 
@@ -88,6 +88,11 @@ pub fn apply_min_p(probs: &mut [f32], min_p: f32) {
     }
 
     let max_prob = probs.iter().copied().fold(0.0f32, f32::max);
+    // ⚡ Bolt: Fast-path skip if no valid positive probabilities exist.
+    if max_prob <= 0.0 {
+        return;
+    }
+
     let threshold = min_p * max_prob;
     for p in probs.iter_mut() {
         // Skip writing zero over an already-zero slot; this avoids a needless
