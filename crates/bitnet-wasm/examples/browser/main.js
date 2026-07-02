@@ -24,6 +24,7 @@ async function initApp() {
     try {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
+        setupKeyboardShortcuts();
 
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
@@ -689,6 +690,44 @@ document.getElementById('top-p').addEventListener('input', function() {
 });
 
 // Setup keyboard navigation for tabs
+function setupKeyboardShortcuts() {
+    // Basic Inference
+    const promptInput = document.getElementById('prompt');
+    const generateBtn = document.getElementById('generate');
+    if (promptInput && generateBtn) {
+        promptInput.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                generateBtn.click();
+            }
+        });
+    }
+
+    // Streaming
+    const streamingPromptInput = document.getElementById('streaming-prompt');
+    const startStreamingBtn = document.getElementById('start-streaming');
+    if (streamingPromptInput && startStreamingBtn) {
+        streamingPromptInput.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                startStreamingBtn.click();
+            }
+        });
+    }
+
+    // Web Workers
+    const workerPromptInput = document.getElementById('worker-prompt');
+    const workerGenerateBtn = document.getElementById('worker-generate');
+    if (workerPromptInput && workerGenerateBtn) {
+        workerPromptInput.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                workerGenerateBtn.click();
+            }
+        });
+    }
+}
+
 function setupTabNavigation() {
     const tabsContainer = document.querySelector('.tabs');
     if (!tabsContainer) return;
