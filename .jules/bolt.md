@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2025-02-23 - Hoist invariant math outside hot-loops for repetition penalty
+**Learning:** In hot loops involving token sampling (like `RepetitionPenaltyConfig::apply` in `crates/bitnet-sampling/src/strategies.rs`), performing invariant calculations like the inverse of the base for `.powi()` repeatedly inside the loop creates an unnecessary bottleneck.
+**Action:** Always extract invariant math operations (e.g. `let inv_base = 1.0 / base;`) entirely outside the loop, especially for division by a constant or conditional paths, to save redundant computation cycles. Ensure expensive operations (like `powi()`) remain lazy and are only computed in branches where needed.
