@@ -261,6 +261,26 @@
         .tab-content.active {
             display: block;
         }
+
+        .shortcut-hint {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 4px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 4px;
+            align-items: center;
+        }
+
+        kbd {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            padding: 1px 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 10px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -299,7 +319,8 @@
 
             <div class="input-group">
                 <label for="prompt">Prompt:</label>
-                <textarea id="prompt" placeholder="Enter your prompt here...">Hello, I am a BitNet model running in your browser!</textarea>
+                <textarea id="prompt" placeholder="Enter your prompt here..." aria-describedby="prompt-hint">Hello, I am a BitNet model running in your browser!</textarea>
+                <div id="prompt-hint" class="shortcut-hint">Press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Enter</kbd> to generate</div>
             </div>
 
             <div class="controls">
@@ -344,7 +365,8 @@
 
             <div class="input-group">
                 <label for="streaming-prompt">Prompt:</label>
-                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming...">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <textarea id="streaming-prompt" placeholder="Enter your prompt for streaming..." aria-describedby="streaming-prompt-hint">Once upon a time, in a world where AI models run in browsers,</textarea>
+                <div id="streaming-prompt-hint" class="shortcut-hint">Press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Enter</kbd> to generate</div>
             </div>
 
             <div class="controls">
@@ -393,7 +415,8 @@
 
             <div class="input-group">
                 <label for="worker-prompt">Prompt:</label>
-                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing...">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <textarea id="worker-prompt" placeholder="Enter prompt for worker processing..." aria-describedby="worker-prompt-hint">This text is being generated in a Web Worker to keep the main thread responsive.</textarea>
+                <div id="worker-prompt-hint" class="shortcut-hint">Press <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Enter</kbd> to generate</div>
             </div>
 
             <div class="input-group">
