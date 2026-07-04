@@ -14,16 +14,21 @@ use std::cmp::Ordering;
 /// Returns the number of non-`NEG_INFINITY` entries remaining.
 /// If `top_k == 0` or `top_k >= logits.len()`, the slice is unchanged.
 pub fn apply_top_k(logits: &mut [f32], top_k: usize) -> usize {
-    let unmasked = logits.iter().filter(|&&x| x > f32::NEG_INFINITY).count();
-    if top_k == 0 || top_k >= logits.len() || unmasked <= top_k {
-        return unmasked;
+    if top_k == 0 || top_k >= logits.len() {
+        return logits.iter().filter(|&&x| x > f32::NEG_INFINITY).count();
     }
 
-    let mut vals = Vec::with_capacity(unmasked);
+    // ⚡ Bolt: Single pass over logits using over-provisioned capacity instead of doing an O(N) pre-counting pass.
+    let mut vals = Vec::with_capacity(std::cmp::min(1024, logits.len()));
     for &logit in logits.iter() {
         if logit > f32::NEG_INFINITY {
             vals.push(logit);
         }
+    }
+
+    let unmasked = vals.len();
+    if unmasked <= top_k {
+        return unmasked;
     }
 
     let partition_idx = vals.len() - top_k;
@@ -50,16 +55,16 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
         return;
     }
 
-    let positive_count = probs.iter().filter(|&&p| p > 0.0).count();
-    if positive_count <= 1 {
-        return;
-    }
-
-    let mut indexed = Vec::with_capacity(positive_count);
+    // ⚡ Bolt: Use a single pass with over-provisioned capacity and u32 indices to avoid O(N) pre-counting and reduce sorting/memory overhead.
+    let mut indexed = Vec::with_capacity(std::cmp::min(1024, probs.len()));
     for (idx, &probability) in probs.iter().enumerate() {
         if probability > 0.0 {
-            indexed.push((idx, probability));
+            indexed.push((idx as u32, probability));
         }
+    }
+
+    if indexed.len() <= 1 {
+        return;
     }
 
     indexed.sort_unstable_by(|a, b| f32_descending(a.1, b.1));
@@ -75,7 +80,7 @@ pub fn apply_top_p(probs: &mut [f32], top_p: f32) {
     }
 
     for (_, (idx, _)) in indexed.iter().enumerate().skip(cutoff) {
-        probs[*idx] = 0.0;
+        probs[*idx as usize] = 0.0;
     }
 }
 
@@ -122,7 +127,7 @@ pub fn apply_typical(probs: &mut [f32], typical_p: f32) {
 mod typical_filter {
     use super::f32_ascending;
 
-    pub(super) type TypicalEntry = (usize, f32, f32);
+    pub(super) type TypicalEntry = (u32, f32, f32);
 
     #[inline]
     pub(super) fn should_skip(typical_p: f32, probs: &[f32]) -> bool {
@@ -131,7 +136,8 @@ mod typical_filter {
 
     pub(super) fn collect_deviations(probs: &[f32]) -> Option<Vec<TypicalEntry>> {
         let mut entropy = 0.0f64;
-        let mut entries: Vec<TypicalEntry> = Vec::with_capacity(probs.len());
+        // ⚡ Bolt: Over-provision capacity and use u32 indices to avoid large allocations for sparse probability arrays and reduce memory overhead.
+        let mut entries: Vec<TypicalEntry> = Vec::with_capacity(std::cmp::min(1024, probs.len()));
 
         for (index, &probability) in probs.iter().enumerate() {
             if probability <= 0.0 {
@@ -140,7 +146,7 @@ mod typical_filter {
 
             let surprise = -probability.ln();
             entropy += f64::from(probability * surprise);
-            entries.push((index, probability, surprise));
+            entries.push((index as u32, probability, surprise));
         }
 
         if entries.is_empty() {
@@ -165,7 +171,7 @@ mod typical_filter {
     ) {
         let cutoff = cutoff_index(entries, typical_p);
         for &(index, _, _) in entries.iter().skip(cutoff) {
-            probs[index] = 0.0;
+            probs[index as usize] = 0.0;
         }
     }
 
