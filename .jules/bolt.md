@@ -5,3 +5,7 @@
 ## 2026-03-05 - Hot Loop Allocations in Token Sampling
 **Learning:** Allocating memory in the hot path of LLM token generation (e.g., `logits.to_vec()` or creating `HashMap`s per token) significantly degrades performance due to repeated allocation overhead of vocabulary-sized vectors (often 128K+ elements). Additionally, mathematically equivalent iterative multiplication (`logit *= inv_penalty`) can replace `HashMap` counting and `.powi(count)`, completely eliminating O(N) memory allocations per token.
 **Action:** When working on generation loops, use buffer pooling (e.g. storing a `Vec` in the generator state and using `std::mem::take` to bypass borrow checker limitations) and avoid `HashMap` allocations for simple counting if an iterative scalar approach is mathematically equivalent.
+
+## 2026-03-24 - Pre-Counting Passes vs Over-Provisioning in Sparse Arrays
+**Learning:** Performing a complete `.filter().count()` pass solely to compute exact vector capacities in large, sparse vocabulary arrays (e.g., in Top-K or Top-P sampling) is often slower than doing a single pass with a slightly over-provisioned capacity (e.g., `std::cmp::min(1024, len)`). Additionally, using `u32` instead of `usize` for token indices reduces memory pressure and speeds up sorting operations.
+**Action:** When writing filter transforms, avoid O(N) pre-counting passes just for capacity sizing. Over-provision a sensible amount instead, and use `u32` for index tuples.
