@@ -24,6 +24,7 @@ async function initApp() {
     try {
         // Setup keyboard navigation for tabs
         setupTabNavigation();
+        setupKeyboardShortcuts();
 
         updateStatus('Initializing WebAssembly module...', 'loading');
         updateProgress(10);
@@ -689,6 +690,26 @@ document.getElementById('top-p').addEventListener('input', function() {
 });
 
 // Setup keyboard navigation for tabs
+
+function setupKeyboardShortcuts() {
+    const setupTextarea = (textareaId, buttonId) => {
+        const textarea = document.getElementById(textareaId);
+        const button = document.getElementById(buttonId);
+        if (textarea && button) {
+            textarea.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    button.click();
+                }
+            });
+        }
+    };
+
+    setupTextarea('prompt', 'generate');
+    setupTextarea('streaming-prompt', 'start-streaming');
+    setupTextarea('worker-prompt', 'worker-generate');
+}
+
 function setupTabNavigation() {
     const tabsContainer = document.querySelector('.tabs');
     if (!tabsContainer) return;
