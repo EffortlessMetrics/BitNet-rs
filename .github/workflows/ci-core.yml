@@ -278,9 +278,9 @@ jobs:
                   failures.append(f"{receipt}: {exc}")
 
           if failures:
-            print("Invalid hardware receipt JSON:")
-            print("\n".join(failures))
-            sys.exit(1)
+              print("Invalid hardware receipt JSON:")
+              print("\n".join(failures))
+              sys.exit(1)
           print(f"Validated {len(receipts)} changed hardware receipt JSON file(s).")
           PY
 
@@ -394,10 +394,10 @@ jobs:
           unsupported = [package for package in selected if package not in supported]
           broad = bool(packages.get("broad_sweep_required")) or bool(unsupported) or not selected
           if os.environ.get("EVENT_NAME") != "pull_request" and not selected:
-            broad = True
+              broad = True
 
           def args(names):
-            return " ".join(f"-p {name}" for name in names)
+              return " ".join(f"-p {name}" for name in names)
 
           print(f"broad_sweep_required={str(broad).lower()}")
           print(f"selection_reason={packages.get('selection_reason', '')}")
