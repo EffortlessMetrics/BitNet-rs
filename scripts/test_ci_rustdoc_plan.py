@@ -12,6 +12,11 @@ class RustdocRoutingTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(rustdoc_required("pull_request", [path]))
 
+    def test_workspace_manifests_outside_crates_require_proof(self):
+        for member in ('crossval', 'tests', 'tests-new', 'xtask', 'tools/bitnet-task', 'xtask-build-helper', 'fuzz', 'tools/migrate-gen-config'):
+            with self.subTest(member=member):
+                self.assertTrue(rustdoc_required("pull_request", [member + "/Cargo.toml"]))
+
     def test_leaf_rust_and_tracking_do_not_select_rustdoc(self):
         for paths in (["crates/bitnet-quantization/src/qk256.rs"], ["docs/tracking/progress.md"], [".codex/campaigns/state.md"], ["policy/clippy-debt.toml"]):
             with self.subTest(paths=paths):

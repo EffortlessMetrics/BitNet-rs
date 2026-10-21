@@ -528,7 +528,7 @@ fn manifest_or_toolchain_changed(files: &[String]) -> bool {
             || path == "Cargo.lock"
             || path == "rust-toolchain.toml"
             || path.starts_with(".cargo/")
-            || (path.starts_with("crates/") && path.ends_with("/Cargo.toml"))
+            || path.ends_with("/Cargo.toml")
     })
 }
 
@@ -1308,6 +1308,14 @@ mod tests {
             "crates/x/src/api/types.rs",
             "src/lib.rs",
             "scripts/ci_rustdoc_plan.py",
+            "crossval/Cargo.toml",
+            "tests/Cargo.toml",
+            "tests-new/Cargo.toml",
+            "xtask/Cargo.toml",
+            "tools/bitnet-task/Cargo.toml",
+            "xtask-build-helper/Cargo.toml",
+            "fuzz/Cargo.toml",
+            "tools/migrate-gen-config/Cargo.toml",
         ] {
             let plan = build_plan(&s(&[path]), &[]);
             assert!(

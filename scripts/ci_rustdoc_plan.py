@@ -17,6 +17,7 @@ def rustdoc_required(event, paths, labels=()):
             or path.endswith(".md")
             or path in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "src/lib.rs")
             or path.startswith(".cargo/")
+            or path.endswith("/Cargo.toml")
             or (path.startswith("crates/") and (path.endswith("/Cargo.toml") or path.endswith("/src/lib.rs") or "/src/api/" in path))
             or path.startswith(("crates/bitnet-ffi/", "crates/bitnet-py/"))
             or path in (".github/workflows/ci-core.yml", ".github/workflows/docs-automation.yml", "scripts/ci_rustdoc_plan.py", "scripts/test_ci_rustdoc_plan.py", "scripts/docs_automation.sh")

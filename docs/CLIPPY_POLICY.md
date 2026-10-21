@@ -116,7 +116,8 @@ promoted only the clean lints from staged policy into `[workspace.lints.clippy]`
 
 ### Lint ratchets (PR 5)
 
-The following staged lints are active after the PR 5 measurement pass:
+The following staged lints are active after the PR 5 measurement pass and
+subsequent focused cleanups:
 
 | Lint | Level | Reason |
 |---|---|---|

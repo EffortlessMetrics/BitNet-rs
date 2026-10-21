@@ -98,7 +98,10 @@ When adding or modifying a CI workflow:
 temporary exception. CI Core keeps the required `Documentation` result and
 the unchanged workspace CPU documentation command. The route selects ordinary
 documentation, manifest/toolchain, crate-root/API/FFI/Python surfaces and routing
-changes; main and manual runs always select it. Leaf implementation Rust and
+changes, including workspace manifests outside `crates/`; main and manual
+runs always select it. The `full-ci` label selects Rustdoc on the next normal
+workflow run; applying the label alone does not start CI Core. Manual dispatch
+remains the explicit immediate route. Leaf implementation Rust and
 tracker-only PRs emit an explicit unselected result. Python route tests run
 before classification, and planner tests cover matching PR risk categories.
 

@@ -12,7 +12,7 @@ view is the whitelist itself, validated by `xtask ci-lane-whitelist check`.
 | Workflow                          | Whitelist lane(s)                                  | Notes                              |
 | --------------------------------- | -------------------------------------------------- | ---------------------------------- |
 | `pr-plan.yml`                     | `pr-plan`                                          | Visibility-only                    |
-| `ci-core.yml`                     | `ci-core-build-test`, `ci-core-clippy`, `ci-core-docs`, `bdd-grid-check` | BDD grid runs only when relevant   |
+| `ci-core.yml`                     | `ci-core-build-test`, `ci-core-clippy`, `rustdoc-workspace`, `bdd-grid-check` | Rustdoc and BDD grid are risk-gated   |
 | `feature-matrix.yml`              | `feature-matrix-pr`, `feature-matrix-full-cli`, `feature-matrix-full` | Full CLI and full matrix are risk-routed |
 | `compatibility.yml`               | `compatibility-msrv`, `compatibility-ffi-abi`      | MSRV path-gated; FFI label-gated   |
 
