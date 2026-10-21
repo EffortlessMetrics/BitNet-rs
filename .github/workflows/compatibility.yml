@@ -41,6 +41,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Select Python for policy routing
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.11'
+
       - name: Test tokenizer routing contract
         run: python3 -m unittest discover -s scripts -p 'test_ci_tokenizer_plan.py'
 

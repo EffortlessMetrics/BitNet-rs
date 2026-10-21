@@ -56,6 +56,13 @@ class TokenizerRoutingTests(unittest.TestCase):
         self.assertIn('changed="$(git diff --name-only "$BASE_SHA"...HEAD)"', workflow)
         self.assertIn('run: python3 -m unittest discover -s scripts -p \'test_ci_tokenizer_plan.py\'', workflow)
 
+    def test_every_policy_parser_caller_selects_python_311_first(self):
+        for name, test_step in (('compatibility.yml', 'Test tokenizer routing contract'), ('ci-core.yml', 'Test core proof routing')):
+            workflow = (ROOT / '.github/workflows' / name).read_text(encoding='utf-8')
+            setup, tests = workflow.index('      - name: Select Python for policy routing'), workflow.index('      - name: ' + test_step)
+            self.assertLess(setup, tests)
+            self.assertIn("python-version: '3.11'", workflow[setup:tests])
+
 
 if __name__ == '__main__':
     unittest.main()
