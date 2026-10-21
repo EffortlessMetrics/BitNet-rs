@@ -531,8 +531,7 @@ fn forward_qk256_a770_opencl(
             activation_sum,
             activation_scale,
             weight_scale,
-        })
-        .map_err(BitNetError::from)?;
+        })?;
         A770_OPENCL_HOST_TO_DEVICE_BYTES
             .fetch_add(result.host_to_device_bytes as u64, Ordering::Relaxed);
         A770_OPENCL_DEVICE_TO_HOST_BYTES
