@@ -38,9 +38,9 @@ fn all_variants_apply_produces_output() {
     let user_text = "Hello, world!";
     for variant in TemplateType::all_variants() {
         let output = variant.apply(user_text, None);
-        assert!(!output.is_empty(), "apply() for {:?} produced empty output", variant,);
+        assert!(!output.is_empty(), "apply() for {:?} produced empty output", variant);
         // Output should contain the user text somewhere
-        assert!(output.contains(user_text), "apply() for {:?} doesn't contain user text", variant,);
+        assert!(output.contains(user_text), "apply() for {:?} doesn't contain user text", variant);
     }
 }
 
@@ -50,7 +50,7 @@ fn all_variants_apply_with_system_prompt() {
     let system = "You are a helpful assistant.";
     for variant in TemplateType::all_variants() {
         let output = variant.apply(user_text, Some(system));
-        assert!(!output.is_empty(), "apply() with system for {:?} produced empty output", variant,);
+        assert!(!output.is_empty(), "apply() with system for {:?} produced empty output", variant);
     }
 }
 
@@ -66,7 +66,7 @@ fn chat_templates_have_stop_sequences() {
             continue;
         }
         let stops = variant.default_stop_sequences();
-        assert!(!stops.is_empty(), "{:?} should have stop sequences", variant,);
+        assert!(!stops.is_empty(), "{:?} should have stop sequences", variant);
     }
 }
 
@@ -185,7 +185,7 @@ fn no_template_for_base_models() {
 #[test]
 fn all_variants_count_is_at_least_55() {
     let count = TemplateType::all_variants().len();
-    assert!(count >= 55, "Expected at least 55 template variants, found {count}",);
+    assert!(count >= 55, "Expected at least 55 template variants, found {count}");
 }
 
 #[test]
@@ -193,7 +193,7 @@ fn all_variants_are_unique() {
     let variants = TemplateType::all_variants();
     let mut seen = std::collections::HashSet::new();
     for v in variants {
-        assert!(seen.insert(v.to_string()), "Duplicate variant found: {:?}", v,);
+        assert!(seen.insert(v.to_string()), "Duplicate variant found: {:?}", v);
     }
 }
 
@@ -205,9 +205,9 @@ fn all_variants_are_unique() {
 fn all_variants_have_valid_info() {
     for variant in TemplateType::all_variants() {
         let info = variant.info();
-        assert!(!info.name.is_empty(), "{:?} should have a non-empty name", variant,);
+        assert!(!info.name.is_empty(), "{:?} should have a non-empty name", variant);
         // Name should match Display output
-        assert_eq!(info.name, variant.to_string(), "{:?} info.name should match Display", variant,);
+        assert_eq!(info.name, variant.to_string(), "{:?} info.name should match Display", variant);
     }
 }
 
@@ -255,19 +255,19 @@ fn chatml_templates_use_im_tokens() {
 #[test]
 fn llama_templates_use_header_tokens() {
     let output = TemplateType::Llama3Chat.apply("test", None);
-    assert!(output.contains("<|start_header_id|>"), "Llama3Chat should use <|start_header_id|>",);
+    assert!(output.contains("<|start_header_id|>"), "Llama3Chat should use <|start_header_id|>");
 }
 
 #[test]
 fn gemma_templates_use_turn_tokens() {
     let output = TemplateType::GemmaChat.apply("test", None);
-    assert!(output.contains("<start_of_turn>"), "GemmaChat should use <start_of_turn>",);
+    assert!(output.contains("<start_of_turn>"), "GemmaChat should use <start_of_turn>");
 }
 
 #[test]
 fn mistral_templates_use_inst_tokens() {
     let output = TemplateType::MistralChat.apply("test", None);
-    assert!(output.contains("[INST]"), "MistralChat should use [INST]",);
+    assert!(output.contains("[INST]"), "MistralChat should use [INST]");
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -286,9 +286,9 @@ fn all_variants_render_chat_succeeds() {
 
     for variant in TemplateType::all_variants() {
         let result = variant.render_chat(&history, Some("You are helpful."));
-        assert!(result.is_ok(), "{:?} render_chat failed: {:?}", variant, result.err(),);
+        assert!(result.is_ok(), "{:?} render_chat failed: {:?}", variant, result.err());
         let rendered = result.unwrap();
-        assert!(!rendered.is_empty(), "{:?} render_chat produced empty output", variant,);
+        assert!(!rendered.is_empty(), "{:?} render_chat produced empty output", variant);
     }
 }
 

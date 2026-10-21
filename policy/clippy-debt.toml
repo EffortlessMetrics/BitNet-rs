@@ -18,14 +18,6 @@ schema_version = "1.0"
 # status = "active"
 
 [[debt]]
-lint = "clippy::unnecessary_trailing_comma"
-path = "crates/bitnet-kernels/**"
-owner = "kernels"
-reason = "PR5 measurement found 50 kernel formatting findings; keep staged until the mechanical cleanup can run without mixing with lint activation."
-expires = "2026-07-15"
-status = "active"
-
-[[debt]]
 lint = "clippy::disallowed_fields"
 path = "workspace"
 owner = "clippy-policy"

@@ -692,6 +692,34 @@ jobs:
             -p bitnet-receipts \
             -p bitnet-sampling
 
+      - name: Check affected CPU targets for workspace manifest PRs
+        if: github.event_name == 'pull_request' && needs.classify-changes.outputs.no_rust_inputs != 'true'
+        env:
+          CHANGED_FILES: ${{ needs.classify-changes.outputs.changed_files }}
+        run: |
+          # Workspace lint activation must include the affected test targets,
+          # which the normal core-library Clippy selection does not compile.
+          if ! grep -Fxq 'Cargo.toml' <<< "$CHANGED_FILES"; then
+            echo "Root workspace manifest unchanged; normal Clippy scope applies."
+            exit 0
+          fi
+          cargo clippy --locked \
+            -p bitnet-common \
+            -p bitnet-models \
+            -p bitnet-kernels \
+            -p bitnet-inference \
+            -p bitnet-gpu-hal \
+            -p bitnet-opencl \
+            -p bitnet-prompt-templates \
+            -p bitnet-server \
+            -p bitnet-spirv \
+            -p bitnet-tests-new \
+            --lib --tests \
+            --no-default-features --features cpu \
+            -- -D clippy::unnecessary_trailing_comma
+          cargo clippy --locked -p bitnet-task --all-targets --no-default-features \
+            -- -D clippy::unnecessary_trailing_comma
+
   # Job 5: Clippy linting (macOS ARM64 / Apple Silicon)
   # macOS minutes are 10x Linux. Even with continue-on-error and
   # exclusion from the required summary, this job pays setup + cargo

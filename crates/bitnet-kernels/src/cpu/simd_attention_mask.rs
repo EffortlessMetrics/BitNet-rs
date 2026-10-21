@@ -357,8 +357,8 @@ pub fn longformer_mask(seq_len: usize, local_window: usize, global_indices: &[us
 /// Apply an additive mask to pre-softmax attention scores (in-place)
 /// using SIMD where available.
 pub fn simd_apply_mask(scores: &mut [f32], mask: &[f32], len: usize) {
-    assert!(scores.len() >= len, "scores length {} too short for len={len}", scores.len(),);
-    assert!(mask.len() >= len, "mask length {} too short for len={len}", mask.len(),);
+    assert!(scores.len() >= len, "scores length {} too short for len={len}", scores.len());
+    assert!(mask.len() >= len, "mask length {} too short for len={len}", mask.len());
 
     #[cfg(target_arch = "x86_64")]
     {
@@ -386,7 +386,7 @@ pub fn simd_apply_mask_batched(
     seq_len: usize,
 ) {
     let mat_size = seq_len * seq_len;
-    assert!(mask.len() >= mat_size, "mask too short: {} < {}", mask.len(), mat_size,);
+    assert!(mask.len() >= mat_size, "mask too short: {} < {}", mask.len(), mat_size);
     assert!(
         scores.len() >= batch_size * mat_size,
         "scores too short: {} < {}",
@@ -755,7 +755,7 @@ mod tests {
         let ratio = 2.0_f32.powf(-1.0);
         for (k, &slope) in s.iter().enumerate() {
             let expected = ratio.powi((k + 1) as i32);
-            assert!((slope - expected).abs() < 1e-6, "head {k}: got {slope}, want {expected}",);
+            assert!((slope - expected).abs() < 1e-6, "head {k}: got {slope}, want {expected}");
         }
     }
 

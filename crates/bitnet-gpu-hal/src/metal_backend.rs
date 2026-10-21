@@ -513,7 +513,7 @@ fn parse_kernel_names(source: &str) -> Vec<String> {
 
 impl fmt::Display for MetalLibrary {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MetalLibrary \"{}\" functions=[{}]", self.label, self.functions.join(", "),)
+        write!(f, "MetalLibrary \"{}\" functions=[{}]", self.label, self.functions.join(", "))
     }
 }
 
@@ -776,7 +776,7 @@ impl MetalFence {
 
 impl fmt::Display for MetalFence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MetalFence[{}] \"{}\" signalled={}", self.id, self.label, self.signalled,)
+        write!(f, "MetalFence[{}] \"{}\" signalled={}", self.id, self.label, self.signalled)
     }
 }
 

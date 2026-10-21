@@ -262,7 +262,7 @@ fn context_lengths_are_reasonable() {
                 arch,
                 ctx,
             );
-            assert!(ctx >= 512, "arch '{}' has suspiciously small context: {}", arch, ctx,);
+            assert!(ctx >= 512, "arch '{}' has suspiciously small context: {}", arch, ctx);
         }
     }
 }

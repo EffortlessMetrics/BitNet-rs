@@ -48,8 +48,8 @@ pub fn create_padding_mask(lengths: &[usize], max_len: usize) -> Vec<f32> {
 /// element of `scores`.
 pub fn apply_mask(scores: &mut [f32], mask: &[f32], seq_len: usize) {
     let n = seq_len * seq_len;
-    assert!(scores.len() >= n, "scores length {} too short for seq_len={seq_len}", scores.len(),);
-    assert!(mask.len() >= n, "mask length {} too short for seq_len={seq_len}", mask.len(),);
+    assert!(scores.len() >= n, "scores length {} too short for seq_len={seq_len}", scores.len());
+    assert!(mask.len() >= n, "mask length {} too short for seq_len={seq_len}", mask.len());
     for i in 0..n {
         scores[i] += mask[i];
     }
@@ -260,7 +260,7 @@ mod tests {
             let row = &scores[i * seq..(i + 1) * seq];
             let probs = softmax(row);
             for j in (i + 1)..seq {
-                assert!(probs[j] < 1e-6, "row {i} col {j}: prob {:.8} should be ~0", probs[j],);
+                assert!(probs[j] < 1e-6, "row {i} col {j}: prob {:.8} should be ~0", probs[j]);
             }
         }
     }

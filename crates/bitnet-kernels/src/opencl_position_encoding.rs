@@ -367,7 +367,7 @@ impl LearnedEncoding {
         }
         if output.len() < self.config.dim {
             return Err(KernelError::InvalidArguments {
-                reason: format!("output length {} < dim {}", output.len(), self.config.dim,),
+                reason: format!("output length {} < dim {}", output.len(), self.config.dim),
             }
             .into());
         }
@@ -717,7 +717,7 @@ impl DynamicNTKRoPE {
         let expected = seq_len * num_heads * head_dim;
         if data.len() < expected {
             return Err(KernelError::InvalidArguments {
-                reason: format!("data length {} < seq_len * heads * head_dim", data.len(),),
+                reason: format!("data length {} < seq_len * heads * head_dim", data.len()),
             }
             .into());
         }
@@ -854,7 +854,7 @@ impl YaRNRoPE {
         let expected = seq_len * num_heads * head_dim;
         if data.len() < expected {
             return Err(KernelError::InvalidArguments {
-                reason: format!("data length {} < expected {}", data.len(), expected,),
+                reason: format!("data length {} < expected {}", data.len(), expected),
             }
             .into());
         }
@@ -961,7 +961,7 @@ impl PositionInterpolation {
         let expected = seq_len * num_heads * head_dim;
         if data.len() < expected {
             return Err(KernelError::InvalidArguments {
-                reason: format!("data length {} < expected {}", data.len(), expected,),
+                reason: format!("data length {} < expected {}", data.len(), expected),
             }
             .into());
         }
@@ -1453,7 +1453,7 @@ mod tests {
 
         // First 3 positions should match weight directly
         for i in 0..3 * dim {
-            assert!(approx_eq(out[i], weight[i]), "mismatch at {i}: {} vs {}", out[i], weight[i],);
+            assert!(approx_eq(out[i], weight[i]), "mismatch at {i}: {} vs {}", out[i], weight[i]);
         }
     }
 
@@ -1725,19 +1725,19 @@ mod tests {
 
         // Check diagonal (distance = 0) → bias = 0
         for i in 0..q_len {
-            assert!(approx_eq(bias[i * kv_len + i], 0.0), "diagonal should be 0",);
+            assert!(approx_eq(bias[i * kv_len + i], 0.0), "diagonal should be 0");
         }
 
         // Check that bias decreases with distance from diagonal
         // bias[q=3, k=2] should be > bias[q=3, k=1] (less negative)
         let b32 = bias[3 * kv_len + 2]; // distance 1
         let b31 = bias[3 * kv_len + 1]; // distance 2
-        assert!(b32 > b31, "bias should decrease with distance: d=1 ({b32}) vs d=2 ({b31})",);
+        assert!(b32 > b31, "bias should decrease with distance: d=1 ({b32}) vs d=2 ({b31})");
 
         // Verify linearity: difference should be constant
         let diff1 = b32 - bias[3 * kv_len + 3]; // distance 1 - distance 0
         let diff2 = b31 - b32; // distance 2 - distance 1
-        assert!(approx_eq(diff1, diff2), "decay should be linear: {diff1} vs {diff2}",);
+        assert!(approx_eq(diff1, diff2), "decay should be linear: {diff1} vs {diff2}");
     }
 
     #[test]
@@ -1876,7 +1876,7 @@ mod tests {
         let mut prev = enc.bucket(1);
         for d in 2..50 {
             let cur = enc.bucket(d);
-            assert!(cur >= prev, "bucket should be non-decreasing: d={d}, prev={prev}, cur={cur}",);
+            assert!(cur >= prev, "bucket should be non-decreasing: d={d}, prev={prev}, cur={cur}");
             prev = cur;
         }
     }
@@ -1905,7 +1905,7 @@ mod tests {
         let ntk = DynamicNTKRoPE::new(cfg, 2048);
         // seq_len=4096 > original=2048 → theta should increase
         let theta = ntk.dynamic_theta(4096);
-        assert!(theta > 10_000.0, "dynamic theta should increase: {theta}",);
+        assert!(theta > 10_000.0, "dynamic theta should increase: {theta}");
     }
 
     #[test]
@@ -1914,7 +1914,7 @@ mod tests {
         let ntk = DynamicNTKRoPE::new(cfg, 2048);
         let t1 = ntk.dynamic_theta(4096);
         let t2 = ntk.dynamic_theta(8192);
-        assert!(t2 > t1, "theta should increase with seq_len: {t1} vs {t2}",);
+        assert!(t2 > t1, "theta should increase with seq_len: {t1} vs {t2}");
     }
 
     #[test]
@@ -1954,7 +1954,7 @@ mod tests {
         for pair in 0..2 {
             let n1 = (orig[2 * pair].powi(2) + orig[2 * pair + 1].powi(2)).sqrt();
             let n2 = (data[2 * pair].powi(2) + data[2 * pair + 1].powi(2)).sqrt();
-            assert!((n1 - n2).abs() < 1e-4, "NTK-RoPE should preserve norm: {n1} vs {n2}",);
+            assert!((n1 - n2).abs() < 1e-4, "NTK-RoPE should preserve norm: {n1} vs {n2}");
         }
     }
 
@@ -1969,7 +1969,7 @@ mod tests {
         let alphas = yarn.compute_alphas();
         assert_eq!(alphas.len(), 32);
         for &a in &alphas {
-            assert!((0.0..=1.0).contains(&a), "alpha should be in [0, 1]: {a}",);
+            assert!((0.0..=1.0).contains(&a), "alpha should be in [0, 1]: {a}");
         }
     }
 
@@ -1980,7 +1980,7 @@ mod tests {
         let yarn = YaRNRoPE::new(cfg, 2048);
         let alphas = yarn.compute_alphas();
         // First pair has highest frequency, should be 0 (NTK mode)
-        assert!(alphas[0] < 0.5, "high-freq alpha should be near 0: {}", alphas[0],);
+        assert!(alphas[0] < 0.5, "high-freq alpha should be near 0: {}", alphas[0]);
     }
 
     #[test]
@@ -1990,7 +1990,7 @@ mod tests {
         let yarn = YaRNRoPE::new(cfg, 2048);
         let alphas = yarn.compute_alphas();
         let last = *alphas.last().unwrap();
-        assert!(last > 0.5, "low-freq alpha should be near 1: {last}",);
+        assert!(last > 0.5, "low-freq alpha should be near 1: {last}");
     }
 
     #[test]
@@ -2033,7 +2033,7 @@ mod tests {
         for pair in 0..2 {
             let n1 = (orig[2 * pair].powi(2) + orig[2 * pair + 1].powi(2)).sqrt();
             let n2 = (data[2 * pair].powi(2) + data[2 * pair + 1].powi(2)).sqrt();
-            assert!((n1 - n2).abs() < 1e-4, "YaRN should preserve norm: {n1} vs {n2}",);
+            assert!((n1 - n2).abs() < 1e-4, "YaRN should preserve norm: {n1} vs {n2}");
         }
     }
 
@@ -2101,7 +2101,7 @@ mod tests {
         for pair in 0..2 {
             let n1 = (orig[2 * pair].powi(2) + orig[2 * pair + 1].powi(2)).sqrt();
             let n2 = (data[2 * pair].powi(2) + data[2 * pair + 1].powi(2)).sqrt();
-            assert!((n1 - n2).abs() < 1e-4, "PI should preserve norm: {n1} vs {n2}",);
+            assert!((n1 - n2).abs() < 1e-4, "PI should preserve norm: {n1} vs {n2}");
         }
     }
 
@@ -2192,7 +2192,7 @@ mod tests {
         RotaryEncoding::new(cfg).apply(&mut twice, 1, 1, dim, 5).unwrap();
 
         for (a, b) in once.iter().zip(twice.iter()) {
-            assert!((a - b).abs() < 1e-4, "double rotation: {a} vs {b}",);
+            assert!((a - b).abs() < 1e-4, "double rotation: {a} vs {b}");
         }
     }
 
@@ -2206,7 +2206,7 @@ mod tests {
         // Compare head 0 and head 1 at same position pair
         let h0_bias = bias[0 * 16 + 0 * 4 + 3]; // head 0, q=0, k=3
         let h1_bias = bias[1 * 16 + 0 * 4 + 3]; // head 1, q=0, k=3
-        assert!((h0_bias - h1_bias).abs() > 1e-6, "different heads should have different biases",);
+        assert!((h0_bias - h1_bias).abs() > 1e-6, "different heads should have different biases");
     }
 
     #[test]
@@ -2214,7 +2214,7 @@ mod tests {
         let enc = RelativeEncoding::new(32, 128, true).unwrap();
         for d in -200..200 {
             let b = enc.bucket(d);
-            assert!(b < enc.num_buckets(), "bucket {b} out of range for distance {d}",);
+            assert!(b < enc.num_buckets(), "bucket {b} out of range for distance {d}");
         }
     }
 
@@ -2272,7 +2272,7 @@ mod tests {
         let pi = PositionInterpolation::new(cfg, 2048);
         for pos in 0..8192 {
             let interp = pi.interpolate_position(pos);
-            assert!(interp <= 2048.0, "interpolated position {interp} > original max 2048",);
+            assert!(interp <= 2048.0, "interpolated position {interp} > original max 2048");
         }
     }
 
