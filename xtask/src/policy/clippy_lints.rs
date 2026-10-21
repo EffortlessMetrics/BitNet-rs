@@ -204,6 +204,22 @@ fn check(
         ));
     }
 
+    let toolchain_path = manifest.with_file_name("rust-toolchain.toml");
+    let toolchain_text = fs::read_to_string(&toolchain_path)
+        .with_context(|| format!("reading pinned toolchain {}", toolchain_path.display()))?;
+    let toolchain: toml::Value = toml::from_str(&toolchain_text)?;
+    let pinned_release = toolchain
+        .get("toolchain")
+        .and_then(|value| value.get("channel"))
+        .and_then(toml::Value::as_str)
+        .context("rust-toolchain.toml omitted toolchain.channel")?;
+    if inventory.release != pinned_release {
+        report.errors.push(format!(
+            "Clippy compiler release {} does not match pinned toolchain {pinned_release}",
+            inventory.release
+        ));
+    }
+
     let debt: DebtFile = if debt_path.exists() {
         let debt_text = fs::read_to_string(debt_path)
             .with_context(|| format!("reading {}", debt_path.display()))?;
@@ -460,6 +476,14 @@ mod tests {
         }
     }
 
+    fn write_pinned_toolchain(dir: &Path) -> Result<()> {
+        fs::write(
+            dir.join("rust-toolchain.toml"),
+            "[toolchain]\nchannel = \"1.95.0\"\n",
+        )?;
+        Ok(())
+    }
+
     fn availability_report(
         available: bool,
         gated: bool,
@@ -468,6 +492,7 @@ mod tests {
         release: &str,
     ) -> Result<Report> {
         let dir = tempfile::tempdir()?;
+        write_pinned_toolchain(dir.path())?;
         let lints = dir.path().join("clippy-lints.toml");
         let debt = dir.path().join("clippy-debt.toml");
         let manifest = dir.path().join("Cargo.toml");
@@ -584,13 +609,17 @@ status = "active"
 
     #[test]
     fn rejects_inventory_from_another_compiler_release() -> Result<()> {
-        let report = availability_report(false, true, None, false, "1.96.0")?;
-        assert!(
-            report
-                .errors
-                .iter()
-                .any(|error| error.contains("does not match policy MSRV"))
-        );
+        for release in ["1.96.0", "1.95.1", "1.95.0-nightly"] {
+            let report = availability_report(false, true, None, false, release)?;
+            assert!(
+                report
+                    .errors
+                    .iter()
+                    .any(|error| error.contains("does not match pinned toolchain")),
+                "{release}: {:?}",
+                report.errors
+            );
+        }
         Ok(())
     }
 
@@ -625,6 +654,7 @@ status = "active"
             chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
         ));
         fs::create_dir_all(&dir).unwrap();
+        write_pinned_toolchain(&dir).unwrap();
         let lints = dir.join("clippy-lints.toml");
         let debt = dir.join("clippy-debt.toml");
         let manifest = dir.join("Cargo.toml");
@@ -690,6 +720,7 @@ manual_checked_ops = "allow"
             chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
         ));
         fs::create_dir_all(&dir).unwrap();
+        write_pinned_toolchain(&dir).unwrap();
         let lints = dir.join("clippy-lints.toml");
         let debt = dir.join("clippy-debt.toml");
         let manifest = dir.join("Cargo.toml");
