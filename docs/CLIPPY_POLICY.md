@@ -155,7 +155,8 @@ keeps the lint staged with a real debt entry.
 `bitnet_inference::generation_state::GenerationTracker::state`. The field
 remains private. Existing lifecycle methods retain their behavior, reading
 through `state()` and writing through one private `set_state()` method. Only
-those two owner accessors have receipted lint expectations; unfulfilled
+those two owner accessors have receipted lint expectations; `Debug` uses the
+getter and preserves the derived field order and ordinary/alternate formatting; unfulfilled
 expectations are denied. This is compile-time API field-access discipline,
 not authorization or a complete transition invariant: the lint rejects reads,
 writes and destructuring, but does not reject struct initialization.

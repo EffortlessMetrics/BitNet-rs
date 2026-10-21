@@ -119,7 +119,7 @@ mod field_contract_positive {
         result, _, executable = compile_probe(root / "positive", source + positive, test=True)
         assert result.returncode == 0, result.stderr
         subprocess.run([str(executable), "--nocapture"], check=True, timeout=30)
-        print("PASS positive: real owner, derived Debug and lifecycle tests", flush=True)
+        print("PASS positive: real owner, accessor-based Debug and lifecycle tests", flush=True)
         for name, probe in probes.items():
             expect_rejection(root / name, source + "\nmod field_contract_negative {\n" + probe + "\n}\n", LINT)
         stale_getter = source.replace(getter, getter.replace("        self.state\n", "        GenState::Idle\n"))
