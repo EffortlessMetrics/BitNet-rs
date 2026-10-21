@@ -77,7 +77,7 @@ pub fn kv_cache_append(cache: &mut [f32], position: usize, new_data: &[f32], hea
     );
     let dst_start = position * head_dim;
     let dst_end = dst_start + new_data.len();
-    assert!(dst_end <= cache.len(), "append overflows cache: need {dst_end}, have {}", cache.len(),);
+    assert!(dst_end <= cache.len(), "append overflows cache: need {dst_end}, have {}", cache.len());
     simd_copy(new_data, &mut cache[dst_start..dst_end]);
 }
 
@@ -92,11 +92,11 @@ pub fn kv_cache_append(cache: &mut [f32], position: usize, new_data: &[f32], hea
 pub fn kv_cache_gather(cache: &[f32], positions: &[usize], head_dim: usize, output: &mut [f32]) {
     assert!(head_dim > 0, "head_dim must be positive");
     let n = positions.len();
-    assert_eq!(output.len(), n * head_dim, "output length {} != {} * {head_dim}", output.len(), n,);
+    assert_eq!(output.len(), n * head_dim, "output length {} != {} * {head_dim}", output.len(), n);
 
     for (i, &pos) in positions.iter().enumerate() {
         let src_off = pos * head_dim;
-        assert!(src_off + head_dim <= cache.len(), "position {pos} out of cache bounds",);
+        assert!(src_off + head_dim <= cache.len(), "position {pos} out of cache bounds");
         let src = &cache[src_off..src_off + head_dim];
         let dst = &mut output[i * head_dim..(i + 1) * head_dim];
         simd_copy(src, dst);
@@ -120,7 +120,7 @@ pub fn kv_cache_rotate(
     freq_base: f32,
 ) {
     assert!(head_dim > 0, "head_dim must be positive");
-    assert!(head_dim.is_multiple_of(2), "head_dim must be even for RoPE",);
+    assert!(head_dim.is_multiple_of(2), "head_dim must be even for RoPE");
     let half_dim = head_dim / 2;
 
     // Precompute dimension-dependent inverse frequencies.
@@ -131,7 +131,7 @@ pub fn kv_cache_rotate(
         let abs_pos = start_pos + p;
         let pos_f = abs_pos as f32;
         let off = abs_pos * head_dim;
-        assert!(off + head_dim <= cache.len(), "position {abs_pos} out of cache bounds",);
+        assert!(off + head_dim <= cache.len(), "position {abs_pos} out of cache bounds");
         let data = &mut cache[off..off + head_dim];
 
         #[cfg(target_arch = "aarch64")]
@@ -206,13 +206,13 @@ pub fn kv_cache_copy(
     head_dim: usize,
 ) {
     assert!(head_dim > 0, "head_dim must be positive");
-    assert_eq!(src_positions.len(), dst_positions.len(), "position lists must have equal length",);
+    assert_eq!(src_positions.len(), dst_positions.len(), "position lists must have equal length");
 
     for (&sp, &dp) in src_positions.iter().zip(dst_positions.iter()) {
         let s_off = sp * head_dim;
         let d_off = dp * head_dim;
-        assert!(s_off + head_dim <= src.len(), "src position {sp} out of bounds",);
-        assert!(d_off + head_dim <= dst.len(), "dst position {dp} out of bounds",);
+        assert!(s_off + head_dim <= src.len(), "src position {sp} out of bounds");
+        assert!(d_off + head_dim <= dst.len(), "dst position {dp} out of bounds");
         let s = &src[s_off..s_off + head_dim];
 
         // Cannot borrow dst twice; use ptr copy which is safe
@@ -285,7 +285,7 @@ pub fn kv_cache_paged_lookup(
     assert!(page_size > 0, "page_size must be positive");
     assert!(head_dim > 0, "head_dim must be positive");
     let n = seq_positions.len();
-    assert_eq!(output.len(), n * head_dim, "output length {} != {} * {head_dim}", output.len(), n,);
+    assert_eq!(output.len(), n * head_dim, "output length {} != {} * {head_dim}", output.len(), n);
 
     for (i, &seq_pos) in seq_positions.iter().enumerate() {
         let logical_page = seq_pos / page_size;
@@ -296,7 +296,7 @@ pub fn kv_cache_paged_lookup(
         );
         let phys_page = page_table[logical_page];
         let src_off = (phys_page * page_size + offset_in_page) * head_dim;
-        assert!(src_off + head_dim <= pages.len(), "physical offset out of pages bounds",);
+        assert!(src_off + head_dim <= pages.len(), "physical offset out of pages bounds");
         let src = &pages[src_off..src_off + head_dim];
         let dst = &mut output[i * head_dim..(i + 1) * head_dim];
         simd_copy(src, dst);
@@ -315,7 +315,7 @@ mod tests {
     fn approx_eq(a: &[f32], b: &[f32], eps: f32) {
         assert_eq!(a.len(), b.len(), "length mismatch");
         for (i, (x, y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!((x - y).abs() <= eps, "mismatch at [{i}]: {x} vs {y} (eps={eps})",);
+            assert!((x - y).abs() <= eps, "mismatch at [{i}]: {x} vs {y} (eps={eps})");
         }
     }
 

@@ -218,7 +218,7 @@ impl GgufModelConfig {
         .unwrap_or(num_heads);
 
         // --- head_dim ---
-        let head_dim = if num_heads > 0 { hidden_size / num_heads } else { 0 };
+        let head_dim = hidden_size.checked_div(num_heads).unwrap_or(0);
 
         // --- intermediate_size ---
         let intermediate_size =
@@ -375,7 +375,7 @@ impl GgufModelConfig {
 
     /// Returns the GQA group size (`num_heads / num_kv_heads`).
     pub fn gqa_group_size(&self) -> usize {
-        if self.num_kv_heads > 0 { self.num_heads / self.num_kv_heads } else { 1 }
+        self.num_heads.checked_div(self.num_kv_heads).unwrap_or(1)
     }
 
     // -----------------------------------------------------------------------
@@ -828,5 +828,26 @@ mod tests {
         let json = serde_json::to_string(&est).unwrap();
         let deserialized: MemoryEstimate = serde_json::from_str(&json).unwrap();
         assert_eq!(est, deserialized);
+    }
+
+    #[test]
+    fn checked_head_division_preserves_zero_fallbacks_and_unsigned_limits()
+    -> Result<(), ConfigError> {
+        let mut meta = llama_metadata();
+        meta.insert("llama.embedding_length".into(), GgufValue::U32(u32::MAX));
+        meta.insert("llama.attention.head_count".into(), GgufValue::U32(0));
+        meta.insert("llama.attention.head_count_kv".into(), GgufValue::U32(0));
+        let mut cfg = GgufModelConfig::from_gguf_metadata(&meta)?;
+        assert_eq!(cfg.head_dim, 0);
+        assert_eq!(cfg.gqa_group_size(), 1);
+        assert!(cfg.validate().is_err());
+        meta.insert("llama.attention.head_count".into(), GgufValue::U32(2));
+        assert_eq!(GgufModelConfig::from_gguf_metadata(&meta)?.head_dim, (u32::MAX / 2) as usize);
+        cfg.num_heads = usize::MAX;
+        cfg.num_kv_heads = 1;
+        assert_eq!(cfg.gqa_group_size(), usize::MAX);
+        cfg.num_kv_heads = 2;
+        assert_eq!(cfg.gqa_group_size(), usize::MAX / 2);
+        Ok(())
     }
 }

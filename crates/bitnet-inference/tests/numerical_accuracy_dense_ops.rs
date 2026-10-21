@@ -70,7 +70,7 @@ fn silu_approaches_identity_for_large_x() {
     for x in [10.0f32, 20.0, 50.0, 100.0] {
         let result = cpu_opt::silu(&[x]);
         let ratio = result[0] / x;
-        assert!((ratio - 1.0).abs() < 0.001, "silu({x}) / {x} = {ratio}, should be ~1.0",);
+        assert!((ratio - 1.0).abs() < 0.001, "silu({x}) / {x} = {ratio}, should be ~1.0");
     }
 }
 
@@ -79,7 +79,7 @@ fn silu_approaches_zero_for_large_negative_x() {
     // For large negative x, SiLU(x) ≈ 0 (sigmoid → 0)
     for x in [-10.0f32, -20.0, -50.0] {
         let result = cpu_opt::silu(&[x]);
-        assert!(result[0].abs() < 0.01, "silu({x}) = {}, should be ~0", result[0],);
+        assert!(result[0].abs() < 0.01, "silu({x}) = {}, should be ~0", result[0]);
     }
 }
 
@@ -116,7 +116,7 @@ fn gelu_symmetry_property() {
 
     // GELU(-x) + x ≈ GELU(x) for x → ∞? No, but GELU(x) ≈ x for large x
     let pos = cpu_opt::gelu(&[5.0])[0];
-    assert!((pos - 5.0).abs() < 0.01, "gelu(5.0) should be ~5.0, got {pos}",);
+    assert!((pos - 5.0).abs() < 0.01, "gelu(5.0) should be ~5.0, got {pos}");
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ fn rmsnorm_eps_prevents_div_by_zero() {
     cpu_opt::rmsnorm(&input, &weight, &mut output, 1, 4, 1e-5).unwrap();
 
     // Output should be 0/sqrt(eps) * 1 = 0
-    assert!(output.iter().all(|v| v.abs() < 1e-6), "rmsnorm of zero input should be ~zero",);
+    assert!(output.iter().all(|v| v.abs() < 1e-6), "rmsnorm of zero input should be ~zero");
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -349,7 +349,7 @@ fn attention_scaling_by_sqrt_head_dim() {
     //   K[0]=[1,0,0,0] with score 1/√4=0.5 → softmax weight will be larger
     //   K[1]=[0,0,0,0] with score 0/√4=0   → softmax weight will be smaller
     // So output[0] should be weighted average of V[0] and V[1], biased toward V[0]
-    assert!(output[0] > 5.0, "position 0 should attend more to value 0 (10), got {}", output[0],);
+    assert!(output[0] > 5.0, "position 0 should attend more to value 0 (10), got {}", output[0]);
 }
 
 // ────────────────────────────────────────────────────────────────

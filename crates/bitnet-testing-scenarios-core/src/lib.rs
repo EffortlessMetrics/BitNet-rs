@@ -92,7 +92,7 @@ impl ScenarioConfigManager {
 
         let prod_config = TestConfigProfile {
             max_parallel_tests: 1,
-            test_timeout: Duration::from_secs(60),
+            test_timeout: Duration::from_mins(1),
             log_level: "warn".to_string(),
             reporting: ReportingProfile {
                 formats: vec![ReportFormat::Json, ReportFormat::Markdown],
@@ -267,7 +267,7 @@ fn create_unit_config() -> TestConfigProfile {
 fn create_integration_config() -> TestConfigProfile {
     let mut cfg = TestConfigProfile {
         max_parallel_tests: num_cpus::get() / 2,
-        test_timeout: Duration::from_secs(60),
+        test_timeout: Duration::from_mins(1),
         log_level: "info".to_string(),
         coverage_threshold: 0.7,
         ..TestConfigProfile::default()
@@ -281,7 +281,7 @@ fn create_integration_config() -> TestConfigProfile {
 fn create_perf_config() -> TestConfigProfile {
     let mut cfg = TestConfigProfile {
         max_parallel_tests: 1,
-        test_timeout: Duration::from_secs(1800),
+        test_timeout: Duration::from_mins(30),
         log_level: "info".to_string(),
         coverage_threshold: 0.0,
         ..TestConfigProfile::default()
@@ -296,7 +296,7 @@ fn create_perf_config() -> TestConfigProfile {
 fn create_e2e_config() -> TestConfigProfile {
     let mut cfg = TestConfigProfile {
         max_parallel_tests: 1,
-        test_timeout: Duration::from_secs(300),
+        test_timeout: Duration::from_mins(5),
         log_level: "debug".to_string(),
         coverage_threshold: 0.9,
         ..TestConfigProfile::default()
@@ -325,7 +325,7 @@ fn create_smoke_config() -> TestConfigProfile {
 fn create_crossval_config() -> TestConfigProfile {
     let mut cfg = TestConfigProfile {
         max_parallel_tests: 1,
-        test_timeout: Duration::from_secs(600),
+        test_timeout: Duration::from_mins(10),
         log_level: "debug".to_string(),
         coverage_threshold: 0.0,
         ..TestConfigProfile::default()
@@ -360,7 +360,7 @@ fn create_debug_config() -> TestConfigProfile {
 fn create_development_config() -> TestConfigProfile {
     let mut cfg = TestConfigProfile {
         max_parallel_tests: num_cpus::get(),
-        test_timeout: Duration::from_secs(60),
+        test_timeout: Duration::from_mins(1),
         log_level: "info".to_string(),
         coverage_threshold: 0.0,
         ..TestConfigProfile::default()
@@ -447,7 +447,7 @@ mod tests {
 
         assert_eq!(
             manager.get_scenario_config(&TestingScenario::EndToEnd).test_timeout,
-            Duration::from_secs(300)
+            Duration::from_mins(5)
         );
         assert_eq!(
             manager.get_scenario_config(&TestingScenario::Smoke).test_timeout,

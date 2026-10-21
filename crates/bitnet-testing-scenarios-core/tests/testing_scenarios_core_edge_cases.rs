@@ -77,7 +77,7 @@ fn unit_config_high_parallelism() {
 fn integration_config_moderate_timeout() {
     let mgr = ScenarioConfigManager::new();
     let cfg = mgr.get_scenario_config(&TestingScenario::Integration);
-    assert_eq!(cfg.test_timeout, Duration::from_secs(60));
+    assert_eq!(cfg.test_timeout, Duration::from_mins(1));
 }
 
 #[test]
@@ -85,7 +85,7 @@ fn performance_config_sequential() {
     let mgr = ScenarioConfigManager::new();
     let cfg = mgr.get_scenario_config(&TestingScenario::Performance);
     assert_eq!(cfg.max_parallel_tests, 1);
-    assert_eq!(cfg.test_timeout, Duration::from_secs(1800));
+    assert_eq!(cfg.test_timeout, Duration::from_mins(30));
 }
 
 #[test]
@@ -161,7 +161,7 @@ fn production_env_sequential() {
     let mgr = ScenarioConfigManager::new();
     let cfg = mgr.get_environment_config(&EnvironmentType::Production);
     assert_eq!(cfg.max_parallel_tests, 1);
-    assert_eq!(cfg.test_timeout, Duration::from_secs(60));
+    assert_eq!(cfg.test_timeout, Duration::from_mins(1));
 }
 
 #[test]
@@ -194,7 +194,7 @@ fn resolve_unit_ci_uses_exact_larger_timeout() {
     let mgr = ScenarioConfigManager::new();
     let cfg = mgr.resolve(&TestingScenario::Unit, &EnvironmentType::Ci);
     // max(unit=10s, ci=300s) — CI default timeout comes from TestConfigProfile::default.
-    assert_eq!(cfg.test_timeout, Duration::from_secs(300));
+    assert_eq!(cfg.test_timeout, Duration::from_mins(5));
 }
 
 #[test]

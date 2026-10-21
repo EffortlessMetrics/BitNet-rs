@@ -144,7 +144,7 @@ impl SecureModelDownloader {
     pub fn new(config: ModelSecurity) -> Self {
         #[cfg(not(target_arch = "wasm32"))]
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(300)) // 5 minute timeout
+            .timeout(std::time::Duration::from_mins(5)) // 5 minute timeout
             .build()
             .expect("Failed to create HTTP client");
 

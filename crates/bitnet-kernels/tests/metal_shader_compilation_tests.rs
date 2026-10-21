@@ -471,11 +471,8 @@ fn calculate_occupancy(threads_per_group: u32, threadgroup_mem: u32, max_groups:
     if threads_per_group == 0 || max_groups == 0 {
         return 0.0;
     }
-    let mem_limited_groups = if threadgroup_mem > 0 {
-        METAL_MAX_THREADGROUP_MEMORY / threadgroup_mem
-    } else {
-        max_groups
-    };
+    let mem_limited_groups =
+        METAL_MAX_THREADGROUP_MEMORY.checked_div(threadgroup_mem).unwrap_or(max_groups);
     let effective = mem_limited_groups.min(max_groups);
     let total_threads = effective * threads_per_group;
     let max_threads = max_groups * METAL_MAX_THREADS_PER_THREADGROUP;

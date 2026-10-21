@@ -183,7 +183,7 @@ fn create_router(state: AppState) -> Router {
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http())
                 .layer(CorsLayer::permissive())
-                .layer(TimeoutLayer::new(Duration::from_secs(300))) // 5 minute timeout
+                .layer(TimeoutLayer::new(Duration::from_mins(5))) // 5 minute timeout
         )
 }
 

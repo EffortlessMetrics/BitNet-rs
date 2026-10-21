@@ -92,6 +92,28 @@ When adding or modifying a CI workflow:
 
 ## Status
 
+### Workspace Rustdoc ownership
+
+`rustdoc-workspace` replaces the expired default-PR `ci-core-docs` lane and its
+temporary exception. CI Core keeps the required `Documentation` result and
+the unchanged workspace CPU documentation command. The route selects ordinary
+documentation, manifest/toolchain, crate-root/API/FFI/Python surfaces and routing
+changes, including workspace manifests outside `crates/`; main and manual
+runs always select it. The `full-ci` label selects Rustdoc on the next normal
+workflow run; applying the label alone does not start CI Core. Manual dispatch
+remains the explicit immediate route. Leaf implementation Rust and
+tracker-only PRs emit an explicit unselected result. Python route tests run
+before classification, and planner tests cover matching PR risk categories.
+
+The public-API route covers `lib.rs` and `src/api/` paths across workspace
+members, including the custom `tests/lib.rs` and `tests-new/lib.rs` library
+roots; it is not a semantic detector for every exported leaf item.
+Docs Automation retains lint/link checks and delegates Rustdoc to CI Core via
+`--skip-rustdoc`; local invocation still builds Rustdoc by default. Runners,
+permissions, admission controls, timeouts and aggregate failure requirements
+are unchanged. The new risk-gated lane has its own review record; the expired
+default-lane exception is removed, not renewed.
+
 * PR 01 (this PR): policy files only, advisory.
 * PR 02: `xtask ci-lane-whitelist check` enforces structure and detects
   workflow drift from the whitelist.

@@ -513,7 +513,7 @@ mod tests {
         assert_eq!(isolation_violations, 0, "Should have no isolation violations");
 
         // Verify parallel execution efficiency
-        let sequential_time = Duration::from_millis(100 + 150 + 300 + 250 + 500 + 400 + 200 + 100); // 2000ms
+        let sequential_time = Duration::from_secs(2); // 2000ms
 
         println!("⏱️  Performance Analysis:");
         println!("  Total execution time: {:?}", total_duration);

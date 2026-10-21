@@ -63,14 +63,14 @@ pub struct OptimizationConfig {
 impl Default for OptimizationConfig {
     fn default() -> Self {
         Self {
-            target_duration: Duration::from_secs(15 * 60), // 15 minutes
+            target_duration: Duration::from_mins(15), // 15 minutes
             max_parallel: num_cpus::get().max(4),
             aggressive_mode: true,
             skip_slow_tests: true,
             slow_test_threshold: Duration::from_secs(30),
             enable_caching: true,
             enable_incremental: true,
-            test_timeout: Duration::from_secs(60), // Reduced from default
+            test_timeout: Duration::from_mins(1), // Reduced from default
         }
     }
 }
@@ -588,7 +588,7 @@ pub mod utils {
     /// Create a fast test configuration for CI environments
     pub fn create_ci_fast_config() -> OptimizationConfig {
         OptimizationConfig {
-            target_duration: Duration::from_secs(10 * 60), // 10 minutes for CI
+            target_duration: Duration::from_mins(10), // 10 minutes for CI
             max_parallel: get_optimal_parallel_tests().min(8), // Limit for CI stability
             aggressive_mode: true,
             skip_slow_tests: true,
@@ -602,14 +602,14 @@ pub mod utils {
     /// Create a development-friendly configuration
     pub fn create_dev_config() -> OptimizationConfig {
         OptimizationConfig {
-            target_duration: Duration::from_secs(5 * 60), // 5 minutes for dev
+            target_duration: Duration::from_mins(5), // 5 minutes for dev
             max_parallel: get_optimal_parallel_tests(),
             aggressive_mode: false,
             skip_slow_tests: false, // Run all tests in dev
-            slow_test_threshold: Duration::from_secs(60),
+            slow_test_threshold: Duration::from_mins(1),
             enable_caching: true,
             enable_incremental: true,
-            test_timeout: Duration::from_secs(120),
+            test_timeout: Duration::from_mins(2),
         }
     }
 }
@@ -621,7 +621,7 @@ mod tests {
     #[tokio::test]
     async fn test_optimization_config() {
         let config = OptimizationConfig::default();
-        assert_eq!(config.target_duration, Duration::from_secs(15 * 60));
+        assert_eq!(config.target_duration, Duration::from_mins(15));
         assert!(config.max_parallel > 0);
     }
 
@@ -639,7 +639,7 @@ mod tests {
         let strategy = optimizer.optimize_execution_plan(test_names).await.unwrap();
 
         assert!(!strategy.test_selection.is_empty());
-        assert!(strategy.estimated_duration <= Duration::from_secs(15 * 60));
+        assert!(strategy.estimated_duration <= Duration::from_mins(15));
     }
 
     #[test]

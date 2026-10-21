@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tokio;
-use tracing::{error, info, warn, Level};
+use tracing::{Level, error, info, warn};
 use tracing_subscriber;
 
 // Import our test framework components
@@ -144,11 +144,7 @@ fn parse_args() -> Args {
 
 /// Initialize logging based on verbosity
 fn init_logging() {
-    let level = if env::var("BITNET_TEST_VERBOSE").is_ok() {
-        Level::DEBUG
-    } else {
-        Level::INFO
-    };
+    let level = if env::var("BITNET_TEST_VERBOSE").is_ok() { Level::DEBUG } else { Level::INFO };
 
     tracing_subscriber::fmt()
         .with_max_level(level)
@@ -168,7 +164,9 @@ fn print_help() {
     println!();
     println!("OPTIONS:");
     println!("    -t, --target <MINUTES>     Target execution time in minutes [default: 15]");
-    println!("    -p, --profile <PROFILE>    Speed profile: lightning, fast, balanced, thorough [default: fast]");
+    println!(
+        "    -p, --profile <PROFILE>    Speed profile: lightning, fast, balanced, thorough [default: fast]"
+    );
     println!("    -j, --parallel <COUNT>     Number of parallel test threads [default: auto]");
     println!("    -v, --verbose              Enable verbose output");
     println!("    --no-incremental           Disable incremental testing");
@@ -194,14 +192,7 @@ fn print_results(result: &OptimizedExecutionResult) {
 
     // Summary
     println!("📊 Summary:");
-    println!(
-        "   Status: {}",
-        if result.success {
-            "✅ PASSED"
-        } else {
-            "❌ FAILED"
-        }
-    );
+    println!("   Status: {}", if result.success { "✅ PASSED" } else { "❌ FAILED" });
     println!(
         "   Duration: {:.1}s (target: {:.1}s)",
         result.total_duration.as_secs_f64(),
@@ -226,22 +217,14 @@ fn print_results(result: &OptimizedExecutionResult) {
     let mut passed_tests = 0;
 
     for (i, group_result) in result.group_results.iter().enumerate() {
-        let group_passed = group_result
-            .test_results
-            .iter()
-            .filter(|r| r.passed())
-            .count();
+        let group_passed = group_result.test_results.iter().filter(|r| r.passed()).count();
         let group_total = group_result.test_results.len();
 
         total_tests += group_total;
         passed_tests += group_passed;
 
         let status_icon = if group_result.success { "✅" } else { "❌" };
-        let timeout_info = if group_result.timeout_occurred {
-            " (TIMEOUT)"
-        } else {
-            ""
-        };
+        let timeout_info = if group_result.timeout_occurred { " (TIMEOUT)" } else { "" };
 
         println!(
             "   Group {}: {} {}/{} tests in {:.1}s{}",
@@ -260,11 +243,7 @@ fn print_results(result: &OptimizedExecutionResult) {
     println!(
         "   Passed: {} ({:.1}%)",
         passed_tests,
-        if total_tests > 0 {
-            passed_tests as f64 / total_tests as f64 * 100.0
-        } else {
-            0.0
-        }
+        if total_tests > 0 { passed_tests as f64 / total_tests as f64 * 100.0 } else { 0.0 }
     );
     println!("   Failed: {}", total_tests - passed_tests);
 
@@ -272,10 +251,7 @@ fn print_results(result: &OptimizedExecutionResult) {
     let target_met = result.total_duration <= result.target_duration;
     println!();
     println!("🎯 Performance Analysis:");
-    println!(
-        "   Target Met: {}",
-        if target_met { "✅ YES" } else { "❌ NO" }
-    );
+    println!("   Target Met: {}", if target_met { "✅ YES" } else { "❌ NO" });
 
     if target_met {
         let time_saved = result.target_duration.as_secs_f64() - result.total_duration.as_secs_f64();
@@ -294,10 +270,7 @@ fn print_results(result: &OptimizedExecutionResult) {
     }
 
     if result.tests_skipped > 0 {
-        println!(
-            "   • {} tests were skipped to meet time target",
-            result.tests_skipped
-        );
+        println!("   • {} tests were skipped to meet time target", result.tests_skipped);
         println!("   • Consider running full test suite in CI/CD pipeline");
     }
 
@@ -322,7 +295,7 @@ fn create_config_from_args(args: &Args) -> TestConfig {
     }
 
     builder = builder
-        .timeout(Duration::from_secs(60))
+        .timeout(Duration::from_mins(1))
         .log_level(if args.verbose { "debug" } else { "warn" })
         .coverage(false)
         .performance(true);
@@ -333,11 +306,7 @@ fn create_config_from_args(args: &Args) -> TestConfig {
 /// Validate environment and prerequisites
 fn validate_environment() -> Result<(), TestError> {
     // Check if cargo is available
-    if std::process::Command::new("cargo")
-        .arg("--version")
-        .output()
-        .is_err()
-    {
+    if std::process::Command::new("cargo").arg("--version").output().is_err() {
         return Err(TestError::SetupError("cargo not found in PATH".to_string()));
     }
 

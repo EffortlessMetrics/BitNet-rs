@@ -176,7 +176,7 @@ mod tests {
         let m = BenchMeasurement {
             name: "test".into(),
             iterations: 10,
-            total_time: Duration::from_nanos(1000),
+            total_time: Duration::from_micros(1),
             min_time: Duration::from_nanos(80),
             max_time: Duration::from_nanos(120),
         };
@@ -200,14 +200,14 @@ mod tests {
         let baseline = BenchMeasurement {
             name: "kernel".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(10000),
+            total_time: Duration::from_micros(10),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         };
         let candidate = BenchMeasurement {
             name: "kernel".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(5000),
+            total_time: Duration::from_micros(5),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         };
@@ -221,14 +221,14 @@ mod tests {
         let baseline = BenchMeasurement {
             name: "k".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(5000),
+            total_time: Duration::from_micros(5),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         };
         let candidate = BenchMeasurement {
             name: "k".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(10000),
+            total_time: Duration::from_micros(10),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         };
@@ -257,14 +257,14 @@ mod tests {
         s1.add(BenchMeasurement {
             name: "k".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(10000),
+            total_time: Duration::from_micros(10),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         });
         s2.add(BenchMeasurement {
             name: "k".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(5000),
+            total_time: Duration::from_micros(5),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         });
@@ -279,14 +279,14 @@ mod tests {
         s1.add(BenchMeasurement {
             name: "fast".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(1000),
+            total_time: Duration::from_micros(1),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         });
         s2.add(BenchMeasurement {
             name: "fast".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(5000),
+            total_time: Duration::from_micros(5),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         });
@@ -300,14 +300,14 @@ mod tests {
         suite.add(BenchMeasurement {
             name: "slow".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(10000),
+            total_time: Duration::from_micros(10),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         });
         suite.add(BenchMeasurement {
             name: "fast".into(),
             iterations: 100,
-            total_time: Duration::from_nanos(1000),
+            total_time: Duration::from_micros(1),
             min_time: Duration::ZERO,
             max_time: Duration::ZERO,
         });

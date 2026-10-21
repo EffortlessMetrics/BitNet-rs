@@ -614,7 +614,7 @@ impl ModelValidator {
             format!(
                 "Embedding dim {} consistent (head_dim={})",
                 model.hidden_size,
-                if model.num_heads > 0 { model.hidden_size / model.num_heads } else { 0 }
+                model.hidden_size.checked_div(model.num_heads).unwrap_or(0)
             ),
         )
     }

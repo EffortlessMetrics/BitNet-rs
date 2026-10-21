@@ -33,10 +33,10 @@ runner = "ubuntu_22_04"
 default_pr = true
 blocking = true
 
-[lane.ci-core-docs]
+[lane.rustdoc-workspace]
 base_lem = 8
 runner = "ubuntu_22_04"
-default_pr = true
+default_pr = false
 blocking = true
 
 [lane.feature-matrix-pr]

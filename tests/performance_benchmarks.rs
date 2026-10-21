@@ -71,7 +71,7 @@ impl Default for BenchmarkConfig {
             min_speedup_required: 2.0, // 2x improvement required
             iterations: 10,
             warmup_iterations: 3,
-            timeout: Duration::from_secs(60),
+            timeout: Duration::from_mins(1),
             cpp_binary_path: None,
             test_data_dir: PathBuf::from("tests/data"),
         }

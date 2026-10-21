@@ -40,8 +40,7 @@ pub struct ModelInfoOutput {
 
 /// Format model info as a human-readable table.
 pub fn format_model_info(info: &ModelInfoOutput) -> String {
-    let gqa_ratio =
-        if info.num_kv_heads > 0 { info.num_attention_heads / info.num_kv_heads } else { 0 };
+    let gqa_ratio = info.num_attention_heads.checked_div(info.num_kv_heads).unwrap_or(0);
 
     let mut out = String::new();
     out.push_str(&format!("Model: {}\n", info.name));

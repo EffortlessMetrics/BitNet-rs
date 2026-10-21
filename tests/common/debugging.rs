@@ -867,7 +867,7 @@ impl TestDebugger {
         // Check for long duration
         if let Some(duration) =
             test_trace.end_time.and_then(|end| end.duration_since(test_trace.start_time).ok())
-            && duration > Duration::from_secs(300)
+            && duration > Duration::from_mins(5)
         {
             // > 5 minutes
             issues.push(format!("Long execution time: {:?}", duration));

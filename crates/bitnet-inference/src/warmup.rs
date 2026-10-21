@@ -49,7 +49,7 @@ impl WarmupConfig {
             seq_len: 128,
             warmup_kv_cache: true,
             warmup_kernels: true,
-            timeout: Duration::from_secs(60),
+            timeout: Duration::from_mins(1),
         }
     }
 
@@ -211,10 +211,10 @@ mod tests {
         let c = WarmupConfig::default()
             .with_iterations(10)
             .with_seq_len(64)
-            .with_timeout(Duration::from_secs(120));
+            .with_timeout(Duration::from_mins(2));
         assert_eq!(c.iterations, 10);
         assert_eq!(c.seq_len, 64);
-        assert_eq!(c.timeout, Duration::from_secs(120));
+        assert_eq!(c.timeout, Duration::from_mins(2));
     }
 
     #[test]

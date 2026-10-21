@@ -4,37 +4,30 @@
 //! and observability tools for production monitoring and debugging.
 
 use anyhow::Result;
+use opentelemetry::{
+    KeyValue, global,
+    sdk::{
+        Resource,
+        trace::{self, TracerProvider},
+    },
+};
+use opentelemetry_jaeger::new_agent_pipeline;
+use prometheus::{
+    Counter, Encoder, Gauge, Histogram, Registry, TextEncoder, histogram_opts, opts,
+    register_counter, register_gauge, register_histogram,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug, trace, instrument, Span};
-use tracing_subscriber::{
-    layer::SubscriberExt,
-    util::SubscriberInitExt,
-    fmt,
-    EnvFilter,
-};
-use opentelemetry::{
-    global,
-    sdk::{
-        trace::{self, TracerProvider},
-        Resource,
-    },
-    KeyValue,
-};
-use opentelemetry_jaeger::new_agent_pipeline;
-use prometheus::{
-    Counter, Histogram, Gauge, Registry, Encoder, TextEncoder,
-    register_counter, register_histogram, register_gauge,
-    opts, histogram_opts,
-};
+use tracing::{Span, debug, error, info, instrument, trace, warn};
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 // Import BitNet components
-use bitnet_inference::{InferenceEngine, GenerationConfig};
+use bitnet_common::{BitNetConfig, Device};
+use bitnet_inference::{GenerationConfig, InferenceEngine};
 use bitnet_models::{Model, ModelLoader};
 use bitnet_tokenizers::TokenizerBuilder;
-use bitnet_common::{BitNetConfig, Device};
 
 /// Metrics collector for BitNet operations
 #[derive(Clone)]
@@ -69,13 +62,11 @@ impl BitNetMetrics {
                 "bitnet_requests_total",
                 "Total number of inference requests"
             )?,
-            request_duration: register_histogram!(
-                histogram_opts!(
-                    "bitnet_request_duration_seconds",
-                    "Request duration in seconds",
-                    vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
-                )
-            )?,
+            request_duration: register_histogram!(histogram_opts!(
+                "bitnet_request_duration_seconds",
+                "Request duration in seconds",
+                vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+            ))?,
             active_requests: register_gauge!(
                 "bitnet_active_requests",
                 "Number of currently active requests"
@@ -84,39 +75,26 @@ impl BitNetMetrics {
                 "bitnet_tokens_generated_total",
                 "Total number of tokens generated"
             )?,
-            model_load_duration: register_histogram!(
-                histogram_opts!(
-                    "bitnet_model_load_duration_seconds",
-                    "Model loading duration in seconds"
-                )
-            )?,
+            model_load_duration: register_histogram!(histogram_opts!(
+                "bitnet_model_load_duration_seconds",
+                "Model loading duration in seconds"
+            ))?,
             model_memory_usage: register_gauge!(
                 "bitnet_model_memory_bytes",
                 "Model memory usage in bytes"
             )?,
-            errors_total: register_counter!(
-                "bitnet_errors_total",
-                "Total number of errors"
-            )?,
-            inference_latency: register_histogram!(
-                histogram_opts!(
-                    "bitnet_inference_latency_seconds",
-                    "Inference latency in seconds",
-                    vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]
-                )
-            )?,
+            errors_total: register_counter!("bitnet_errors_total", "Total number of errors")?,
+            inference_latency: register_histogram!(histogram_opts!(
+                "bitnet_inference_latency_seconds",
+                "Inference latency in seconds",
+                vec![0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0]
+            ))?,
             throughput_tokens_per_second: register_gauge!(
                 "bitnet_throughput_tokens_per_second",
                 "Current throughput in tokens per second"
             )?,
-            cpu_usage: register_gauge!(
-                "bitnet_cpu_usage_percent",
-                "CPU usage percentage"
-            )?,
-            memory_usage: register_gauge!(
-                "bitnet_memory_usage_bytes",
-                "Memory usage in bytes"
-            )?,
+            cpu_usage: register_gauge!("bitnet_cpu_usage_percent", "CPU usage percentage")?,
+            memory_usage: register_gauge!("bitnet_memory_usage_bytes", "Memory usage in bytes")?,
             gpu_utilization: register_gauge!(
                 "bitnet_gpu_utilization_percent",
                 "GPU utilization percentage"
@@ -144,16 +122,9 @@ impl ObservableBitNetService {
         metrics.model_load_duration.observe(load_duration.as_secs_f64());
         metrics.model_memory_usage.set(estimate_model_memory_usage());
 
-        info!(
-            duration_ms = load_duration.as_millis(),
-            "Model loaded successfully"
-        );
+        info!(duration_ms = load_duration.as_millis(), "Model loaded successfully");
 
-        Ok(Self {
-            engine: Arc::new(RwLock::new(engine)),
-            metrics,
-            config: BitNetConfig::default(),
-        })
+        Ok(Self { engine: Arc::new(RwLock::new(engine)), metrics, config: BitNetConfig::default() })
     }
 
     #[instrument(skip(self))]
@@ -183,12 +154,11 @@ impl ObservableBitNetService {
                 // Add custom attributes to the span
                 span.record("model_device", format!("{:?}", Device::Cpu));
 
-                engine.generate_with_config(prompt, config)
-                    .map_err(|e| {
-                        self.metrics.errors_total.inc();
-                        error!(error = %e, "Inference failed");
-                        e
-                    })?
+                engine.generate_with_config(prompt, config).map_err(|e| {
+                    self.metrics.errors_total.inc();
+                    error!(error = %e, "Inference failed");
+                    e
+                })?
             };
 
             let duration = start_time.elapsed();
@@ -217,7 +187,9 @@ impl ObservableBitNetService {
             trace!(generated_text = %generated_text, "Generated text");
 
             Ok(generated_text)
-        }.instrument(span).await;
+        }
+        .instrument(span)
+        .await;
 
         self.metrics.active_requests.dec();
         result
@@ -282,20 +254,18 @@ async fn initialize_observability() -> Result<()> {
 
     // Initialize tracing subscriber with multiple layers
     tracing_subscriber::registry()
-        .with(
-            tracing_opentelemetry::layer().with_tracer(tracer)
-        )
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .with(
             fmt::layer()
                 .with_target(false)
                 .with_thread_ids(true)
                 .with_level(true)
                 .with_file(true)
-                .with_line_number(true)
+                .with_line_number(true),
         )
         .with(
             EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("info,bitnet=debug"))
+                .unwrap_or_else(|_| EnvFilter::new("info,bitnet=debug")),
         )
         .init();
 
@@ -335,7 +305,7 @@ async fn main() -> Result<()> {
 
     // Keep the application running to observe metrics
     info!("Observability example running. Check metrics at http://localhost:9090/metrics");
-    tokio::time::sleep(Duration::from_secs(60)).await;
+    tokio::time::sleep(Duration::from_mins(1)).await;
 
     // Shutdown tracing
     global::shutdown_tracer_provider();
@@ -349,10 +319,22 @@ async fn run_inference_examples(service: &ObservableBitNetService) -> Result<()>
     info!("Running inference examples to generate observability data");
 
     let examples = vec![
-        ("Hello, world!", GenerationConfig { max_new_tokens: 20, temperature: 0.7, ..Default::default() }),
-        ("The future of AI is", GenerationConfig { max_new_tokens: 50, temperature: 0.8, ..Default::default() }),
-        ("Once upon a time", GenerationConfig { max_new_tokens: 100, temperature: 0.9, ..Default::default() }),
-        ("Explain quantum computing", GenerationConfig { max_new_tokens: 200, temperature: 0.6, ..Default::default() }),
+        (
+            "Hello, world!",
+            GenerationConfig { max_new_tokens: 20, temperature: 0.7, ..Default::default() },
+        ),
+        (
+            "The future of AI is",
+            GenerationConfig { max_new_tokens: 50, temperature: 0.8, ..Default::default() },
+        ),
+        (
+            "Once upon a time",
+            GenerationConfig { max_new_tokens: 100, temperature: 0.9, ..Default::default() },
+        ),
+        (
+            "Explain quantum computing",
+            GenerationConfig { max_new_tokens: 200, temperature: 0.6, ..Default::default() },
+        ),
     ];
 
     for (i, (prompt, config)) in examples.iter().enumerate() {
@@ -376,7 +358,9 @@ async fn run_inference_examples(service: &ObservableBitNetService) -> Result<()>
 
             // Add some delay between requests
             tokio::time::sleep(Duration::from_millis(500)).await;
-        }.instrument(span).await;
+        }
+        .instrument(span)
+        .await;
     }
 
     // Simulate some error scenarios
@@ -392,10 +376,8 @@ async fn simulate_error_scenarios(service: &ObservableBitNetService) -> Result<(
     info!("Simulating error scenarios");
 
     // Simulate various error conditions
-    let error_scenarios = vec![
-        ("", "Empty prompt"),
-        ("x".repeat(20000).as_str(), "Extremely long prompt"),
-    ];
+    let error_scenarios =
+        vec![("", "Empty prompt"), ("x".repeat(20000).as_str(), "Extremely long prompt")];
 
     for (prompt, scenario) in error_scenarios {
         let span = tracing::warn_span!("error_scenario", scenario = scenario);
@@ -407,7 +389,9 @@ async fn simulate_error_scenarios(service: &ObservableBitNetService) -> Result<(
             if let Err(e) = service.generate_text(prompt, &config).await {
                 warn!(error = %e, scenario = scenario, "Expected error occurred");
             }
-        }.instrument(span).await;
+        }
+        .instrument(span)
+        .await;
     }
 
     Ok(())
@@ -417,39 +401,33 @@ async fn simulate_error_scenarios(service: &ObservableBitNetService) -> Result<(
 async fn start_metrics_server(service: ObservableBitNetService) {
     use warp::Filter;
 
-    let metrics_route = warp::path("metrics")
-        .map(move || {
-            match service.get_metrics() {
-                Ok(metrics) => warp::reply::with_header(
-                    metrics,
-                    "content-type",
-                    "text/plain; version=0.0.4; charset=utf-8"
-                ),
-                Err(e) => {
-                    error!(error = %e, "Failed to generate metrics");
-                    warp::reply::with_header(
-                        format!("Error generating metrics: {}", e),
-                        "content-type",
-                        "text/plain"
-                    )
-                }
-            }
-        });
+    let metrics_route = warp::path("metrics").map(move || match service.get_metrics() {
+        Ok(metrics) => warp::reply::with_header(
+            metrics,
+            "content-type",
+            "text/plain; version=0.0.4; charset=utf-8",
+        ),
+        Err(e) => {
+            error!(error = %e, "Failed to generate metrics");
+            warp::reply::with_header(
+                format!("Error generating metrics: {}", e),
+                "content-type",
+                "text/plain",
+            )
+        }
+    });
 
-    let health_route = warp::path("health")
-        .map(|| {
-            warp::reply::json(&serde_json::json!({
-                "status": "healthy",
-                "timestamp": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
-            }))
-        });
+    let health_route = warp::path("health").map(|| {
+        warp::reply::json(&serde_json::json!({
+            "status": "healthy",
+            "timestamp": SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+        }))
+    });
 
     let routes = metrics_route.or(health_route);
 
     info!("Starting metrics server on http://0.0.0.0:9090");
-    warp::serve(routes)
-        .run(([0, 0, 0, 0], 9090))
-        .await;
+    warp::serve(routes).run(([0, 0, 0, 0], 9090)).await;
 }
 
 /// Mock model loading for demonstration
@@ -496,9 +474,7 @@ struct MockModel {
 
 impl MockModel {
     fn new() -> Self {
-        Self {
-            config: BitNetConfig::default(),
-        }
+        Self { config: BitNetConfig::default() }
     }
 }
 
@@ -519,7 +495,11 @@ impl Model for MockModel {
         Ok(Box::new(MockTensor::new(vec![1, 50257])))
     }
 
-    fn generate(&self, _tokens: &[u32], _config: &bitnet_inference::GenerationConfig) -> Result<Vec<u32>> {
+    fn generate(
+        &self,
+        _tokens: &[u32],
+        _config: &bitnet_inference::GenerationConfig,
+    ) -> Result<Vec<u32>> {
         // Mock generation with some processing time
         std::thread::sleep(Duration::from_millis(50));
         Ok(vec![1234, 5678, 9012])
@@ -535,10 +515,7 @@ struct MockTensor {
 impl MockTensor {
     fn new(shape: Vec<usize>) -> Self {
         let size = shape.iter().product();
-        Self {
-            shape,
-            data: vec![0.1; size],
-        }
+        Self { shape, data: vec![0.1; size] }
     }
 }
 

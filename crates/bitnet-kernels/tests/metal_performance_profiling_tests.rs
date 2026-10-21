@@ -222,7 +222,7 @@ fn calculate_occupancy(
     } else {
         max_tgs_per_core
     };
-    let shared_limited = if shared_mem > 0 { max_shared / shared_mem } else { max_tgs_per_core };
+    let shared_limited = max_shared.checked_div(shared_mem).unwrap_or(max_tgs_per_core);
     let actual_tgs = reg_limited.min(shared_limited).min(max_tgs_per_core);
     let active_threads = actual_tgs * threads_per_tg;
     let max_threads = max_tgs_per_core * MAX_THREADS_PER_THREADGROUP;

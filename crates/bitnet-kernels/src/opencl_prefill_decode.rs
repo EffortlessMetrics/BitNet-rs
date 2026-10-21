@@ -258,7 +258,7 @@ pub fn cpu_decode_step(
         / hidden_dim as f32;
 
     let actual_entries =
-        if hidden_dim > 0 { (kv_cache.len() / hidden_dim).min(cache_len) } else { 0 };
+        kv_cache.len().checked_div(hidden_dim).map_or(0, |entries| entries.min(cache_len));
 
     let attn_score: f32 = if actual_entries > 0 {
         (0..actual_entries)

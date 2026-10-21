@@ -30,8 +30,8 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # This workflow may build Rustdoc. Do not cancel selected work after setup;
-  # route tracker-only PRs to the fast path below instead.
+  # Rustdoc belongs to CI Core Documentation. Preserve selected lint/link work
+  # after setup; route tracker-only PRs to the fast path below.
   cancel-in-progress: false
 
 jobs:
@@ -83,7 +83,7 @@ jobs:
           echo "tracker_only=${tracker_only}"
 
   docs-automation:
-    name: Lint + Link Check + Rustdoc
+    name: Lint + Link Check
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     needs: [classify-docs]
@@ -117,4 +117,4 @@ jobs:
 
       - name: Run docs automation checks
         if: needs.classify-docs.outputs.tracker_only != 'true'
-        run: scripts/docs_automation.sh
+        run: scripts/docs_automation.sh --skip-rustdoc

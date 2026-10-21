@@ -619,7 +619,7 @@ fn test_bdd_wave6_latency_histogram_percentiles() {
 #[test]
 fn test_bdd_wave6_throughput_tracker() {
     // Given a ThroughputTracker
-    let mut tracker = ThroughputTracker::new(Duration::from_secs(60));
+    let mut tracker = ThroughputTracker::new(Duration::from_mins(1));
 
     // When recording token generation
     tracker.record(100);

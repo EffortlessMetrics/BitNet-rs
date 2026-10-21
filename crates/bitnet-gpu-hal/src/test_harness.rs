@@ -1280,7 +1280,7 @@ mod tests {
         let results = s.run("cpu");
         assert_eq!(results.len(), s.cases.len());
         for r in &results {
-            assert!(r.passed, "case {} failed: {:?}", r.test_name, r.error_message,);
+            assert!(r.passed, "case {} failed: {:?}", r.test_name, r.error_message);
         }
     }
 
@@ -1395,7 +1395,7 @@ mod tests {
         let reports = runner.run_all();
         assert!(!reports.is_empty());
         for r in &reports {
-            assert!(r.all_agree, "report {} disagrees: {}", r.test_name, r.summary(),);
+            assert!(r.all_agree, "report {} disagrees: {}", r.test_name, r.summary());
         }
     }
 

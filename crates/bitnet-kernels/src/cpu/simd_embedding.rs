@@ -367,7 +367,7 @@ pub fn compute_absolute_positions(
     embed_dim: usize,
     offset: usize,
 ) -> Result<Vec<f32>> {
-    let max_pos = if embed_dim > 0 { position_table.len() / embed_dim } else { 0 };
+    let max_pos = position_table.len().checked_div(embed_dim).unwrap_or(0);
     if offset + seq_len > max_pos {
         return Err(shape_error(format!(
             "offset({offset}) + seq_len({seq_len}) = {} exceeds position table rows ({max_pos})",
@@ -674,9 +674,7 @@ pub fn embedding_rms_norm(
     eps: f32,
 ) -> Result<()> {
     if gamma.len() != embed_dim {
-        return Err(shape_error(
-            format!("gamma length {} != embed_dim({embed_dim})", gamma.len(),),
-        ));
+        return Err(shape_error(format!("gamma length {} != embed_dim({embed_dim})", gamma.len())));
     }
     if embed_dim == 0 || embeddings.is_empty() {
         return Ok(());
@@ -919,6 +917,20 @@ pub fn embedding_pipeline(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checked_position_rows_preserve_zero_width_and_bounds() -> Result<()> {
+        assert!(compute_absolute_positions(&[1.0], 0, 0, 0)?.is_empty());
+        assert!(compute_absolute_positions(&[1.0], 1, 0, 0).is_err());
+        assert!(compute_absolute_positions(&[1.0], 0, usize::MAX, 0)?.is_empty());
+        assert!(compute_absolute_positions(&[1.0], 1, usize::MAX, 0).is_err());
+        assert_eq!(
+            compute_absolute_positions(&[1.0, 2.0, 3.0, 4.0, 5.0], 1, 2, 1)?,
+            vec![3.0, 4.0]
+        );
+        assert!(compute_absolute_positions(&[1.0, 2.0, 3.0], 2, 2, 0).is_err());
+        Ok(())
+    }
 
     // ── Test helpers ────────────────────────────────────────────────
 

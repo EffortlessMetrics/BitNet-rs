@@ -35,7 +35,7 @@ fn clamp_token(token_id: u32, vocab_size: usize) -> usize {
 /// Compute vocabulary size from embedding table length.
 #[inline(always)]
 fn vocab_size(table_len: usize, embed_dim: usize) -> usize {
-    if embed_dim == 0 { 0 } else { table_len / embed_dim }
+    table_len.checked_div(embed_dim).unwrap_or(0)
 }
 
 // ── embed_tokens_neon ───────────────────────────────────────────────────

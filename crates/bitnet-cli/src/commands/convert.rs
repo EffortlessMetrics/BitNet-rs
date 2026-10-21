@@ -192,7 +192,7 @@ impl ConvertCommand {
         pb.set_position(10);
 
         pb.set_message("Converting weights...");
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
         pb.set_position(40);
 
         if target_quantization.is_some() {
@@ -279,7 +279,7 @@ impl ConvertCommand {
         pb.enable_steady_tick(Duration::from_millis(100));
 
         // Simulate verification
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
 
         // Check output file exists and is readable
         if !self.output.exists() {

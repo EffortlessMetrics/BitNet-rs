@@ -266,7 +266,7 @@ impl ModelCache {
         let statistics = self.statistics.clone();
         let ttl = Duration::from_secs(self.config.model_cache_ttl);
 
-        let mut interval = tokio::time::interval(Duration::from_secs(300)); // Check every 5 minutes
+        let mut interval = tokio::time::interval(Duration::from_mins(5)); // Check every 5 minutes
 
         loop {
             interval.tick().await;

@@ -716,7 +716,7 @@ mod tests {
 
     #[test]
     fn test_throughput_total_tokens() {
-        let mut t = ThroughputTracker::new(Duration::from_secs(60));
+        let mut t = ThroughputTracker::new(Duration::from_mins(1));
         let now = Instant::now();
         t.record_at(now, 10);
         t.record_at(now, 20);
@@ -726,7 +726,7 @@ mod tests {
 
     #[test]
     fn test_throughput_reset() {
-        let mut t = ThroughputTracker::new(Duration::from_secs(60));
+        let mut t = ThroughputTracker::new(Duration::from_mins(1));
         t.record(10);
         t.reset();
         assert_eq!(t.total_tokens(), 0);
@@ -813,7 +813,7 @@ mod tests {
         let mut h = LatencyHistogram::new();
         h.record(50.0);
         h.record(100.0);
-        let t = ThroughputTracker::new(Duration::from_secs(60));
+        let t = ThroughputTracker::new(Duration::from_mins(1));
         let mp = MemoryProfiler::new();
         mp.record_allocation(2048);
 

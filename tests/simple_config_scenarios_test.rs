@@ -7,8 +7,7 @@ use std::time::Duration;
 // Import the configuration scenarios module directly
 mod common;
 use common::config_scenarios::{
-    ConfigurationContext, EnvironmentType, PlatformSettings, ScenarioConfigManager,
-    TestingScenario,
+    ConfigurationContext, EnvironmentType, PlatformSettings, ScenarioConfigManager, TestingScenario,
 };
 
 #[test]
@@ -63,7 +62,7 @@ fn test_configuration_context() {
     context.environment = EnvironmentType::CI;
     context.resource_constraints.max_parallel_tests = Some(1);
     context.resource_constraints.network_access = false;
-    context.time_constraints.max_test_timeout = Duration::from_secs(300);
+    context.time_constraints.max_test_timeout = Duration::from_mins(5);
     context.quality_requirements.min_coverage = 0.85;
 
     let config = manager.get_context_config(&context);
@@ -109,7 +108,7 @@ fn test_time_constraints() {
     let mut context = ConfigurationContext::default();
 
     // Test fast feedback constraint
-    context.time_constraints.target_feedback_time = Some(Duration::from_secs(120));
+    context.time_constraints.target_feedback_time = Some(Duration::from_mins(2));
     let config = manager.get_context_config(&context);
     assert!(!config.reporting.generate_coverage);
     assert!(!config.crossval.enabled);
@@ -165,21 +164,15 @@ fn test_platform_specific_configurations() {
     let mut context = ConfigurationContext::default();
 
     // Test Windows platform
-    context.platform_settings = Some(PlatformSettings {
-        os: Some("windows".to_string()),
-        arch: None,
-        features: vec![],
-    });
+    context.platform_settings =
+        Some(PlatformSettings { os: Some("windows".to_string()), arch: None, features: vec![] });
     context.scenario = TestingScenario::Unit; // Start with high parallelism
     let config = manager.get_context_config(&context);
     assert!(config.max_parallel_tests <= 8);
 
     // Test macOS platform
-    context.platform_settings = Some(PlatformSettings {
-        os: Some("macos".to_string()),
-        arch: None,
-        features: vec![],
-    });
+    context.platform_settings =
+        Some(PlatformSettings { os: Some("macos".to_string()), arch: None, features: vec![] });
     let config = manager.get_context_config(&context);
     assert!(config.max_parallel_tests <= 6);
 

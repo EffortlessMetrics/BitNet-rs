@@ -413,7 +413,7 @@ impl ModelValidator {
         if model.requires_fp16 && !device.supports_fp16 {
             report.add(
                 ValidationSeverity::Error,
-                format!("Model requires FP16 but '{}' does not support it", device.device_name,),
+                format!("Model requires FP16 but '{}' does not support it", device.device_name),
                 Some(
                     "Use FP32 model variant or a device with FP16 \
                      support"
@@ -425,7 +425,7 @@ impl ModelValidator {
         if model.requires_fp32 && !device.supports_fp32 {
             report.add(
                 ValidationSeverity::Error,
-                format!("Model requires FP32 but '{}' does not support it", device.device_name,),
+                format!("Model requires FP32 but '{}' does not support it", device.device_name),
                 None,
             );
         }

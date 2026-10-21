@@ -148,6 +148,9 @@ jobs:
               bdd-grid-check)
                 required_jobs+=("BDD Grid Check")
                 ;;
+              rustdoc-workspace)
+                required_jobs+=("Documentation")
+                ;;
               ci-core-build-test)
                 required_jobs+=("CI Core Success")
                 ;;

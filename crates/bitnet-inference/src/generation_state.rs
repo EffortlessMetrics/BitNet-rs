@@ -3,6 +3,8 @@
 //! Track generation progress: token counts, stop conditions,
 //! timing, and state transitions.
 
+#![deny(unfulfilled_lint_expectations)]
+
 use std::time::{Duration, Instant};
 
 /// Generation state.
@@ -65,7 +67,6 @@ impl StopReason {
 }
 
 /// Tracks the state of a generation request.
-#[derive(Debug)]
 pub struct GenerationTracker {
     state: GenState,
     prompt_tokens: usize,
@@ -76,6 +77,24 @@ pub struct GenerationTracker {
     prefill_duration: Option<Duration>,
     last_token_ids: Vec<u32>,
     repetition_window: usize,
+}
+
+// Preserve derived Debug output while observing the protected field via its accessor.
+impl std::fmt::Debug for GenerationTracker {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("GenerationTracker")
+            .field("state", &self.state())
+            .field("prompt_tokens", &self.prompt_tokens)
+            .field("generated_tokens", &self.generated_tokens)
+            .field("max_tokens", &self.max_tokens)
+            .field("eos_token_id", &self.eos_token_id)
+            .field("start_time", &self.start_time)
+            .field("prefill_duration", &self.prefill_duration)
+            .field("last_token_ids", &self.last_token_ids)
+            .field("repetition_window", &self.repetition_window)
+            .finish()
+    }
 }
 
 impl GenerationTracker {
@@ -105,7 +124,7 @@ impl GenerationTracker {
 
     /// Begin prefill phase.
     pub fn start_prefill(&mut self, prompt_len: usize) {
-        self.state = GenState::Prefill;
+        self.set_state(GenState::Prefill);
         self.prompt_tokens = prompt_len;
         self.start_time = Some(Instant::now());
     }
@@ -115,13 +134,13 @@ impl GenerationTracker {
         if let Some(start) = self.start_time {
             self.prefill_duration = Some(start.elapsed());
         }
-        self.state = GenState::Generating;
+        self.set_state(GenState::Generating);
     }
 
     /// Record a generated token and check stop conditions.
     pub fn on_token(&mut self, token_id: u32) -> GenState {
-        if self.state != GenState::Generating {
-            return self.state;
+        if self.state() != GenState::Generating {
+            return self.state();
         }
 
         self.generated_tokens += 1;
@@ -131,33 +150,33 @@ impl GenerationTracker {
         if let Some(eos) = self.eos_token_id
             && token_id == eos
         {
-            self.state = GenState::Stopped(StopReason::EndOfSequence);
-            return self.state;
+            self.set_state(GenState::Stopped(StopReason::EndOfSequence));
+            return self.state();
         }
 
         // Check max tokens
         if self.generated_tokens >= self.max_tokens {
-            self.state = GenState::Stopped(StopReason::MaxTokens);
-            return self.state;
+            self.set_state(GenState::Stopped(StopReason::MaxTokens));
+            return self.state();
         }
 
         // Check repetition
         if self.detect_repetition() {
-            self.state = GenState::Stopped(StopReason::RepetitionLoop);
-            return self.state;
+            self.set_state(GenState::Stopped(StopReason::RepetitionLoop));
+            return self.state();
         }
 
-        self.state
+        self.state()
     }
 
     /// Cancel generation.
     pub fn cancel(&mut self) {
-        self.state = GenState::Stopped(StopReason::Cancelled);
+        self.set_state(GenState::Stopped(StopReason::Cancelled));
     }
 
     /// Mark as failed.
     pub fn fail(&mut self) {
-        self.state = GenState::Failed;
+        self.set_state(GenState::Failed);
     }
 
     fn detect_repetition(&self) -> bool {
@@ -171,8 +190,16 @@ impl GenerationTracker {
         recent == prior
     }
 
+    // The owner read is the sole observation seam; callers use this accessor.
+    #[expect(clippy::disallowed_fields, reason = "policy:clippy-0001")]
     pub fn state(&self) -> GenState {
         self.state
+    }
+
+    // Existing lifecycle methods retain their transitions through this owner write.
+    #[expect(clippy::disallowed_fields, reason = "policy:clippy-0002")]
+    fn set_state(&mut self, state: GenState) {
+        self.state = state;
     }
 
     pub fn prompt_tokens(&self) -> usize {
@@ -202,7 +229,7 @@ impl GenerationTracker {
     pub fn summary(&self) -> String {
         format!(
             "state={}, prompt={}, generated={}/{}, tps={:.1}",
-            self.state.name(),
+            self.state().name(),
             self.prompt_tokens,
             self.generated_tokens,
             self.max_tokens,
@@ -214,6 +241,81 @@ impl GenerationTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_debug_preserves_derived_fields_and_formatting() {
+        #[derive(Debug)]
+        struct DerivedTracker<'a> {
+            state: GenState,
+            prompt_tokens: usize,
+            generated_tokens: usize,
+            max_tokens: usize,
+            eos_token_id: Option<u32>,
+            start_time: Option<Instant>,
+            prefill_duration: Option<Duration>,
+            last_token_ids: &'a Vec<u32>,
+            repetition_window: usize,
+        }
+
+        fn assert_derived_debug(tracker: &GenerationTracker) {
+            let derived = DerivedTracker {
+                state: tracker.state(),
+                prompt_tokens: tracker.prompt_tokens,
+                generated_tokens: tracker.generated_tokens,
+                max_tokens: tracker.max_tokens,
+                eos_token_id: tracker.eos_token_id,
+                start_time: tracker.start_time,
+                prefill_duration: tracker.prefill_duration,
+                last_token_ids: &tracker.last_token_ids,
+                repetition_window: tracker.repetition_window,
+            };
+            // Check the reference fixture's full contents as well as its rendering.
+            assert_eq!(
+                (
+                    derived.state,
+                    derived.prompt_tokens,
+                    derived.generated_tokens,
+                    derived.max_tokens,
+                    derived.eos_token_id,
+                    derived.start_time,
+                    derived.prefill_duration,
+                    derived.last_token_ids,
+                    derived.repetition_window,
+                ),
+                (
+                    tracker.state(),
+                    tracker.prompt_tokens,
+                    tracker.generated_tokens,
+                    tracker.max_tokens,
+                    tracker.eos_token_id,
+                    tracker.start_time,
+                    tracker.prefill_duration,
+                    &tracker.last_token_ids,
+                    tracker.repetition_window,
+                ),
+            );
+            assert_eq!(
+                format!("{tracker:?}"),
+                format!("{derived:?}").replacen("DerivedTracker", "GenerationTracker", 1)
+            );
+            assert_eq!(
+                format!("{tracker:#?}"),
+                format!("{derived:#?}").replacen("DerivedTracker", "GenerationTracker", 1)
+            );
+        }
+
+        let mut tracker = GenerationTracker::new(3).with_eos(2).with_repetition_window(4);
+        assert_derived_debug(&tracker);
+        tracker.start_prefill(5);
+        assert_derived_debug(&tracker);
+        tracker.start_generation();
+        tracker.on_token(1);
+        assert_derived_debug(&tracker);
+        tracker.on_token(2);
+        assert_derived_debug(&tracker);
+        tracker.fail();
+        assert_derived_debug(&tracker);
+    }
 
     #[test]
     fn test_initial_state() {
@@ -294,6 +396,24 @@ mod tests {
         }
         let state = tracker.on_token(3);
         assert_eq!(state, GenState::Stopped(StopReason::RepetitionLoop));
+    }
+
+    #[test]
+    fn test_non_generating_tokens_preserve_state_and_counts() {
+        let mut tracker = GenerationTracker::new(1);
+        assert_eq!(tracker.on_token(7), GenState::Idle);
+        assert_eq!(tracker.generated_tokens(), 0);
+        tracker.start_prefill(2);
+        assert_eq!(tracker.on_token(7), GenState::Prefill);
+        assert_eq!(tracker.generated_tokens(), 0);
+        tracker.start_generation();
+        assert_eq!(tracker.on_token(7), GenState::Stopped(StopReason::MaxTokens));
+        assert_eq!(tracker.generated_tokens(), 1);
+        assert_eq!(tracker.on_token(8), GenState::Stopped(StopReason::MaxTokens));
+        assert_eq!(tracker.generated_tokens(), 1);
+        tracker.fail();
+        assert_eq!(tracker.on_token(9), GenState::Failed);
+        assert_eq!(tracker.generated_tokens(), 1);
     }
 
     #[test]

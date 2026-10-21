@@ -113,7 +113,7 @@ impl Default for ComparisonConfig {
             iterations: 100,
             warmup_iterations: 10,
             metrics: vec![MetricKind::Latency, MetricKind::Throughput],
-            timeout: Some(Duration::from_secs(60)),
+            timeout: Some(Duration::from_mins(1)),
             reference_backend: None,
         }
     }

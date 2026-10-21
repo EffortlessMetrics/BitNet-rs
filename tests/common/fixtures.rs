@@ -286,7 +286,7 @@ impl FixtureManager {
                         let now = SystemTime::now();
                         if let Ok(duration_since_access) = now.duration_since(accessed) {
                             // Don't remove files accessed in the last 5 minutes
-                            if duration_since_access < Duration::from_secs(300) {
+                            if duration_since_access < Duration::from_mins(5) {
                                 continue;
                             }
                         }
@@ -959,7 +959,7 @@ mod tests {
         fs::write(&old_file, b"old content").await.unwrap();
 
         // Modify the file's timestamp to make it old
-        let old_time = SystemTime::now() - Duration::from_secs(48 * 60 * 60); // 48 hours ago
+        let old_time = SystemTime::now() - Duration::from_hours(48); // 48 hours ago
         let file_time = filetime::FileTime::from_system_time(old_time);
         filetime::set_file_mtime(&old_file, file_time).ok();
 
@@ -981,7 +981,7 @@ mod tests {
         fs::write(&new_file, b"new").await.unwrap();
 
         // Make one file old
-        let old_time = SystemTime::now() - Duration::from_secs(48 * 60 * 60);
+        let old_time = SystemTime::now() - Duration::from_hours(48);
         let file_time = filetime::FileTime::from_system_time(old_time);
         filetime::set_file_mtime(&old_file, file_time).ok();
 

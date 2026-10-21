@@ -8,9 +8,10 @@ suppression_style = "expect-with-reason"
 blanket_categories = false
 rust_default_implementation = true
 
-# Planned lints land in waves keyed by MSRV. The activate_when_msrv
-# field is informational here; PR 08 ("Clippy Stage A") materialises
-# the first wave inside [workspace.lints.clippy].
+# Planned lints are enforced once their MSRV is due. An explicit
+# activate_when_available gate requires a live inventory from that compiler:
+# the lint must be absent from Cargo while unavailable, and activated at the
+# planned level as soon as the compiler provides it. This is not source debt.
 
 [[planned]]
 name = "clippy::same_length_and_capacity"
@@ -58,7 +59,8 @@ reason = "Use standard ownership helper instead of local reimplementation."
 name = "clippy::manual_pop_if"
 level = "warn"
 activate_when_msrv = "1.95"
-reason = "Use collection APIs that encode predicate-and-pop intent."
+activate_when_available = true
+reason = "Use predicate-and-pop APIs once the pinned compiler exposes this lint; the live inventory enforces availability and subsequent activation."
 
 [[planned]]
 name = "clippy::duration_suboptimal_units"

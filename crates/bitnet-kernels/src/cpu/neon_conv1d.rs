@@ -619,7 +619,7 @@ mod tests {
     fn approx_eq(a: &[f32], b: &[f32], tol: f32) {
         assert_eq!(a.len(), b.len(), "length mismatch");
         for (i, (&x, &y)) in a.iter().zip(b.iter()).enumerate() {
-            assert!((x - y).abs() <= tol, "mismatch at index {i}: {x} vs {y} (tol={tol})",);
+            assert!((x - y).abs() <= tol, "mismatch at index {i}: {x} vs {y} (tol={tol})");
         }
     }
 

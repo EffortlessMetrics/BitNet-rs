@@ -1606,13 +1606,13 @@ mod tests {
 
     #[test]
     fn test_rate_tracker_closed_initially() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 5, Duration::from_secs(30));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 5, Duration::from_secs(30));
         assert_eq!(tracker.state(ErrorCategory::Memory), CircuitState::Closed);
     }
 
     #[test]
     fn test_rate_tracker_stays_closed_below_threshold() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 5, Duration::from_secs(30));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 5, Duration::from_secs(30));
         for _ in 0..4 {
             let state = tracker.record(ErrorCategory::Memory);
             assert_eq!(state, CircuitState::Closed);
@@ -1621,7 +1621,7 @@ mod tests {
 
     #[test]
     fn test_rate_tracker_opens_at_threshold() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 3, Duration::from_secs(30));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 3, Duration::from_secs(30));
         tracker.record(ErrorCategory::Runtime);
         tracker.record(ErrorCategory::Runtime);
         let state = tracker.record(ErrorCategory::Runtime);
@@ -1630,7 +1630,7 @@ mod tests {
 
     #[test]
     fn test_rate_tracker_categories_independent() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 2, Duration::from_secs(30));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 2, Duration::from_secs(30));
         tracker.record(ErrorCategory::Memory);
         let state = tracker.record(ErrorCategory::Runtime);
         // Runtime has only 1 error — should still be closed.
@@ -1639,7 +1639,7 @@ mod tests {
 
     #[test]
     fn test_rate_tracker_reset() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 2, Duration::from_secs(30));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 2, Duration::from_secs(30));
         tracker.record(ErrorCategory::Memory);
         tracker.record(ErrorCategory::Memory);
         assert_eq!(tracker.state(ErrorCategory::Memory), CircuitState::Open);
@@ -1649,7 +1649,7 @@ mod tests {
 
     #[test]
     fn test_rate_tracker_current_count() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 10, Duration::from_secs(5));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 10, Duration::from_secs(5));
         tracker.record(ErrorCategory::Compilation);
         tracker.record(ErrorCategory::Compilation);
         assert_eq!(tracker.current_count(ErrorCategory::Compilation), 2);
@@ -1658,7 +1658,7 @@ mod tests {
 
     #[test]
     fn test_rate_tracker_clone_shares_state() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 5, Duration::from_secs(5));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 5, Duration::from_secs(5));
         let clone = tracker.clone();
         tracker.record(ErrorCategory::Memory);
         assert_eq!(clone.current_count(ErrorCategory::Memory), 1);
@@ -1676,7 +1676,7 @@ mod tests {
 
     #[test]
     fn test_rate_tracker_half_open_after_cooldown() {
-        let tracker = ErrorRateTracker::new(Duration::from_secs(60), 2, Duration::from_millis(50));
+        let tracker = ErrorRateTracker::new(Duration::from_mins(1), 2, Duration::from_millis(50));
         tracker.record(ErrorCategory::Memory);
         tracker.record(ErrorCategory::Memory);
         assert_eq!(tracker.state(ErrorCategory::Memory), CircuitState::Open);

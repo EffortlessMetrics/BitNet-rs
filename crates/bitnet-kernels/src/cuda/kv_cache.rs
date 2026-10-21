@@ -321,7 +321,7 @@ impl KvCacheBuffer {
         }
         if !self.config.head_dim.is_multiple_of(2) {
             return Err(KernelError::InvalidArguments {
-                reason: format!("rotate_kv requires even head_dim, got {}", self.config.head_dim,),
+                reason: format!("rotate_kv requires even head_dim, got {}", self.config.head_dim),
             }
             .into());
         }

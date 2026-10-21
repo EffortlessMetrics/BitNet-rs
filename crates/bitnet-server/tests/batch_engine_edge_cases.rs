@@ -147,11 +147,11 @@ fn batch_request_chained_builders() {
     let req = BatchRequest::new("prompt".to_string(), GenerationConfig::default())
         .with_priority(RequestPriority::High)
         .with_device_preference(Device::Cpu)
-        .with_timeout(Duration::from_secs(60))
+        .with_timeout(Duration::from_mins(1))
         .with_quantization_hint("i2s".to_string());
     assert_eq!(req.priority, RequestPriority::High);
     assert_eq!(req.device_preference, Some(Device::Cpu));
-    assert_eq!(req.timeout, Some(Duration::from_secs(60)));
+    assert_eq!(req.timeout, Some(Duration::from_mins(1)));
     assert_eq!(req.quantization_hint, Some("i2s".to_string()));
 }
 

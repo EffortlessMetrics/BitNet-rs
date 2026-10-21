@@ -1806,7 +1806,7 @@ mod tests {
 
     #[test]
     fn circuit_breaker_opens_after_threshold() {
-        let mut cb = CircuitBreaker::new(3, 1, Duration::from_secs(60));
+        let mut cb = CircuitBreaker::new(3, 1, Duration::from_mins(1));
         cb.record_failure();
         cb.record_failure();
         assert_eq!(cb.state(), CircuitState::Closed);
@@ -1816,7 +1816,7 @@ mod tests {
 
     #[test]
     fn circuit_breaker_rejects_when_open() {
-        let mut cb = CircuitBreaker::new(1, 1, Duration::from_secs(60));
+        let mut cb = CircuitBreaker::new(1, 1, Duration::from_mins(1));
         cb.record_failure();
         assert!(cb.allow_request().is_err());
     }
@@ -1854,7 +1854,7 @@ mod tests {
 
     #[test]
     fn circuit_breaker_reset() {
-        let mut cb = CircuitBreaker::new(1, 1, Duration::from_secs(60));
+        let mut cb = CircuitBreaker::new(1, 1, Duration::from_mins(1));
         cb.record_failure();
         assert_eq!(cb.state(), CircuitState::Open);
         cb.reset();
@@ -1864,7 +1864,7 @@ mod tests {
 
     #[test]
     fn circuit_breaker_success_resets_failure_count() {
-        let mut cb = CircuitBreaker::new(3, 1, Duration::from_secs(60));
+        let mut cb = CircuitBreaker::new(3, 1, Duration::from_mins(1));
         cb.record_failure();
         cb.record_failure();
         cb.record_success();
@@ -2079,7 +2079,7 @@ mod tests {
     #[test]
     fn engine_with_circuit_breaker() {
         let mut engine = SafetyGuardrailEngine::new(GuardrailConfig::default())
-            .with_circuit_breaker(2, 1, Duration::from_secs(60));
+            .with_circuit_breaker(2, 1, Duration::from_mins(1));
         // Two failures should trip the breaker
         let _ = engine.check_input("", "s1", 1); // fail (empty)
         let _ = engine.check_input("", "s1", 1); // fail (empty)

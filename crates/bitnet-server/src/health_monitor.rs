@@ -207,7 +207,7 @@ mod tests {
     fn test_health_report_healthy() {
         let checks =
             vec![HealthCheck::ok("a", Duration::ZERO), HealthCheck::ok("b", Duration::ZERO)];
-        let report = HealthReport::from_checks(checks, Duration::from_secs(60));
+        let report = HealthReport::from_checks(checks, Duration::from_mins(1));
         assert_eq!(report.overall, HealthStatus::Healthy);
         assert!(report.is_ready());
     }
@@ -218,7 +218,7 @@ mod tests {
             HealthCheck::ok("a", Duration::ZERO),
             HealthCheck::degraded("b", "slow", Duration::ZERO),
         ];
-        let report = HealthReport::from_checks(checks, Duration::from_secs(60));
+        let report = HealthReport::from_checks(checks, Duration::from_mins(1));
         assert_eq!(report.overall, HealthStatus::Degraded);
     }
 
@@ -232,7 +232,7 @@ mod tests {
 
     #[test]
     fn test_rate_tracker() {
-        let mut tracker = RateTracker::new(Duration::from_secs(60));
+        let mut tracker = RateTracker::new(Duration::from_mins(1));
         tracker.record();
         tracker.record();
         tracker.record();
@@ -261,7 +261,7 @@ mod tests {
 
     #[test]
     fn test_report_summary() {
-        let report = HealthReport::from_checks(vec![], Duration::from_secs(120));
+        let report = HealthReport::from_checks(vec![], Duration::from_mins(2));
         let s = report.summary();
         assert!(s.contains("starting"));
         assert!(s.contains("120"));

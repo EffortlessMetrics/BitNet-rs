@@ -31,3 +31,37 @@ schema_version = "1.0"
 # [exception.last_seen]
 # line = 42
 # column = 9
+
+# Two approved provider accesses for the private generation lifecycle field.
+# Unfulfilled expectations fail in the owner module and in dedicated CI probes.
+[[exception]]
+id = "clippy-0001"
+lint = "clippy::disallowed_fields"
+path = "crates/bitnet-inference/src/generation_state.rs"
+classification = "encapsulation_owner"
+owner = "inference"
+reason = "GenerationTracker::state is the sole owner read of the private lifecycle field; all other field expressions and destructuring remain denied."
+created = "2026-10-21"
+review_after = "2026-11-01"
+expires = "2026-11-07"
+
+[exception.selector]
+kind = "fn"
+container = "GenerationTracker::state"
+text_contains = "self.state"
+
+[[exception]]
+id = "clippy-0002"
+lint = "clippy::disallowed_fields"
+path = "crates/bitnet-inference/src/generation_state.rs"
+classification = "encapsulation_owner"
+owner = "inference"
+reason = "GenerationTracker::set_state is the sole owner write of the private lifecycle field; existing lifecycle methods keep their original transition behavior."
+created = "2026-10-21"
+review_after = "2026-11-01"
+expires = "2026-11-07"
+
+[exception.selector]
+kind = "fn"
+container = "GenerationTracker::set_state"
+text_contains = "self.state = state"

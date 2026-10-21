@@ -1127,7 +1127,7 @@ mod tests {
             let data: Vec<f32> = (1..=n).map(|x| x as f32).collect();
             let scan = r.inclusive_scan_add(&data);
             let total = r.reduce_add(&data);
-            assert!((scan[n - 1] - total).abs() < 1e-4, "scan last != reduce_add for {size}",);
+            assert!((scan[n - 1] - total).abs() < 1e-4, "scan last != reduce_add for {size}");
         }
     }
 
@@ -1171,7 +1171,7 @@ mod tests {
             let preds: Vec<i32> = (0..n).map(|i| if i % 3 == 0 { 1 } else { 0 }).collect();
             let result = b.ballot(&preds);
             let expected = preds.iter().filter(|&&p| p != 0).count() as u32;
-            assert_eq!(result.count_ones(), expected, "ballot count mismatch for {size}",);
+            assert_eq!(result.count_ones(), expected, "ballot count mismatch for {size}");
         }
     }
 

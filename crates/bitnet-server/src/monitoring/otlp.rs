@@ -36,7 +36,7 @@ pub fn init_otlp_metrics(endpoint: Option<String>, resource: Resource) -> Result
         .build()?;
 
     let reader = opentelemetry_sdk::metrics::PeriodicReader::builder(exporter)
-        .with_interval(Duration::from_secs(60))
+        .with_interval(Duration::from_mins(1))
         .build();
 
     let provider = SdkMeterProvider::builder().with_reader(reader).with_resource(resource).build();

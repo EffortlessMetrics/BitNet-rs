@@ -201,7 +201,7 @@ mod tests {
         metrics.record_request(Duration::from_millis(100), true).await;
         metrics.record_request(Duration::from_millis(500), true).await;
         metrics.record_request(Duration::from_millis(1500), true).await;
-        metrics.record_request(Duration::from_millis(3000), true).await;
+        metrics.record_request(Duration::from_secs(3), true).await;
 
         let compliance = metrics.sla_compliance().await;
         assert!((compliance - 0.75).abs() < 0.01, "Expected 0.75, got {}", compliance);
@@ -225,7 +225,7 @@ mod tests {
     async fn test_get_indicators_snapshot() {
         let metrics = PerformanceMetrics::new();
 
-        metrics.record_request(Duration::from_millis(1000), true).await;
+        metrics.record_request(Duration::from_secs(1), true).await;
         metrics.record_request(Duration::from_millis(1500), true).await;
         metrics.record_request(Duration::from_millis(2500), false).await;
 

@@ -1753,7 +1753,7 @@ mod tests {
             let angle = 1.0 / 10_000f32.powf(2.0 * dim_pair / d);
             let expected_sin = angle.sin();
             let expected_cos = angle.cos();
-            assert!((row1[2 * i] - expected_sin).abs() < 1e-5, "sin mismatch at dim {}", 2 * i,);
+            assert!((row1[2 * i] - expected_sin).abs() < 1e-5, "sin mismatch at dim {}", 2 * i);
             assert!(
                 (row1[2 * i + 1] - expected_cos).abs() < 1e-5,
                 "cos mismatch at dim {}",
