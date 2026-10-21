@@ -764,7 +764,7 @@ jobs:
     timeout-minutes: 15
     needs: [classify-changes]
     steps:
-      - name: No-Rust fast path
+      - name: Unselected Rustdoc route
         if: needs.classify-changes.outputs.rustdoc_required != 'true'
         run: |
           echo "Rustdoc route unselected: leaf Rust, policy or tracking change; workspace proof remains selected for documentation/API risk and main/manual events."

@@ -71,7 +71,7 @@ jobs:
       - name: Test Clippy activation contracts
         run: |
           cargo test --locked -p xtask --no-default-features policy::clippy_lints::tests::
-            cargo test --locked -p xtask --no-default-features ci::plan::tests::
+          cargo test --locked -p xtask --no-default-features ci::plan::tests::
 
       - name: clippy-lint-policy check
         run: |
