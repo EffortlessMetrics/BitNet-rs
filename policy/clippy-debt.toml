@@ -16,11 +16,3 @@ schema_version = "1.0"
 # reason = "Kernel arithmetic needs explicit checked/wrapping/saturating policy before promotion."
 # expires = "2026-07-01"
 # status = "active"
-
-[[debt]]
-lint = "clippy::disallowed_fields"
-path = "workspace"
-owner = "clippy-policy"
-reason = "Protected field seams are not configured in clippy.toml yet; activation waits for real protected fields instead of a decorative lint."
-expires = "2026-07-15"
-status = "active"

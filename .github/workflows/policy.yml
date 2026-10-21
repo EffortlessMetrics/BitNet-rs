@@ -9,6 +9,7 @@ on:
       - "rust-toolchain.toml"
       - "clippy.toml"
       - ".github/workflows/policy.yml"
+      - "scripts/check_protected_field_contract.py"
       - "xtask/**"
       - "**/*.rs"
   push:
@@ -67,6 +68,9 @@ jobs:
         run: |
           cargo run --locked -p xtask --no-default-features -- check-clippy-exceptions \
             --report-dir target/bitnet/reports
+
+      - name: Prove protected generation field contract
+        run: python3 scripts/check_protected_field_contract.py
 
       - name: Test Clippy activation contracts
         run: |

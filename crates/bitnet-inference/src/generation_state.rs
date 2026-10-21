@@ -3,6 +3,8 @@
 //! Track generation progress: token counts, stop conditions,
 //! timing, and state transitions.
 
+#![deny(unfulfilled_lint_expectations)]
+
 use std::time::{Duration, Instant};
 
 /// Generation state.
@@ -105,7 +107,7 @@ impl GenerationTracker {
 
     /// Begin prefill phase.
     pub fn start_prefill(&mut self, prompt_len: usize) {
-        self.state = GenState::Prefill;
+        self.set_state(GenState::Prefill);
         self.prompt_tokens = prompt_len;
         self.start_time = Some(Instant::now());
     }
@@ -115,13 +117,13 @@ impl GenerationTracker {
         if let Some(start) = self.start_time {
             self.prefill_duration = Some(start.elapsed());
         }
-        self.state = GenState::Generating;
+        self.set_state(GenState::Generating);
     }
 
     /// Record a generated token and check stop conditions.
     pub fn on_token(&mut self, token_id: u32) -> GenState {
-        if self.state != GenState::Generating {
-            return self.state;
+        if self.state() != GenState::Generating {
+            return self.state();
         }
 
         self.generated_tokens += 1;
@@ -131,33 +133,33 @@ impl GenerationTracker {
         if let Some(eos) = self.eos_token_id
             && token_id == eos
         {
-            self.state = GenState::Stopped(StopReason::EndOfSequence);
-            return self.state;
+            self.set_state(GenState::Stopped(StopReason::EndOfSequence));
+            return self.state();
         }
 
         // Check max tokens
         if self.generated_tokens >= self.max_tokens {
-            self.state = GenState::Stopped(StopReason::MaxTokens);
-            return self.state;
+            self.set_state(GenState::Stopped(StopReason::MaxTokens));
+            return self.state();
         }
 
         // Check repetition
         if self.detect_repetition() {
-            self.state = GenState::Stopped(StopReason::RepetitionLoop);
-            return self.state;
+            self.set_state(GenState::Stopped(StopReason::RepetitionLoop));
+            return self.state();
         }
 
-        self.state
+        self.state()
     }
 
     /// Cancel generation.
     pub fn cancel(&mut self) {
-        self.state = GenState::Stopped(StopReason::Cancelled);
+        self.set_state(GenState::Stopped(StopReason::Cancelled));
     }
 
     /// Mark as failed.
     pub fn fail(&mut self) {
-        self.state = GenState::Failed;
+        self.set_state(GenState::Failed);
     }
 
     fn detect_repetition(&self) -> bool {
@@ -171,8 +173,16 @@ impl GenerationTracker {
         recent == prior
     }
 
+    // The owner read is the sole observation seam; callers use this accessor.
+    #[expect(clippy::disallowed_fields, reason = "policy:clippy-0001")]
     pub fn state(&self) -> GenState {
         self.state
+    }
+
+    // Existing lifecycle methods retain their transitions through this owner write.
+    #[expect(clippy::disallowed_fields, reason = "policy:clippy-0002")]
+    fn set_state(&mut self, state: GenState) {
+        self.state = state;
     }
 
     pub fn prompt_tokens(&self) -> usize {
@@ -202,7 +212,7 @@ impl GenerationTracker {
     pub fn summary(&self) -> String {
         format!(
             "state={}, prompt={}, generated={}/{}, tps={:.1}",
-            self.state.name(),
+            self.state().name(),
             self.prompt_tokens,
             self.generated_tokens,
             self.max_tokens,
@@ -294,6 +304,24 @@ mod tests {
         }
         let state = tracker.on_token(3);
         assert_eq!(state, GenState::Stopped(StopReason::RepetitionLoop));
+    }
+
+    #[test]
+    fn test_non_generating_tokens_preserve_state_and_counts() {
+        let mut tracker = GenerationTracker::new(1);
+        assert_eq!(tracker.on_token(7), GenState::Idle);
+        assert_eq!(tracker.generated_tokens(), 0);
+        tracker.start_prefill(2);
+        assert_eq!(tracker.on_token(7), GenState::Prefill);
+        assert_eq!(tracker.generated_tokens(), 0);
+        tracker.start_generation();
+        assert_eq!(tracker.on_token(7), GenState::Stopped(StopReason::MaxTokens));
+        assert_eq!(tracker.generated_tokens(), 1);
+        assert_eq!(tracker.on_token(8), GenState::Stopped(StopReason::MaxTokens));
+        assert_eq!(tracker.generated_tokens(), 1);
+        tracker.fail();
+        assert_eq!(tracker.on_token(9), GenState::Failed);
+        assert_eq!(tracker.generated_tokens(), 1);
     }
 
     #[test]

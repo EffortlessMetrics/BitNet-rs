@@ -149,12 +149,22 @@ Because CI Core uses `RUSTFLAGS = "-Dwarnings"` and Clippy with
 default lanes. If measurement finds hits, PR 5 either fixes them in scope or
 keeps the lint staged with a real debt entry.
 
-### `disallowed_fields` (PR 5 prerequisite)
+### Protected generation-state field
 
-`disallowed_fields` is not activated globally until protected seam definitions
-are present in `clippy.toml`. Candidate seams are listed in
-`docs/development/RUST_1_95_ROLLOUT.md`. Activation is a deliberate step after
-the seams are specified, not an automatic promotion.
+`disallowed_fields` is active at `deny` for
+`bitnet_inference::generation_state::GenerationTracker::state`. The field
+remains private. Existing lifecycle methods retain their behavior, reading
+through `state()` and writing through one private `set_state()` method. Only
+those two owner accessors have receipted lint expectations; unfulfilled
+expectations are denied. This is compile-time API field-access discipline,
+not authorization or a complete transition invariant: the lint rejects reads,
+writes and destructuring, but does not reject struct initialization.
+
+Policy CI checks the exact two source sites and receipts, compiles the real
+owner module and runs its lifecycle tests, proves method access succeeds and
+child-module direct read/write/destructuring fail with the actual Clippy lint,
+then proves a stale expectation fails for each accessor. The existing exception
+checker also validates the new receipts. No module/crate-wide allow is used.
 
 ### Test carveout removal (PR 6)
 
@@ -166,11 +176,11 @@ PR 6 removed the remaining Clippy test unwrap/expect carveouts from
 
 ### Clippy debt and exceptions (PR 5–6 and later)
 
-`policy/clippy-debt.toml` currently contains placeholder entries only.
+`policy/clippy-debt.toml` currently contains no active debt entries.
 The 1.95 wave requires real entries with `owner`, `reason`, and `expiry`
 for any debt that cannot be resolved immediately. Placeholder entries
 that lack these fields are invalid under the updated checker.
 
-`policy/clippy-exceptions.toml` currently has no entries. Exceptions added
+`policy/clippy-exceptions.toml` contains the two generation-state owner receipts. Exceptions added
 during the 1.95 wave must follow the exact `#[expect]` receipt schema with
 a `clippy-NNNN` identifier.

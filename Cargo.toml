@@ -644,6 +644,7 @@ manual_take = "warn"
 unnecessary_trailing_comma = "warn"
 duration_suboptimal_units = "warn"
 manual_checked_ops = "warn"
+disallowed_fields = "deny"
 
 # Deferred Rust 1.95 ratchets. CI Core runs with `RUSTFLAGS=-D warnings`,
 # so warning-level activation is a hard gate once these move out of
