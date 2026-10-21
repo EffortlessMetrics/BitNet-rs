@@ -535,6 +535,7 @@ fn manifest_or_toolchain_changed(files: &[String]) -> bool {
 fn public_api_changed(files: &[String]) -> bool {
     files.iter().any(|path| {
         path.ends_with("/lib.rs")
+            || path.starts_with("src/api/")
             || path.contains("/src/api/")
             || path.starts_with("crates/bitnet-ffi/")
             || path.starts_with("crates/bitnet-py/")
@@ -1322,6 +1323,7 @@ mod tests {
             "tests/lib.rs",
             "tests-new/lib.rs",
             "tools/custom/src/api/types.rs",
+            "src/api/types.rs",
         ] {
             let plan = build_plan(&s(&[path]), &[]);
             assert!(

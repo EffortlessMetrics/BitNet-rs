@@ -18,7 +18,7 @@ class RustdocRoutingTests(unittest.TestCase):
                 self.assertTrue(rustdoc_required("pull_request", [member + "/Cargo.toml"]))
 
     def test_nonstandard_workspace_library_and_api_roots_require_proof(self):
-        for path in ('crossval/src/lib.rs', 'xtask/src/lib.rs', 'xtask-build-helper/src/lib.rs', 'tests/lib.rs', 'tests-new/lib.rs', 'tools/custom/src/api/types.rs'):
+        for path in ('crossval/src/lib.rs', 'xtask/src/lib.rs', 'xtask-build-helper/src/lib.rs', 'tests/lib.rs', 'tests-new/lib.rs', 'tools/custom/src/api/types.rs', 'src/api/types.rs'):
             with self.subTest(path=path):
                 self.assertTrue(rustdoc_required("pull_request", [path]))
 
