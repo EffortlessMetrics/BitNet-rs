@@ -815,7 +815,7 @@ impl CUDAGraph {
     /// Replay the instantiated graph on a stream.
     pub fn replay(&mut self, stream: &mut CUDAStream) -> CUDAResult<()> {
         if self.state != GraphState::Ready {
-            return Err(CUDAError::GraphError(format!("cannot replay in state {}", self.state,)));
+            return Err(CUDAError::GraphError(format!("cannot replay in state {}", self.state)));
         }
         stream.record_work();
         self.replay_count += 1;
@@ -962,7 +962,7 @@ impl CUDABackend {
     /// Initialise the backend: select device and create streams.
     pub fn init(&mut self, available_devices: &[CUDADevice]) -> CUDAResult<()> {
         if self.state != BackendState::Uninitialised {
-            return Err(CUDAError::Backend(format!("cannot init in state {}", self.state,)));
+            return Err(CUDAError::Backend(format!("cannot init in state {}", self.state)));
         }
         let dev = available_devices
             .iter()
@@ -1109,7 +1109,7 @@ impl CUDABackend {
     /// Internal guard: ensure backend is `Ready`.
     fn require_ready(&self) -> CUDAResult<()> {
         if self.state != BackendState::Ready {
-            return Err(CUDAError::Backend(format!("backend not ready (state={})", self.state,)));
+            return Err(CUDAError::Backend(format!("backend not ready (state={})", self.state)));
         }
         Ok(())
     }

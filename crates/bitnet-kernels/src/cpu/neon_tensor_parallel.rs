@@ -86,7 +86,7 @@ pub unsafe fn neon_allreduce_sum(partitions: &[&[f32]], output: &mut [f32]) {
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_allreduce_max(partitions: &[&[f32]], output: &mut [f32]) {
-    assert!(!partitions.is_empty(), "neon_allreduce_max: partitions must not be empty",);
+    assert!(!partitions.is_empty(), "neon_allreduce_max: partitions must not be empty");
     let n = output.len();
     for (i, part) in partitions.iter().enumerate() {
         assert_eq!(
@@ -142,7 +142,7 @@ pub unsafe fn neon_allreduce_max(partitions: &[&[f32]], output: &mut [f32]) {
 #[cfg(target_arch = "aarch64")]
 #[target_feature(enable = "neon")]
 pub unsafe fn neon_tensor_scatter(input: &[f32], outputs: &mut [&mut [f32]], n_partitions: usize) {
-    assert!(n_partitions > 0, "neon_tensor_scatter: n_partitions must be > 0",);
+    assert!(n_partitions > 0, "neon_tensor_scatter: n_partitions must be > 0");
     assert_eq!(
         outputs.len(),
         n_partitions,
@@ -269,7 +269,7 @@ pub unsafe fn neon_column_parallel_linear(
         "neon_column_parallel_linear: output size mismatch",
     );
     if let Some(b) = bias {
-        assert!(b.len() >= partition_end, "neon_column_parallel_linear: bias too short",);
+        assert!(b.len() >= partition_end, "neon_column_parallel_linear: bias too short");
     }
 
     let in_ptr = input.as_ptr();

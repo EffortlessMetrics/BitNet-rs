@@ -26,7 +26,7 @@ fn defaults_for(arch: &str) -> ModelConfig {
 #[test]
 fn all_known_architectures_resolve() {
     for arch in ArchitectureRegistry::known_architectures() {
-        assert!(ArchitectureRegistry::is_known(arch), "architecture '{}' should be known", arch,);
+        assert!(ArchitectureRegistry::is_known(arch), "architecture '{}' should be known", arch);
     }
 }
 

@@ -101,7 +101,7 @@ pub fn format_done_event(request_id: &str, total_tokens: usize, elapsed_ms: u64)
 
 /// Format an error event.
 pub fn format_error_event(code: u16, message: &str) -> String {
-    format!(r#"{{"type":"error","code":{},"message":"{}"}}"#, code, message,)
+    format!(r#"{{"type":"error","code":{},"message":"{}"}}"#, code, message)
 }
 
 /// Track active generation sessions.

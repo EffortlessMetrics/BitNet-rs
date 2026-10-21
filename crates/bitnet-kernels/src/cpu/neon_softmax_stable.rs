@@ -633,7 +633,7 @@ mod tests {
         softmax_scalar_ref(&input, &mut scalar_out);
 
         for (i, (&n, &s)) in neon_out.iter().zip(scalar_out.iter()).enumerate() {
-            assert!((n - s).abs() < 1e-3, "parity[{i}]: neon={n}, scalar={s}",);
+            assert!((n - s).abs() < 1e-3, "parity[{i}]: neon={n}, scalar={s}");
         }
     }
 

@@ -716,7 +716,7 @@ pub fn launch_mse_loss(
     _targets: &[f32],
     config: &LossConfig,
 ) -> Result<Vec<f32>> {
-    log::debug!("mse_loss CUDA stub: n={}, grid={:?}", config.n, config.grid_dim(),);
+    log::debug!("mse_loss CUDA stub: n={}, grid={:?}", config.n, config.grid_dim());
     Err(KernelError::GpuError {
         reason: "mse_loss CUDA kernel not yet compiled — scaffold only".into(),
     }
@@ -731,7 +731,7 @@ pub fn launch_huber_loss(
     _delta: f32,
     config: &LossConfig,
 ) -> Result<Vec<f32>> {
-    log::debug!("huber_loss CUDA stub: n={}, grid={:?}", config.n, config.grid_dim(),);
+    log::debug!("huber_loss CUDA stub: n={}, grid={:?}", config.n, config.grid_dim());
     Err(KernelError::GpuError {
         reason: "huber_loss CUDA kernel not yet compiled — scaffold only".into(),
     }

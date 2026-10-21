@@ -299,10 +299,10 @@ impl FunctionCallFormatter {
     pub fn format_result(result: &FunctionResult) -> String {
         match &result.output {
             FunctionOutput::Success(v) => {
-                format!("<function_result name=\"{}\">{}</function_result>", result.call.name, v,)
+                format!("<function_result name=\"{}\">{}</function_result>", result.call.name, v)
             }
             FunctionOutput::Error(e) => {
-                format!("<function_error name=\"{}\">{}</function_error>", result.call.name, e,)
+                format!("<function_error name=\"{}\">{}</function_error>", result.call.name, e)
             }
         }
     }

@@ -314,7 +314,7 @@ pub fn launch_gating(
     {
         match launch_gating_cuda(gate, up, output, config) {
             Ok(()) => {
-                log::debug!("Gating {:?} completed on CUDA (n={})", config.gating, config.n,);
+                log::debug!("Gating {:?} completed on CUDA (n={})", config.gating, config.n);
                 return Ok(());
             }
             Err(e) => {

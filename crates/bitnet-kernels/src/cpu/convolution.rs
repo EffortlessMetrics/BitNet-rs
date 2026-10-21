@@ -525,7 +525,7 @@ pub fn conv1d_depthwise(
     if let Some(b) = bias
         && b.len() != channels
     {
-        return Err(invalid_args(&format!("bias length {} != channels {channels}", b.len(),)));
+        return Err(invalid_args(&format!("bias length {} != channels {channels}", b.len())));
     }
 
     let mut output = vec![0.0f32; batch_size * channels * out_len];

@@ -183,7 +183,7 @@ impl QuantizedEmbeddingTable {
         }
         if precision == QuantPrecision::Int4 && !embedding_dim.is_multiple_of(2) {
             return Err(KernelError::InvalidArguments {
-                reason: format!("INT4 requires even embedding_dim, got {}", embedding_dim,),
+                reason: format!("INT4 requires even embedding_dim, got {}", embedding_dim),
             }
             .into());
         }
@@ -334,7 +334,7 @@ impl ProductQuantizer {
         }
         if num_centroids > 256 {
             return Err(KernelError::InvalidArguments {
-                reason: format!("num_centroids {} exceeds u8 max 256", num_centroids,),
+                reason: format!("num_centroids {} exceeds u8 max 256", num_centroids),
             }
             .into());
         }
