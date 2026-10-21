@@ -83,10 +83,7 @@ fn clippy_driver_output(args: &[&str]) -> Result<String> {
         .output()
         .context("querying the installed Clippy toolchain; install its clippy component")?;
     if !output.status.success() {
-        bail!(
-            "clippy-driver {args:?} failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        bail!("clippy-driver {args:?} failed: {}", String::from_utf8_lossy(&output.stderr));
     }
     String::from_utf8(output.stdout).context("Clippy toolchain output was not UTF-8")
 }
@@ -117,11 +114,7 @@ fn discover_toolchain_lints() -> Result<ToolchainLintInventory> {
         .trim()
         .to_string();
     let lints = parse_lint_inventory(&clippy_driver_output(&["-W", "help"])?)?;
-    Ok(ToolchainLintInventory {
-        release,
-        compiler_version,
-        lints,
-    })
+    Ok(ToolchainLintInventory { release, compiler_version, lints })
 }
 
 #[derive(Debug, Serialize)]
@@ -158,10 +151,7 @@ pub fn run(
         println!("error: {e}");
     }
     if fail_on_error && !report.errors.is_empty() {
-        bail!(
-            "clippy-lint-policy check failed: {} errors",
-            report.errors.len()
-        );
+        bail!("clippy-lint-policy check failed: {} errors", report.errors.len());
     }
     Ok(())
 }
@@ -173,31 +163,19 @@ fn check(
     report_dir: &Path,
     inventory: &ToolchainLintInventory,
 ) -> Result<Report> {
-    let mut report = Report {
-        toolchain: Some(inventory.clone()),
-        ..Report::default()
-    };
+    let mut report = Report { toolchain: Some(inventory.clone()), ..Report::default() };
 
     let lints_text = fs::read_to_string(lints_path)
         .with_context(|| format!("reading {}", lints_path.display()))?;
     let lints: LintsFile =
         toml::from_str(&lints_text).with_context(|| format!("parsing {}", lints_path.display()))?;
     if lints.schema_version.is_empty() {
-        report
-            .errors
-            .push(format!("{} missing `schema_version`", lints_path.display()));
+        report.errors.push(format!("{} missing `schema_version`", lints_path.display()));
     }
     if lints.msrv.is_empty() {
-        report
-            .errors
-            .push(format!("{} missing `msrv`", lints_path.display()));
+        report.errors.push(format!("{} missing `msrv`", lints_path.display()));
     }
-    if inventory
-        .release
-        .split('.')
-        .take(2)
-        .ne(lints.msrv.split('.').take(2))
-    {
+    if inventory.release.split('.').take(2).ne(lints.msrv.split('.').take(2)) {
         report.errors.push(format!(
             "Clippy compiler release {} does not match policy MSRV {}; lint availability must be measured on the pinned release",
             inventory.release, lints.msrv
@@ -232,9 +210,7 @@ fn check(
         DebtFile::default()
     };
     if debt.schema_version.is_empty() {
-        report
-            .errors
-            .push(format!("{} missing `schema_version`", debt_path.display()));
+        report.errors.push(format!("{} missing `schema_version`", debt_path.display()));
     }
     report.debt_count = debt.debt.len();
 
@@ -251,13 +227,8 @@ fn check(
         if !version_le(&planned.activate_when_msrv, &lints.msrv) {
             continue;
         }
-        let key = planned
-            .name
-            .strip_prefix("clippy::")
-            .unwrap_or(&planned.name);
-        let cargo_level = cargo_lints
-            .and_then(|table| table.get(key))
-            .and_then(lint_level);
+        let key = planned.name.strip_prefix("clippy::").unwrap_or(&planned.name);
+        let cargo_level = cargo_lints.and_then(|table| table.get(key)).and_then(lint_level);
         let debt_entries = debt_by_lint.get(planned.name.as_str()).map_or(0, Vec::len);
         let status = LintStatus {
             lint: planned.name.clone(),
@@ -334,15 +305,12 @@ fn validate_planned(
             continue;
         }
         if !seen.insert(planned.name.as_str()) {
-            report
-                .errors
-                .push(format!("duplicate planned lint `{}`", planned.name));
+            report.errors.push(format!("duplicate planned lint `{}`", planned.name));
         }
         if !planned.name.starts_with("clippy::") {
-            report.errors.push(format!(
-                "planned lint `{}` must start with `clippy::`",
-                planned.name
-            ));
+            report
+                .errors
+                .push(format!("planned lint `{}` must start with `clippy::`", planned.name));
         }
         if !matches!(planned.level.as_str(), "allow" | "warn" | "deny") {
             report.errors.push(format!(
@@ -351,22 +319,19 @@ fn validate_planned(
             ));
         }
         if planned.activate_when_msrv.is_empty() {
-            report.errors.push(format!(
-                "planned lint `{}` missing `activate_when_msrv`",
-                planned.name
-            ));
-        }
-        if planned.reason.is_empty() {
             report
                 .errors
-                .push(format!("planned lint `{}` missing `reason`", planned.name));
+                .push(format!("planned lint `{}` missing `activate_when_msrv`", planned.name));
+        }
+        if planned.reason.is_empty() {
+            report.errors.push(format!("planned lint `{}` missing `reason`", planned.name));
         }
     }
     for lint in debt_by_lint.keys() {
         if !seen.contains(*lint) {
-            report.warnings.push(format!(
-                "debt references lint `{lint}` not present in planned ledger"
-            ));
+            report
+                .warnings
+                .push(format!("debt references lint `{lint}` not present in planned ledger"));
         }
     }
 }
@@ -383,77 +348,53 @@ fn validate_debt<'a>(
         } else {
             by_lint.entry(entry.lint.as_str()).or_default().push(entry);
             if !entry.lint.starts_with("clippy::") {
-                report.errors.push(format!(
-                    "debt lint `{}` must start with `clippy::`",
-                    entry.lint
-                ));
+                report
+                    .errors
+                    .push(format!("debt lint `{}` must start with `clippy::`", entry.lint));
             }
         }
         if entry.path.is_empty() {
-            report
-                .errors
-                .push(format!("debt `{}` missing `path`", entry.lint));
+            report.errors.push(format!("debt `{}` missing `path`", entry.lint));
         }
         if entry.owner.is_empty() {
-            report
-                .errors
-                .push(format!("debt `{}` missing `owner`", entry.lint));
+            report.errors.push(format!("debt `{}` missing `owner`", entry.lint));
         }
         if entry.reason.is_empty() {
-            report
-                .errors
-                .push(format!("debt `{}` missing `reason`", entry.lint));
+            report.errors.push(format!("debt `{}` missing `reason`", entry.lint));
         }
         if entry.status.is_empty() {
-            report
-                .errors
-                .push(format!("debt `{}` missing `status`", entry.lint));
+            report.errors.push(format!("debt `{}` missing `status`", entry.lint));
         }
         if entry.expires.is_empty() {
-            report
-                .errors
-                .push(format!("debt `{}` missing `expires`", entry.lint));
+            report.errors.push(format!("debt `{}` missing `expires`", entry.lint));
         } else if let Ok(d) = chrono::NaiveDate::parse_from_str(&entry.expires, "%Y-%m-%d") {
             if d < today {
-                report.errors.push(format!(
-                    "debt `{}` expired on {}",
-                    entry.lint, entry.expires
-                ));
+                report.errors.push(format!("debt `{}` expired on {}", entry.lint, entry.expires));
             }
         } else {
-            report.errors.push(format!(
-                "debt `{}` has invalid `expires` `{}`",
-                entry.lint, entry.expires
-            ));
+            report
+                .errors
+                .push(format!("debt `{}` has invalid `expires` `{}`", entry.lint, entry.expires));
         }
     }
     by_lint
 }
 
 fn clippy_lints_table(value: &toml::Value) -> Option<&toml::map::Map<String, toml::Value>> {
-    value
-        .get("workspace")?
-        .get("lints")?
-        .get("clippy")?
-        .as_table()
+    value.get("workspace")?.get("lints")?.get("clippy")?.as_table()
 }
 
 fn lint_level(value: &toml::Value) -> Option<String> {
     match value {
         toml::Value::String(s) => Some(s.clone()),
-        toml::Value::Table(t) => t
-            .get("level")
-            .and_then(toml::Value::as_str)
-            .map(str::to_string),
+        toml::Value::Table(t) => t.get("level").and_then(toml::Value::as_str).map(str::to_string),
         _ => None,
     }
 }
 
 fn version_le(lhs: &str, rhs: &str) -> bool {
     let parse = |s: &str| -> Vec<u64> {
-        s.split('.')
-            .map(|part| part.parse::<u64>().unwrap_or(0))
-            .collect::<Vec<_>>()
+        s.split('.').map(|part| part.parse::<u64>().unwrap_or(0)).collect::<Vec<_>>()
     };
     let mut left = parse(lhs);
     let mut right = parse(rhs);
@@ -477,10 +418,7 @@ mod tests {
     }
 
     fn write_pinned_toolchain(dir: &Path) -> Result<()> {
-        fs::write(
-            dir.join("rust-toolchain.toml"),
-            "[toolchain]\nchannel = \"1.95.0\"\n",
-        )?;
+        fs::write(dir.join("rust-toolchain.toml"), "[toolchain]\nchannel = \"1.95.0\"\n")?;
         Ok(())
     }
 
@@ -527,15 +465,8 @@ status = "active"
         fs::write(&debt, format!("schema_version = \"1.0\"\n{debt_entry}"))?;
         let declaration =
             level.map_or_else(String::new, |level| format!("manual_pop_if = \"{level}\""));
-        fs::write(
-            &manifest,
-            format!("[workspace.lints.clippy]\n{declaration}\n"),
-        )?;
-        let mut toolchain = inventory(if available {
-            &["clippy::manual_pop_if"]
-        } else {
-            &[]
-        });
+        fs::write(&manifest, format!("[workspace.lints.clippy]\n{declaration}\n"))?;
+        let mut toolchain = inventory(if available { &["clippy::manual_pop_if"] } else { &[] });
         toolchain.release = release.into();
         check(&lints, &debt, &manifest, dir.path(), &toolchain)
     }
@@ -565,21 +496,13 @@ status = "active"
         for level in [Some("warn"), Some("allow")] {
             let report = availability_report(false, true, level, false, "1.95.0")?;
             assert!(
-                report
-                    .errors
-                    .iter()
-                    .any(|error| error.contains("must be absent")),
+                report.errors.iter().any(|error| error.contains("must be absent")),
                 "{:?}",
                 report.errors
             );
         }
         let ungated = availability_report(false, false, None, false, "1.95.0")?;
-        assert!(
-            ungated
-                .errors
-                .iter()
-                .any(|error| error.contains("explicit availability gate"))
-        );
+        assert!(ungated.errors.iter().any(|error| error.contains("explicit availability gate")));
         let debt = availability_report(false, true, None, true, "1.95.0")?;
         assert!(
             debt.errors
@@ -594,12 +517,7 @@ status = "active"
         let missing = availability_report(true, true, None, false, "1.95.0")?;
         assert!(missing.errors.iter().any(|error| error.contains("absent")));
         let allowed = availability_report(true, true, Some("allow"), false, "1.95.0")?;
-        assert!(
-            allowed
-                .errors
-                .iter()
-                .any(|error| error.contains("without debt"))
-        );
+        assert!(allowed.errors.iter().any(|error| error.contains("without debt")));
         let active = availability_report(true, true, Some("warn"), false, "1.95.0")?;
         assert!(active.errors.is_empty(), "{:?}", active.errors);
         assert_eq!(active.active.len(), 1);
@@ -612,10 +530,7 @@ status = "active"
         for release in ["1.96.0", "1.95.1", "1.95.0-nightly"] {
             let report = availability_report(false, true, None, false, release)?;
             assert!(
-                report
-                    .errors
-                    .iter()
-                    .any(|error| error.contains("does not match pinned toolchain")),
+                report.errors.iter().any(|error| error.contains("does not match pinned toolchain")),
                 "{release}: {:?}",
                 report.errors
             );
@@ -639,11 +554,7 @@ status = "active"
         let mut report = Report::default();
         let by_lint = validate_debt(&debt, &mut report);
         assert!(by_lint.contains_key("clippy::manual_checked_ops"));
-        assert!(
-            report.errors.iter().any(|e| e.contains("expired")),
-            "{:?}",
-            report.errors
-        );
+        assert!(report.errors.iter().any(|e| e.contains("expired")), "{:?}", report.errors);
     }
 
     #[test]
@@ -702,10 +613,8 @@ manual_checked_ops = "allow"
 "#
         )
         .unwrap();
-        let toolchain = inventory(&[
-            "clippy::same_length_and_capacity",
-            "clippy::manual_checked_ops",
-        ]);
+        let toolchain =
+            inventory(&["clippy::same_length_and_capacity", "clippy::manual_checked_ops"]);
         let report = check(&lints, &debt, &manifest, &dir, &toolchain).unwrap();
         assert_eq!(report.active.len(), 1);
         assert_eq!(report.deferred.len(), 1);
@@ -785,10 +694,7 @@ manual_take = "deny"
             report.errors
         );
         assert!(
-            report
-                .errors
-                .iter()
-                .any(|e| e.contains("needless_type_cast") && e.contains("absent")),
+            report.errors.iter().any(|e| e.contains("needless_type_cast") && e.contains("absent")),
             "{:?}",
             report.errors
         );

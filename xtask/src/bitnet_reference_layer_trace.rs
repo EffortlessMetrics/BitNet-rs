@@ -17673,9 +17673,11 @@ fn attention_value_mix_rust_scalar_recompute(
         if let (Some(probability), Some(value_cache), Some(value_dim)) =
             (probability, value_cache, value_dim)
         {
-            token_count = value_cache.shape.get(1).copied().or_else(|| {
-                value_cache.num_elements.checked_div(value_dim)
-            });
+            token_count = value_cache
+                .shape
+                .get(1)
+                .copied()
+                .or_else(|| value_cache.num_elements.checked_div(value_dim));
             if let Some(token_count) = token_count {
                 let value_sample_count = value_dim.saturating_mul(token_count);
                 if probability.first_values.len() >= token_count
@@ -17899,9 +17901,11 @@ fn attention_value_mix_input_attribution_section(
         let value_dim = value_mix.num_elements;
 
         if let (Some(probability), Some(value_cache)) = (probability, value_cache) {
-            token_count = value_cache.shape.get(1).copied().or_else(|| {
-                value_cache.num_elements.checked_div(value_dim)
-            });
+            token_count = value_cache
+                .shape
+                .get(1)
+                .copied()
+                .or_else(|| value_cache.num_elements.checked_div(value_dim));
             if let Some(token_count) = token_count {
                 let value_sample_count = value_dim.saturating_mul(token_count);
                 if probability.first_values.len() >= token_count
