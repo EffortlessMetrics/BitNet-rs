@@ -10,6 +10,9 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.github/workflows/compatibility.yml'
+      - 'scripts/ci_tokenizer_plan.py'
+      - 'scripts/test_ci_tokenizer_plan.py'
+      - 'policy/ci-risk-packs.toml'
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
@@ -31,11 +34,31 @@ jobs:
     outputs:
       selected: ${{ steps.route.outputs.selected }}
       reason: ${{ steps.route.outputs.reason }}
+      tokenizer_selected: ${{ steps.tokenizer-route.outputs.selected }}
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
           fetch-depth: 0
+
+      - name: Test tokenizer routing contract
+        run: python3 -m unittest discover -s scripts -p 'test_ci_tokenizer_plan.py'
+
+      - name: Decide whether tokenizer compatibility is selected
+        id: tokenizer-route
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          set -euo pipefail
+          changed=''
+          if [ "$EVENT_NAME" = 'pull_request' ]; then
+            test -n "$BASE_SHA"
+            changed="$(git diff --name-only "$BASE_SHA"...HEAD)"
+          fi
+          selected="$(python3 scripts/ci_tokenizer_plan.py --event "$EVENT_NAME" --labels-json "$LABELS_JSON" --changed-files "$changed")"
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
 
       - name: Decide whether MSRV is selected
         id: route
@@ -351,72 +374,32 @@ jobs:
 
   tokenizer-fixtures:
     name: Tokenizer Compatibility Tests
+    needs: route-msrv
+    if: needs.route-msrv.outputs.tokenizer_selected == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true  # Informational while stabilizing baselines
     timeout-minutes: 10
-    # Installs transformers + torch + scipy and replays tokenizer fixtures.
-    # Only relevant when bitnet-tokenizers or its fixtures change. Gate to
-    # main, manual dispatch, or PRs that opt in via the `tokenizer` /
-    # `full-ci` label.
-    if: >-
-      github.ref == 'refs/heads/main' ||
-      github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'tokenizer') ||
-      contains(github.event.pull_request.labels.*.name, 'full-ci')
+    # The planner requires this lane for tokenizer-risk paths. Run the real
+    # CPU library and in-memory fixture/API tests; no external model is needed.
+    # Model-backed parity remains in the separately admitted deep lanes.
+    env:
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      TOKENIZERS_PARALLELISM: 'false'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.95.0"
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
-          python-version: '3.10'
-      - name: Install Python dependencies
+          shared-key: ci-core-ubuntu
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Test CPU tokenizer compatibility and local fixtures
         run: |
-          python -m pip install -U pip setuptools wheel
-          pip install "transformers==4.44.2" "tokenizers==0.19.1" "torch==2.*" "scipy==1.*"
-      - name: Configure offline mode
-        run: |
-          echo "TOKENIZERS_PARALLELISM=false" >> $GITHUB_ENV
-          echo "HF_HUB_DISABLE_TELEMETRY=1" >> $GITHUB_ENV
-          echo "TRANSFORMERS_OFFLINE=1" >> $GITHUB_ENV
-      - name: Ensure tokenizer fixtures
-        run: |
-          cd crates/bitnet-tokenizers
-          mkdir -p fixtures
-          cp -r ../../tests/fixtures/tokenizers/* fixtures/ || true
-      - name: Test tokenizer fixtures
-        run: |
-          cd crates/bitnet-tokenizers
-          cargo test --locked --features fixtures -- --nocapture || true
-      - name: Verify GPT-2 compatibility
-        run: |
-          cargo run --locked --example tokenizer_compat_test -- \
-            --model gpt2 \
-            --input "Hello, world!" \
-            --expected fixtures/gpt2-hello-world.json || true
-      - name: Verify Llama compatibility
-        run: |
-          cargo run --locked --example tokenizer_compat_test -- \
-            --model llama \
-            --input "Hello, world!" \
-            --expected fixtures/llama-hello-world.json || true
-      - name: Tokenizer parity smoke test
-        if: github.event_name == 'pull_request'
-        run: |
-          # Build BitNet CLI
-          cargo build -p bitnet-cli --locked --release --no-default-features --features cpu || true
-
-          # Run smoke test if model and tokenizer available
-          if [ -f "models/test-model.gguf" ] && [ -f "models/tokenizer.json" ]; then
-            BITNET_BIN=target/release/bitnet \
-            MODEL_PATH=models/test-model.gguf \
-            TOKENIZER=models/tokenizer.json \
-            HF_MODEL_ID=gpt2 \
-            scripts/test-tokenizer-parity.py --smoke || true
-          else
-            echo "Skipping tokenizer parity test - model not available"
-          fi
+          cargo test --locked -p bitnet-tokenizers --no-default-features --features cpu \
+            --lib --test json_loader --test rust_gguf_tokenizer_api
 
   gguf-compat:
     name: GGUF Compatibility Check
