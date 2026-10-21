@@ -202,7 +202,17 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
                 r"^crossval/",
             ],
         ),
-        ("tokenizer", vec![r"^crates/bitnet-tokenizers/", r"^tests/fixtures/tokenizers/"]),
+        (
+            "tokenizer",
+            vec![
+                r"^crates/bitnet-tokenizers/",
+                r"^crates/bitnet-token-merge-core/",
+                r"^crates/bitnet-tokenizer-model-core/",
+                r"^crates/bitnet-tokenizer-discovery-core/",
+                r"^crates/bitnet-tokenizer-text-core/",
+                r"^tests/fixtures/tokenizers/",
+            ],
+        ),
         (
             "bdd",
             vec![
@@ -1516,6 +1526,30 @@ mod tests {
         assert!(plan.risk_packs.iter().any(|p| p == "gpu"));
         assert!(plan.risk_packs.iter().any(|p| p == "ffi"));
         assert!(plan.risk_packs.iter().any(|p| p == "tokenizer"));
+    }
+
+    #[test]
+    fn every_tokenizer_risk_path_requires_compatibility() {
+        for path in [
+            "crates/bitnet-tokenizers/src/download.rs",
+            "crates/bitnet-token-merge-core/src/lib.rs",
+            "crates/bitnet-tokenizer-model-core/src/lib.rs",
+            "crates/bitnet-tokenizer-discovery-core/src/lib.rs",
+            "crates/bitnet-tokenizer-text-core/src/lib.rs",
+            "tests/fixtures/tokenizers/valid_tokenizer_a.json",
+        ] {
+            let plan = build_plan(&s(&[path]), &[]);
+            assert!(plan.risk_packs.iter().any(|pack| pack == "tokenizer"), "{path}");
+            assert!(
+                plan.lanes.iter().any(|lane| lane.id == "compatibility-tokenizer" && lane.blocking),
+                "{path} must require tokenizer compatibility"
+            );
+        }
+        for path in ["crates/bitnet-server/src/lib.rs", "crates/bitnet-tokenizers-other/src/lib.rs"]
+        {
+            let plan = build_plan(&s(&[path]), &[]);
+            assert!(!plan.lanes.iter().any(|lane| lane.id == "compatibility-tokenizer"), "{path}");
+        }
     }
 
     #[test]
