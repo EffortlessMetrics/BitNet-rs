@@ -155,7 +155,10 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
             ],
         ),
         ("tracking", vec![r"^\.codex/campaigns/", r"^docs/tracking/"]),
-        ("workflow", vec![r"^\.github/workflows/", r"^\.github/actions/"]),
+        (
+            "workflow",
+            vec![r"^\.github/workflows/", r"^\.github/actions/"],
+        ),
         (
             "rust_core",
             vec![
@@ -202,7 +205,13 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
                 r"^crossval/",
             ],
         ),
-        ("tokenizer", vec![r"^crates/bitnet-tokenizers/", r"^tests/fixtures/tokenizers/"]),
+        (
+            "tokenizer",
+            vec![
+                r"^crates/bitnet-tokenizers/",
+                r"^tests/fixtures/tokenizers/",
+            ],
+        ),
         (
             "bdd",
             vec![
@@ -215,7 +224,10 @@ fn area_patterns() -> Vec<(&'static str, Vec<&'static str>)> {
             ],
         ),
         ("fuzz", vec![r"^fuzz/"]),
-        ("manifest", vec![r"^Cargo\.(toml|lock)$", r"^rust-toolchain\.toml$"]),
+        (
+            "manifest",
+            vec![r"^Cargo\.(toml|lock)$", r"^rust-toolchain\.toml$"],
+        ),
     ]
 }
 
@@ -229,8 +241,10 @@ fn classify_areas(files: &[String]) -> BTreeMap<String, bool> {
         })
         .collect();
 
-    let mut touched: BTreeMap<String, bool> =
-        compiled.iter().map(|(area, _)| ((*area).to_string(), false)).collect();
+    let mut touched: BTreeMap<String, bool> = compiled
+        .iter()
+        .map(|(area, _)| ((*area).to_string(), false))
+        .collect();
     for f in files {
         for (area, regexes) in &compiled {
             if regexes.iter().any(|r| r.is_match(f)) {
@@ -242,7 +256,13 @@ fn classify_areas(files: &[String]) -> BTreeMap<String, bool> {
 }
 
 fn lane(id: &str, name: &str, lem: u64, reason: &str, blocking: bool) -> Lane {
-    Lane { id: id.to_string(), name: name.to_string(), lem, reason: reason.to_string(), blocking }
+    Lane {
+        id: id.to_string(),
+        name: name.to_string(),
+        lem,
+        reason: reason.to_string(),
+        blocking,
+    }
 }
 
 fn lane_catalog() -> Vec<SkippedLane> {
@@ -251,15 +271,27 @@ fn lane_catalog() -> Vec<SkippedLane> {
         skipped_lane("ci-core-build-test", "CI (Core) - build/test/clippy", true),
         skipped_lane("rustdoc-workspace", "Workspace CPU Rustdoc", true),
         skipped_lane("feature-matrix-pr", "Feature Matrix (PR smoke)", true),
-        skipped_lane("feature-matrix-full-cli", "Feature Matrix (full-cli PR smoke)", true),
+        skipped_lane(
+            "feature-matrix-full-cli",
+            "Feature Matrix (full-cli PR smoke)",
+            true,
+        ),
         skipped_lane("feature-matrix-full", "Feature Matrix (full)", false),
         skipped_lane("bdd-grid-check", "BDD Grid Check", true),
         skipped_lane("policy", "Policy", true),
         skipped_lane("macos-arm64-route", "Route macOS PR lane", false),
         skipped_lane("macos-arm64-clippy", "Clippy (macOS ARM64)", false),
-        skipped_lane("performance-tracking-route", "Route Performance Tracking", false),
+        skipped_lane(
+            "performance-tracking-route",
+            "Route Performance Tracking",
+            false,
+        ),
         skipped_lane("test-telemetry-route", "Route Test Telemetry", false),
-        skipped_lane("compatibility-msrv-route", "Route MSRV Compatibility", false),
+        skipped_lane(
+            "compatibility-msrv-route",
+            "Route MSRV Compatibility",
+            false,
+        ),
         skipped_lane("compatibility-msrv", "Compatibility (MSRV)", true),
         skipped_lane("compatibility-ffi-abi", "Compatibility (ABI/FFI)", true),
         skipped_lane("compatibility-tokenizer", "Compatibility (tokenizer)", true),
@@ -267,7 +299,11 @@ fn lane_catalog() -> Vec<SkippedLane> {
         skipped_lane("gpu-docker", "GPU CI Matrix (Docker)", false),
         skipped_lane("property-tests", "Property Tests (smoke)", false),
         skipped_lane("ripr-advisory", "ripr static exposure (advisory)", false),
-        skipped_lane("always-on-guards", "Guards / PR Size / Markdown / Link", true),
+        skipped_lane(
+            "always-on-guards",
+            "Guards / PR Size / Markdown / Link",
+            true,
+        ),
     ]
 }
 
@@ -295,7 +331,13 @@ fn pick_lanes(
 
     if any_changed {
         lanes.push(lane("pr-plan", "PR Plan", 1, "plan artifact", false));
-        lanes.push(lane("macos-arm64-route", "Route macOS PR lane", 1, "cheap route job", false));
+        lanes.push(lane(
+            "macos-arm64-route",
+            "Route macOS PR lane",
+            1,
+            "cheap route job",
+            false,
+        ));
         lanes.push(lane(
             "performance-tracking-route",
             "Route Performance Tracking",
@@ -328,7 +370,13 @@ fn pick_lanes(
         ));
     }
     if policy_lane_changed(changed) {
-        lanes.push(lane("policy", "Policy", 6, "policy-relevant paths changed", true));
+        lanes.push(lane(
+            "policy",
+            "Policy",
+            6,
+            "policy-relevant paths changed",
+            true,
+        ));
     }
     if (any_changed && rustdoc_changed(changed)) || has("full-ci") {
         lanes.push(lane(
@@ -340,7 +388,13 @@ fn pick_lanes(
         ));
     }
     if has("bdd") || has("grid") || has("full-ci") {
-        lanes.push(lane("bdd-grid-check", "BDD Grid Check", 4, "bdd/grid/full-ci label", true));
+        lanes.push(lane(
+            "bdd-grid-check",
+            "BDD Grid Check",
+            4,
+            "bdd/grid/full-ci label",
+            true,
+        ));
     }
     if macos_paths || has("macos") || has("apple-silicon") || has("metal") || has("full-ci") {
         lanes.push(lane(
@@ -528,15 +582,14 @@ fn manifest_or_toolchain_changed(files: &[String]) -> bool {
             || path == "Cargo.lock"
             || path == "rust-toolchain.toml"
             || path.starts_with(".cargo/")
-            || path.ends_with("/Cargo.toml")
+            || (path.starts_with("crates/") && path.ends_with("/Cargo.toml"))
     })
 }
 
 fn public_api_changed(files: &[String]) -> bool {
     files.iter().any(|path| {
-        path.ends_with("/lib.rs")
-            || path.starts_with("src/api/")
-            || path.contains("/src/api/")
+        (path.starts_with("crates/")
+            && (path.ends_with("/src/lib.rs") || path.contains("/src/api/")))
             || path.starts_with("crates/bitnet-ffi/")
             || path.starts_with("crates/bitnet-py/")
             || path == "COMPATIBILITY.md"
@@ -550,7 +603,11 @@ fn rustdoc_changed(files: &[String]) -> bool {
         || manifest_or_toolchain_changed(files)
         || public_api_changed(files)
         || files.iter().any(|path| {
-            (!is_tracker_path(path) && (path.starts_with("docs/") || path.ends_with(".md")))
+            path.ends_with("/Cargo.toml")
+                || path.ends_with("/lib.rs")
+                || path.starts_with("src/api/")
+                || path.contains("/src/api/")
+                || (!is_tracker_path(path) && (path.starts_with("docs/") || path.ends_with(".md")))
                 || matches!(
                     path.as_str(),
                     "src/lib.rs"
@@ -643,7 +700,9 @@ fn build_classification(
     let policy_docs_only =
         !changed.is_empty() && changed.iter().all(|path| is_policy_docs_path(path));
     let docs_only = !changed.is_empty()
-        && changed.iter().all(|path| is_docs_path(path) && !is_tracker_path(path));
+        && changed
+            .iter()
+            .all(|path| is_docs_path(path) && !is_tracker_path(path));
     let no_rust_inputs =
         !changed.is_empty() && changed.iter().all(|path| !is_rust_input_path(path));
 
@@ -702,7 +761,10 @@ fn selected_lanes(lanes: &[Lane]) -> Vec<SelectedLane> {
 
 fn skipped_lanes(lanes: &[Lane]) -> Vec<SkippedLane> {
     let selected: BTreeSet<&str> = lanes.iter().map(|lane| lane.id.as_str()).collect();
-    lane_catalog().into_iter().filter(|lane| !selected.contains(lane.id.as_str())).collect()
+    lane_catalog()
+        .into_iter()
+        .filter(|lane| !selected.contains(lane.id.as_str()))
+        .collect()
 }
 
 fn build_budget(total: u64) -> Budget {
@@ -756,7 +818,10 @@ struct CargoMetadataDependency {
 }
 
 fn normalized_path_key(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/").trim_end_matches('/').to_ascii_lowercase()
+    path.to_string_lossy()
+        .replace('\\', "/")
+        .trim_end_matches('/')
+        .to_ascii_lowercase()
 }
 
 fn workspace_package_graph() -> Result<WorkspacePackageGraph> {
@@ -799,7 +864,10 @@ fn workspace_package_graph() -> Result<WorkspacePackageGraph> {
         }
     }
 
-    Ok(WorkspacePackageGraph { packages, direct_dependents_by_dependency })
+    Ok(WorkspacePackageGraph {
+        packages,
+        direct_dependents_by_dependency,
+    })
 }
 
 fn direct_dependents_for(
@@ -812,7 +880,12 @@ fn direct_dependents_for(
     let mut out = BTreeSet::new();
     for package in changed_packages {
         if let Some(dependents) = graph.direct_dependents_by_dependency.get(package) {
-            out.extend(dependents.iter().filter(|dep| !changed_packages.contains(*dep)).cloned());
+            out.extend(
+                dependents
+                    .iter()
+                    .filter(|dep| !changed_packages.contains(*dep))
+                    .cloned(),
+            );
         }
     }
     out
@@ -875,7 +948,9 @@ fn broad_sweep_required(changed: &[String], changed_packages: &BTreeSet<String>)
     ];
 
     manifest_or_toolchain_changed(changed)
-        || changed.iter().any(|path| path.starts_with(".cargo/") || path == "build.rs")
+        || changed
+            .iter()
+            .any(|path| path.starts_with(".cargo/") || path == "build.rs")
         || (changed.iter().any(|path| is_rust_input_path(path)) && changed_packages.is_empty())
         || changed_packages
             .iter()
@@ -887,8 +962,10 @@ fn build_packages(
     risk_packs: &[String],
     graph: Option<&WorkspacePackageGraph>,
 ) -> Packages {
-    let changed_packages: BTreeSet<String> =
-        changed.iter().filter_map(|path| package_name_for_path(path)).collect();
+    let changed_packages: BTreeSet<String> = changed
+        .iter()
+        .filter_map(|path| package_name_for_path(path))
+        .collect();
     let direct_dependents = direct_dependents_for(&changed_packages, graph);
     let risk_set: BTreeSet<&str> = risk_packs.iter().map(String::as_str).collect();
     let mut canaries = BTreeSet::new();
@@ -954,7 +1031,11 @@ fn build_plan_with_workspace_metadata(changed: &[String], labels: &[String]) -> 
     } else {
         None
     };
-    Ok(build_plan_with_package_graph(changed, labels, graph.as_ref()))
+    Ok(build_plan_with_package_graph(
+        changed,
+        labels,
+        graph.as_ref(),
+    ))
 }
 
 fn build_plan_with_package_graph(
@@ -1008,7 +1089,11 @@ fn pick_risk_packs(changed: &[String]) -> Vec<String> {
         ),
         (
             "kernels_cpu",
-            &["crates/bitnet-kernels/", "crates/bitnet-cpu-activations/", "crates/bitnet-simd/"],
+            &[
+                "crates/bitnet-kernels/",
+                "crates/bitnet-cpu-activations/",
+                "crates/bitnet-simd/",
+            ],
         ),
         (
             "gpu",
@@ -1030,7 +1115,12 @@ fn pick_risk_packs(changed: &[String]) -> Vec<String> {
         ),
         (
             "ffi",
-            &["crates/bitnet-ffi/", "crates/bitnet-sys/", "crates/bitnet-ggml-ffi/", "crossval/"],
+            &[
+                "crates/bitnet-ffi/",
+                "crates/bitnet-sys/",
+                "crates/bitnet-ggml-ffi/",
+                "crossval/",
+            ],
         ),
         (
             "tokenizer",
@@ -1054,16 +1144,27 @@ fn pick_risk_packs(changed: &[String]) -> Vec<String> {
                 "crates/bitnet-feature-contract",
             ],
         ),
-        ("manifest_release", &["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/"]),
+        (
+            "manifest_release",
+            &["Cargo.toml", "Cargo.lock", "rust-toolchain.toml", ".cargo/"],
+        ),
         (
             "docs_tracking",
-            &["docs/", ".codex/campaigns/", "README.md", "CHANGELOG.md", "CONTRIBUTING.md"],
+            &[
+                "docs/",
+                ".codex/campaigns/",
+                "README.md",
+                "CHANGELOG.md",
+                "CONTRIBUTING.md",
+            ],
         ),
     ];
 
     let mut out: Vec<String> = Vec::new();
     for (pack, prefixes) in table {
-        let any_match = changed.iter().any(|c| prefixes.iter().any(|p| c.starts_with(p)));
+        let any_match = changed
+            .iter()
+            .any(|c| prefixes.iter().any(|p| c.starts_with(p)));
         if any_match {
             out.push((*pack).to_string());
         }
@@ -1095,7 +1196,11 @@ fn guard_verdict(total: u64, labels: &[String]) -> (String, Vec<String>) {
         .collect();
 
     let verdict = if total > fail_above {
-        if !present.is_empty() { "block-overridden" } else { "block" }
+        if !present.is_empty() {
+            "block-overridden"
+        } else {
+            "block"
+        }
     } else if total >= suggest_ack_at {
         "ack-suggested"
     } else if total >= strong_warn_at {
@@ -1110,14 +1215,22 @@ fn guard_verdict(total: u64, labels: &[String]) -> (String, Vec<String>) {
 }
 
 fn render_markdown(plan: &Plan) -> String {
-    let touched_areas: Vec<&str> =
-        plan.touched.iter().filter(|(_, v)| **v).map(|(k, _)| k.as_str()).collect();
+    let touched_areas: Vec<&str> = plan
+        .touched
+        .iter()
+        .filter(|(_, v)| **v)
+        .map(|(k, _)| k.as_str())
+        .collect();
     let mut s = String::new();
     s.push_str("# PR Plan\n\n");
     s.push_str(&format!("- **Posture:** {}\n", plan.posture));
     s.push_str(&format!(
         "- **Touched areas:** {}\n",
-        if touched_areas.is_empty() { "(none)".to_string() } else { touched_areas.join(", ") }
+        if touched_areas.is_empty() {
+            "(none)".to_string()
+        } else {
+            touched_areas.join(", ")
+        }
     ));
     let labels_str = if plan.labels.is_empty() {
         "(none)".to_string()
@@ -1127,9 +1240,15 @@ fn render_markdown(plan: &Plan) -> String {
         sorted.join(", ")
     };
     s.push_str(&format!("- **Labels:** {labels_str}\n"));
-    s.push_str(&format!("- **Estimated LEM:** {}  ·  {}\n", plan.estimated_lem, plan.band));
+    s.push_str(&format!(
+        "- **Estimated LEM:** {}  ·  {}\n",
+        plan.estimated_lem, plan.band
+    ));
     if !plan.risk_packs.is_empty() {
-        s.push_str(&format!("- **Risk packs:** {}\n", plan.risk_packs.join(", ")));
+        s.push_str(&format!(
+            "- **Risk packs:** {}\n",
+            plan.risk_packs.join(", ")
+        ));
     }
     let guard_icon = match plan.guard.as_str() {
         "ok" => "✅",
@@ -1173,7 +1292,9 @@ fn changed_files(base: &str, head: &str) -> Result<Vec<String>> {
         .with_context(|| format!("running git diff {base}...{head}"))?;
     if !output.status.success() {
         // Fall back to last commit on the branch.
-        let alt = Command::new("git").args(["diff", "--name-only", "HEAD~1..HEAD"]).output()?;
+        let alt = Command::new("git")
+            .args(["diff", "--name-only", "HEAD~1..HEAD"])
+            .output()?;
         if !alt.status.success() {
             return Ok(vec![]);
         }
@@ -1183,7 +1304,11 @@ fn changed_files(base: &str, head: &str) -> Result<Vec<String>> {
 }
 
 fn decode_lines(bytes: &[u8]) -> Vec<String> {
-    String::from_utf8_lossy(bytes).lines().filter(|s| !s.is_empty()).map(str::to_string).collect()
+    String::from_utf8_lossy(bytes)
+        .lines()
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1286,7 +1411,11 @@ mod tests {
         let names: Vec<&str> = plan.lanes.iter().map(|l| l.name.as_str()).collect();
         assert!(names.iter().any(|n| n.contains("CI (Core)")));
         assert!(names.iter().any(|n| *n == "Policy"));
-        assert!(names.iter().any(|n| n.contains("Feature Matrix (PR smoke)")));
+        assert!(
+            names
+                .iter()
+                .any(|n| n.contains("Feature Matrix (PR smoke)"))
+        );
         assert!(!names.iter().any(|n| n.contains("Compatibility (MSRV)")));
     }
 
@@ -1327,7 +1456,9 @@ mod tests {
         ] {
             let plan = build_plan(&s(&[path]), &[]);
             assert!(
-                plan.selected_lanes.iter().any(|lane| lane.id == "rustdoc-workspace"),
+                plan.selected_lanes
+                    .iter()
+                    .any(|lane| lane.id == "rustdoc-workspace"),
                 "{path}"
             );
         }
@@ -1339,21 +1470,72 @@ mod tests {
         ] {
             let plan = build_plan(&s(&[path]), &[]);
             assert!(
-                !plan.selected_lanes.iter().any(|lane| lane.id == "rustdoc-workspace"),
+                !plan
+                    .selected_lanes
+                    .iter()
+                    .any(|lane| lane.id == "rustdoc-workspace"),
                 "{path}"
             );
         }
         let forced = build_plan(&s(&["crates/x/src/leaf.rs"]), &s(&["full-ci"]));
-        assert!(forced.selected_lanes.iter().any(|lane| lane.id == "rustdoc-workspace"));
+        assert!(
+            forced
+                .selected_lanes
+                .iter()
+                .any(|lane| lane.id == "rustdoc-workspace")
+        );
+    }
+
+    #[test]
+    fn outside_crates_rustdoc_inputs_do_not_expand_msrv_routing() {
+        for path in [
+            "crossval/src/lib.rs",
+            "xtask/src/lib.rs",
+            "xtask-build-helper/src/lib.rs",
+            "tests/lib.rs",
+            "tests-new/lib.rs",
+            "tools/custom/src/api/types.rs",
+            "src/api/types.rs",
+            "src/lib.rs",
+            "crossval/Cargo.toml",
+            "tests/Cargo.toml",
+            "tests-new/Cargo.toml",
+            "xtask/Cargo.toml",
+            "tools/bitnet-task/Cargo.toml",
+            "xtask-build-helper/Cargo.toml",
+            "fuzz/Cargo.toml",
+        ] {
+            let plan = build_plan(&s(&[path]), &[]);
+            assert!(
+                plan.selected_lanes
+                    .iter()
+                    .any(|lane| lane.id == "rustdoc-workspace"),
+                "{path}"
+            );
+            assert!(
+                !plan
+                    .selected_lanes
+                    .iter()
+                    .any(|lane| lane.id == "compatibility-msrv"),
+                "{path}"
+            );
+        }
     }
 
     #[test]
     fn xtask_changes_do_not_select_feature_matrix_without_matching_workflow_paths() {
         let plan = build_plan(&s(&["xtask/src/ci/plan.rs"]), &[]);
-        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "ci-core-build-test"));
+        assert!(
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "ci-core-build-test")
+        );
         assert!(plan.selected_lanes.iter().any(|lane| lane.id == "policy"));
         assert!(
-            !plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"),
+            !plan
+                .selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-pr"),
             "Feature Matrix does not trigger for xtask-only changes"
         );
     }
@@ -1361,9 +1543,16 @@ mod tests {
     #[test]
     fn ordinary_rust_feature_matrix_skips_full_cli_smoke() {
         let plan = build_plan(&s(&["crates/bitnet-quantization/src/qk256.rs"]), &[]);
-        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"));
         assert!(
-            !plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-pr")
+        );
+        assert!(
+            !plan
+                .selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-full-cli"),
             "ordinary Rust PRs should not pay the full-cli feature smoke"
         );
     }
@@ -1371,19 +1560,34 @@ mod tests {
     #[test]
     fn cli_paths_select_full_cli_feature_smoke() {
         let plan = build_plan(&s(&["crates/bitnet-cli/src/model_status.rs"]), &[]);
-        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"));
         assert!(
-            plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-pr")
+        );
+        assert!(
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-full-cli"),
             "CLI paths should keep the cpu+full-cli smoke"
         );
     }
 
     #[test]
     fn full_cli_label_selects_full_cli_feature_smoke() {
-        let plan = build_plan(&s(&["crates/bitnet-quantization/src/qk256.rs"]), &s(&["full-cli"]));
-        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-pr"));
+        let plan = build_plan(
+            &s(&["crates/bitnet-quantization/src/qk256.rs"]),
+            &s(&["full-cli"]),
+        );
         assert!(
-            plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-pr")
+        );
+        assert!(
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-full-cli"),
             "full-cli label should opt back into the cpu+full-cli smoke"
         );
     }
@@ -1400,10 +1604,15 @@ mod tests {
             "xtask-build-helper/src/lib.rs",
             "scripts/off-workspace-helper.rs",
         ] {
-            assert!(is_rust_input_path(path), "{path} should run Rust CI planning");
+            assert!(
+                is_rust_input_path(path),
+                "{path} should run Rust CI planning"
+            );
             let plan = build_plan(&s(&[path]), &[]);
             assert!(
-                plan.selected_lanes.iter().any(|lane| lane.id == "ci-core-build-test"),
+                plan.selected_lanes
+                    .iter()
+                    .any(|lane| lane.id == "ci-core-build-test"),
                 "{path} should select CI Core"
             );
         }
@@ -1425,7 +1634,10 @@ mod tests {
         assert!(names.iter().any(|n| n.contains("GPU CI Matrix (Docker")));
         assert!(names.iter().any(|n| n.contains("Clippy (macOS ARM64)")));
         assert!(
-            !plan.selected_lanes.iter().any(|lane| lane.id == "feature-matrix-full-cli"),
+            !plan
+                .selected_lanes
+                .iter()
+                .any(|lane| lane.id == "feature-matrix-full-cli"),
             "full matrix label supersedes the targeted full-cli smoke"
         );
     }
@@ -1527,16 +1739,25 @@ mod tests {
         let plan = build_plan_with_package_graph(&changed, &[], Some(&graph));
         let selected: BTreeSet<&str> = plan.packages.selected.iter().map(String::as_str).collect();
 
-        assert_eq!(plan.packages.changed, vec!["bitnet-quantization".to_string()]);
+        assert_eq!(
+            plan.packages.changed,
+            vec!["bitnet-quantization".to_string()]
+        );
         assert!(!plan.packages.broad_sweep_required);
         assert!(selected.contains("bitnet-quantization"));
         assert!(selected.contains("bitnet-models"));
         assert!(
-            plan.packages.direct_dependents.iter().any(|package| package == "bitnet-models"),
+            plan.packages
+                .direct_dependents
+                .iter()
+                .any(|package| package == "bitnet-models"),
             "bitnet-models directly depends on bitnet-quantization"
         );
         assert!(
-            plan.packages.canaries.iter().any(|package| package == "bitnet-models"),
+            plan.packages
+                .canaries
+                .iter()
+                .any(|package| package == "bitnet-models"),
             "qk256 risk pack keeps bitnet-models as a canary"
         );
         Ok(())
@@ -1549,8 +1770,18 @@ mod tests {
         let plan = build_plan_with_package_graph(&changed, &[], Some(&graph));
 
         assert!(plan.packages.broad_sweep_required);
-        assert!(plan.packages.selected.iter().any(|package| package == "bitnet-common"));
-        assert!(plan.packages.selected.iter().any(|package| package == "bitnet-kernels"));
+        assert!(
+            plan.packages
+                .selected
+                .iter()
+                .any(|package| package == "bitnet-common")
+        );
+        assert!(
+            plan.packages
+                .selected
+                .iter()
+                .any(|package| package == "bitnet-kernels")
+        );
         assert_eq!(
             plan.packages.selection_reason,
             "broad sweep required for manifest/toolchain/shared-foundation change"
@@ -1569,7 +1800,12 @@ mod tests {
 
         assert!(plan.packages.changed.is_empty());
         assert!(plan.packages.broad_sweep_required);
-        assert!(plan.packages.selected.iter().any(|package| package == "bitnet-common"));
+        assert!(
+            plan.packages
+                .selected
+                .iter()
+                .any(|package| package == "bitnet-common")
+        );
         assert_eq!(
             plan.packages.selection_reason,
             "broad sweep required for manifest/toolchain/shared-foundation change"
@@ -1581,14 +1817,38 @@ mod tests {
     fn ci_plan_fixture_docs_only() -> Result<()> {
         let plan = build_plan(&fixture_lines("docs.txt")?, &[]);
         let value = serde_json::to_value(&plan)?;
-        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/tracker_or_campaign_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/hardware_receipt_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/policy_docs_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/rust_inputs_changed"), Some(&json!(false)));
-        assert_eq!(value.pointer("/budget/preferred_default_lem"), Some(&json!(25)));
+        assert_eq!(
+            value.pointer("/classification/no_rust_inputs"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/docs_only"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/tracker_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/tracker_or_campaign_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/hardware_receipt_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/policy_docs_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/rust_inputs_changed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/budget/preferred_default_lem"),
+            Some(&json!(25))
+        );
         assert_eq!(value.pointer("/budget/default_limit_lem"), Some(&json!(35)));
         Ok(())
     }
@@ -1597,10 +1857,22 @@ mod tests {
     fn ci_plan_fixture_tracker_only() -> Result<()> {
         let plan = build_plan(&fixture_lines("tracker.txt")?, &[]);
         let value = serde_json::to_value(&plan)?;
-        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/tracker_or_campaign_only"), Some(&json!(true)));
+        assert_eq!(
+            value.pointer("/classification/no_rust_inputs"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/docs_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/tracker_only"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/tracker_or_campaign_only"),
+            Some(&json!(true))
+        );
         assert_eq!(plan.posture, "tracking-only");
         Ok(())
     }
@@ -1609,13 +1881,34 @@ mod tests {
     fn ci_plan_fixture_hardware_receipt_only() -> Result<()> {
         let plan = build_plan(&fixture_lines("hardware-receipt.txt")?, &[]);
         let value = serde_json::to_value(&plan)?;
-        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/hardware_receipt_only"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/policy_docs_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/rust_inputs_changed"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/model_validation_changed"), Some(&json!(true)));
+        assert_eq!(
+            value.pointer("/classification/no_rust_inputs"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/docs_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/tracker_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/hardware_receipt_only"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/policy_docs_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/rust_inputs_changed"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/model_validation_changed"),
+            Some(&json!(true))
+        );
         Ok(())
     }
 
@@ -1623,12 +1916,30 @@ mod tests {
     fn ci_plan_fixture_policy_docs_only() -> Result<()> {
         let plan = build_plan(&fixture_lines("policy-docs.txt")?, &[]);
         let value = serde_json::to_value(&plan)?;
-        assert_eq!(value.pointer("/classification/no_rust_inputs"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/docs_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/tracker_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/policy_docs_only"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/hardware_receipt_only"), Some(&json!(false)));
-        assert_eq!(value.pointer("/classification/rust_inputs_changed"), Some(&json!(false)));
+        assert_eq!(
+            value.pointer("/classification/no_rust_inputs"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/docs_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/tracker_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/policy_docs_only"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/hardware_receipt_only"),
+            Some(&json!(false))
+        );
+        assert_eq!(
+            value.pointer("/classification/rust_inputs_changed"),
+            Some(&json!(false))
+        );
         assert!(plan.selected_lanes.iter().any(|lane| lane.id == "policy"));
         Ok(())
     }
@@ -1641,9 +1952,14 @@ mod tests {
             value.pointer("/classification/manifest_or_toolchain_changed"),
             Some(&json!(true))
         );
-        assert_eq!(value.pointer("/classification/public_api_changed"), Some(&json!(true)));
+        assert_eq!(
+            value.pointer("/classification/public_api_changed"),
+            Some(&json!(true))
+        );
         assert!(
-            plan.selected_lanes.iter().any(|lane| lane.id == "compatibility-msrv"),
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "compatibility-msrv"),
             "manifest/public API fixture should select MSRV"
         );
         Ok(())
@@ -1653,10 +1969,24 @@ mod tests {
     fn ci_plan_fixture_gpu_and_macos() -> Result<()> {
         let plan = build_plan(&fixture_lines("macos.txt")?, &[]);
         let value = serde_json::to_value(&plan)?;
-        assert_eq!(value.pointer("/classification/gpu_changed"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/macos_changed"), Some(&json!(true)));
-        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "gpu-native"));
-        assert!(plan.selected_lanes.iter().any(|lane| lane.id == "macos-arm64-clippy"));
+        assert_eq!(
+            value.pointer("/classification/gpu_changed"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/macos_changed"),
+            Some(&json!(true))
+        );
+        assert!(
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "gpu-native")
+        );
+        assert!(
+            plan.selected_lanes
+                .iter()
+                .any(|lane| lane.id == "macos-arm64-clippy")
+        );
         Ok(())
     }
 
@@ -1665,10 +1995,22 @@ mod tests {
         let changed = fixture_lines("model-validation.txt")?;
         let plan = build_plan(&changed, &s(&["coverage", "full-ci"]));
         let value = serde_json::to_value(&plan)?;
-        assert_eq!(value.pointer("/classification/model_validation_changed"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/coverage_requested"), Some(&json!(true)));
-        assert_eq!(value.pointer("/classification/full_ci_requested"), Some(&json!(true)));
-        assert_eq!(value.pointer("/labels"), Some(&json!(["coverage", "full-ci"])));
+        assert_eq!(
+            value.pointer("/classification/model_validation_changed"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/coverage_requested"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/classification/full_ci_requested"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            value.pointer("/labels"),
+            Some(&json!(["coverage", "full-ci"]))
+        );
         Ok(())
     }
 
