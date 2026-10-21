@@ -3,29 +3,33 @@
 //! This example demonstrates how to integrate bitnet-rs with the Axum web framework
 //! to create a high-performance inference API server.
 
-use anyhow::Result;
-use axum::response::sse::{Event, KeepAlive};
 use axum::{
-    Json, Router,
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response, Sse},
     routing::{get, post},
+    Json, Router,
 };
+use axum::response::sse::{Event, KeepAlive};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tower::ServiceBuilder;
-use tower_http::{cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer};
-use tracing::{error, info, instrument, warn};
+use tower_http::{
+    cors::CorsLayer,
+    trace::TraceLayer,
+    timeout::TimeoutLayer,
+};
+use tracing::{info, warn, error, instrument};
+use anyhow::Result;
 
 // Import BitNet components
-use bitnet_common::{BitNetConfig, Device};
-use bitnet_inference::{GenerationConfig, InferenceEngine};
+use bitnet_inference::{InferenceEngine, GenerationConfig};
 use bitnet_models::{Model, ModelLoader};
 use bitnet_tokenizers::TokenizerBuilder;
+use bitnet_common::{BitNetConfig, Device};
 
 /// Application state shared across handlers
 #[derive(Clone)]
@@ -94,7 +98,9 @@ struct ErrorResponse {
 #[tokio::main]
 pub async fn main() -> Result<()> {
     // Initialize tracing
-    tracing_subscriber::fmt().with_max_level(tracing::Level::INFO).init();
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
 
     info!("Starting BitNet Axum server...");
 
@@ -121,8 +127,11 @@ async fn initialize_app_state() -> Result<AppState> {
     let config = BitNetConfig::default();
 
     // Determine device
-    let device =
-        if cfg!(feature = "cuda") && is_cuda_available() { Device::Cuda(0) } else { Device::Cpu };
+    let device = if cfg!(feature = "cuda") && is_cuda_available() {
+        Device::Cuda(0)
+    } else {
+        Device::Cpu
+    };
 
     info!("Using device: {:?}", device);
 
@@ -134,7 +143,8 @@ async fn initialize_app_state() -> Result<AppState> {
     let model = load_model(&model_path, &device).await?;
 
     // Load tokenizer
-    let tokenizer_name = std::env::var("BITNET_TOKENIZER").unwrap_or_else(|_| "gpt2".to_string());
+    let tokenizer_name = std::env::var("BITNET_TOKENIZER")
+        .unwrap_or_else(|_| "gpt2".to_string());
 
     info!("Loading tokenizer: {}", tokenizer_name);
     let tokenizer = TokenizerBuilder::from_pretrained(&tokenizer_name)?;
@@ -221,8 +231,7 @@ async fn generate_handler(
     // Generate text
     let generated_text = {
         let mut engine = state.inference_engine.write().await;
-        engine
-            .generate_with_config(&request.prompt, &gen_config)
+        engine.generate_with_config(&request.prompt, &gen_config)
             .map_err(|e| AppError::InferenceError(e.to_string()))?
     };
 
@@ -318,8 +327,10 @@ async fn generate_stream_handler(
 /// Health check endpoint
 async fn health_handler(State(state): State<AppState>) -> impl IntoResponse {
     let stats = state.stats.read().await;
-    let uptime =
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let uptime = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
 
     let health = HealthResponse {
         status: "healthy".to_string(),
@@ -397,7 +408,10 @@ curl -X POST http://localhost:3000/generate \
 ```
 "#;
 
-    ([("content-type", "text/markdown")], docs)
+    (
+        [("content-type", "text/markdown")],
+        docs
+    )
 }
 
 /// Load model (mock implementation for example)
@@ -423,7 +437,9 @@ struct MockModel {
 
 impl MockModel {
     fn new() -> Self {
-        Self { config: BitNetConfig::default() }
+        Self {
+            config: BitNetConfig::default(),
+        }
     }
 }
 
@@ -443,11 +459,7 @@ impl Model for MockModel {
         Ok(Box::new(MockTensor::new(vec![1, 50257])))
     }
 
-    fn generate(
-        &self,
-        _tokens: &[u32],
-        _config: &bitnet_inference::GenerationConfig,
-    ) -> Result<Vec<u32>> {
+    fn generate(&self, _tokens: &[u32], _config: &bitnet_inference::GenerationConfig) -> Result<Vec<u32>> {
         // Mock generation
         Ok(vec![1234, 5678, 9012])
     }
@@ -462,7 +474,10 @@ struct MockTensor {
 impl MockTensor {
     fn new(shape: Vec<usize>) -> Self {
         let size = shape.iter().product();
-        Self { shape, data: vec![0.1; size] }
+        Self {
+            shape,
+            data: vec![0.1; size],
+        }
     }
 }
 
@@ -499,15 +514,16 @@ enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message, code) = match self {
-            AppError::InferenceError(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, msg, "INFERENCE_ERROR")
-            }
+            AppError::InferenceError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg, "INFERENCE_ERROR"),
             AppError::ModelError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg, "MODEL_ERROR"),
             AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg, "VALIDATION_ERROR"),
         };
 
-        let body =
-            Json(ErrorResponse { error: error_message, code: code.to_string(), details: None });
+        let body = Json(ErrorResponse {
+            error: error_message,
+            code: code.to_string(),
+            details: None,
+        });
 
         (status, body).into_response()
     }
@@ -526,8 +542,7 @@ mod tests {
                     Box::new(MockModel::new()),
                     Arc::new(MockTokenizer::new()),
                     Device::Cpu,
-                )
-                .unwrap(),
+                ).unwrap()
             )),
             config: BitNetConfig::default(),
             stats: Arc::new(RwLock::new(ServerStats::default())),

@@ -615,7 +615,7 @@ manual_checked_ops = "allow"
         .unwrap();
         let toolchain =
             inventory(&["clippy::same_length_and_capacity", "clippy::manual_checked_ops"]);
-        let report = check(&lints, &debt, &manifest, &dir, &toolchain).unwrap();
+        let report = check(&lints, &debt, &manifest, &dir, &toolchain)?;
         assert_eq!(report.active.len(), 1);
         assert_eq!(report.deferred.len(), 1);
         assert!(report.errors.is_empty(), "{:?}", report.errors);
@@ -675,7 +675,7 @@ manual_take = "deny"
             "clippy::manual_take",
             "clippy::needless_type_cast",
         ]);
-        let report = check(&lints, &debt, &manifest, &dir, &toolchain).unwrap();
+        let report = check(&lints, &debt, &manifest, &dir, &toolchain)?;
         assert_eq!(report.errors.len(), 3, "{:?}", report.errors);
         assert!(
             report
