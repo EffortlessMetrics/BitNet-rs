@@ -124,8 +124,8 @@ jobs:
       - name: Checkout routing contract
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
 
-      - name: Test Rustdoc routing
-        run: python3 -m unittest discover -s scripts -p test_ci_rustdoc_plan.py
+      - name: Test core proof routing
+        run: python3 -m unittest discover -s scripts -p 'test_ci_*_plan.py'
 
       - name: Classify no-Rust PR shapes
         id: classify
@@ -433,6 +433,8 @@ jobs:
           print(f"run_inference_golden={str(broad or 'bitnet-inference' in selected).lower()}")
           print(f"run_avx2_quantization={str(broad or 'bitnet-quantization' in selected).lower()}")
           print(f"run_avx2_kernels={str(broad or 'bitnet-kernels' in selected).lower()}")
+          server_changed = 'bitnet-server' in packages.get('changed', [])
+          print(f"run_server_on_broad_sweep={str(broad and (server_changed or 'bitnet-server' in selected)).lower()}")
           PY
 
           echo "Package selection:"
@@ -500,6 +502,10 @@ jobs:
             --lib \
             --no-default-features --features cpu \
             -- --nocapture
+
+      - name: "Run unit tests: changed server on broad sweep"
+        if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.run_server_on_broad_sweep == 'true'
+        run: cargo test --locked -p bitnet-server --lib --no-default-features --features cpu -- --nocapture
 
       - name: "Run unit tests: SRP microcrates"
         if: needs.classify-changes.outputs.no_rust_inputs != 'true' && steps.package-plan.outputs.broad_sweep_required == 'true'
@@ -708,6 +714,7 @@ jobs:
             -p bitnet-common \
             -p bitnet-models \
             -p bitnet-kernels \
+              -p bitnet-quantization \
             -p bitnet-inference \
             -p bitnet-gpu-hal \
             -p bitnet-opencl \

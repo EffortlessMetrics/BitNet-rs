@@ -73,6 +73,11 @@ jobs:
           cargo test --locked -p xtask --no-default-features policy::clippy_lints::tests::
           cargo test --locked -p xtask --no-default-features ci::plan::tests::
 
+      - name: Check activated lint ratchets in policy tools
+        run: |
+          cargo clippy --locked -p xtask --all-targets --no-default-features -- \
+            -D clippy::manual_checked_ops -D clippy::duration_suboptimal_units -D clippy::unnecessary_trailing_comma
+
       - name: clippy-lint-policy check
         run: |
           cargo run --locked -p xtask --no-default-features -- check-lint-policy \
