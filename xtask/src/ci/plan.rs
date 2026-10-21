@@ -534,8 +534,8 @@ fn manifest_or_toolchain_changed(files: &[String]) -> bool {
 
 fn public_api_changed(files: &[String]) -> bool {
     files.iter().any(|path| {
-        (path.starts_with("crates/")
-            && (path.ends_with("/src/lib.rs") || path.contains("/src/api/")))
+        path.ends_with("/lib.rs")
+            || path.contains("/src/api/")
             || path.starts_with("crates/bitnet-ffi/")
             || path.starts_with("crates/bitnet-py/")
             || path == "COMPATIBILITY.md"
@@ -1316,6 +1316,12 @@ mod tests {
             "xtask-build-helper/Cargo.toml",
             "fuzz/Cargo.toml",
             "tools/migrate-gen-config/Cargo.toml",
+            "crossval/src/lib.rs",
+            "xtask/src/lib.rs",
+            "xtask-build-helper/src/lib.rs",
+            "tests/lib.rs",
+            "tests-new/lib.rs",
+            "tools/custom/src/api/types.rs",
         ] {
             let plan = build_plan(&s(&[path]), &[]);
             assert!(

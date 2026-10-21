@@ -105,8 +105,9 @@ remains the explicit immediate route. Leaf implementation Rust and
 tracker-only PRs emit an explicit unselected result. Python route tests run
 before classification, and planner tests cover matching PR risk categories.
 
-The public-API route uses the repository's existing crate-root and `src/api/`
-path convention; it is not a semantic detector for every exported leaf item.
+The public-API route covers `lib.rs` and `src/api/` paths across workspace
+members, including the custom `tests/lib.rs` and `tests-new/lib.rs` library
+roots; it is not a semantic detector for every exported leaf item.
 Docs Automation retains lint/link checks and delegates Rustdoc to CI Core via
 `--skip-rustdoc`; local invocation still builds Rustdoc by default. Runners,
 permissions, admission controls, timeouts and aggregate failure requirements

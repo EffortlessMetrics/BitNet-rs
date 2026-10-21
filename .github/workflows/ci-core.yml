@@ -24,6 +24,8 @@ on:
       - 'fuzz/**'
       - 'Cargo.toml'
       - '**/Cargo.toml'
+      - '**/lib.rs'
+      - '**/src/api/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'Makefile'
@@ -78,6 +80,8 @@ on:
       - 'fuzz/**'
       - 'Cargo.toml'
       - '**/Cargo.toml'
+      - '**/lib.rs'
+      - '**/src/api/**'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'Makefile'
@@ -166,7 +170,7 @@ jobs:
             while IFS= read -r path; do
               [ -n "$path" ] || continue
               case "$path" in
-                crates/*|crossval/*|tests/*|tools/bitnet-task/*|xtask/*|fuzz/*|src/*|.cargo/*|Cargo.toml|*/Cargo.toml|Cargo.lock|rust-toolchain.toml|Makefile)
+                crates/*|crossval/*|tests/*|tools/bitnet-task/*|xtask/*|fuzz/*|src/*|.cargo/*|Cargo.toml|*/Cargo.toml|*/lib.rs|*/src/api/*|Cargo.lock|rust-toolchain.toml|Makefile)
                   no_rust_inputs=false
                   ;;
               esac
