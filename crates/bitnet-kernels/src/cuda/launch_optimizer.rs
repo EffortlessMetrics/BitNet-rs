@@ -517,18 +517,18 @@ impl LaunchOptimizer {
         let blocks_by_blocks = self.arch.max_blocks_per_sm;
 
         let total_shared = resources.static_shared_mem + resources.dynamic_shared_mem;
-        let blocks_by_shared = if total_shared == 0 {
-            self.arch.max_blocks_per_sm
-        } else {
-            self.arch.max_shared_mem_per_sm / total_shared
-        };
+        let blocks_by_shared = self
+            .arch
+            .max_shared_mem_per_sm
+            .checked_div(total_shared)
+            .unwrap_or(self.arch.max_blocks_per_sm);
 
         let regs_per_block = resources.registers_per_thread * threads_per_block;
-        let blocks_by_regs = if regs_per_block == 0 {
-            self.arch.max_blocks_per_sm
-        } else {
-            self.arch.max_registers_per_sm / regs_per_block
-        };
+        let blocks_by_regs = self
+            .arch
+            .max_registers_per_sm
+            .checked_div(regs_per_block)
+            .unwrap_or(self.arch.max_blocks_per_sm);
 
         let limits = [
             (blocks_by_threads, OccupancyLimiter::Threads),

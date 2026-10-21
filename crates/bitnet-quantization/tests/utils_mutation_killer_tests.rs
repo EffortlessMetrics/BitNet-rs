@@ -815,7 +815,7 @@ mod utility_functions_mutation_killers {
 
                 // Kill * -> / mutation in start calculation (line 23)
                 // Wrong: let start = i / block_size;
-                let wrong_start = if block_size > 0 { i / block_size } else { 0 };
+                let wrong_start = i.checked_div(block_size).unwrap_or(0);
                 if wrong_start != start {
                     // This would cause wrong block boundaries
                     let wrong_end = (wrong_start + block_size).min(data.len());

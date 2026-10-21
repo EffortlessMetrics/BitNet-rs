@@ -451,7 +451,7 @@ impl RecoveryMetrics {
 
     /// Average recovery time in milliseconds, or 0 if none recorded.
     pub const fn avg_recovery_time_ms(&self) -> u64 {
-        if self.recovery_count == 0 { 0 } else { self.recovery_time_sum_ms / self.recovery_count }
+        self.recovery_time_sum_ms.checked_div(self.recovery_count).unwrap_or(0)
     }
 }
 

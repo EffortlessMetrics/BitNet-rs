@@ -571,8 +571,8 @@ fn collect_preflight_env(diagnostics_to_stderr: bool) -> Result<Vec<(String, Str
         .and_then(|value| value.split_whitespace().next().map(ToString::to_string))
         .unwrap_or_else(|| "unknown".to_string());
 
-    let pids_pct = if pid_max > 0 { pids_used.saturating_mul(100) / pid_max } else { 0 };
-    let files_pct = if files_max > 0 { files_used.saturating_mul(100) / files_max } else { 0 };
+    let pids_pct = pids_used.saturating_mul(100).checked_div(pid_max).unwrap_or(0);
+    let files_pct = files_used.saturating_mul(100).checked_div(files_max).unwrap_or(0);
 
     preflight_line(diagnostics_to_stderr, "=== BitNet-rs System Resource Check ===");
     preflight_line(diagnostics_to_stderr, format!("PIDs: {pids_used} / {pid_max} ({pids_pct}%)"));

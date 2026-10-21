@@ -780,7 +780,7 @@ impl CrossAttentionModule {
         let mut concat_output = vec![0.0f32; dec_len * num_heads * head_dim];
         let mut extractor = AlignmentExtractor::new(dec_len, actual_enc_len);
 
-        let heads_per_kv = if num_kv_heads > 0 { num_heads / num_kv_heads } else { 1 };
+        let heads_per_kv = num_heads.checked_div(num_kv_heads).unwrap_or(1);
 
         for h in 0..num_heads {
             let kv_h = if num_kv_heads == num_heads { h } else { h / heads_per_kv };

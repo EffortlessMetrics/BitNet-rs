@@ -18,22 +18,6 @@ schema_version = "1.0"
 # status = "active"
 
 [[debt]]
-lint = "clippy::manual_checked_ops"
-path = "crates/bitnet-kernels/**"
-owner = "numeric-kernels"
-reason = "PR5 measurement found 25 kernel findings; cleanup belongs with the numeric/kernel lint pass so arithmetic invariants are preserved."
-expires = "2026-07-15"
-status = "active"
-
-[[debt]]
-lint = "clippy::manual_checked_ops"
-path = "crates/bitnet-models/**"
-owner = "model-contracts"
-reason = "PR5 measurement found model config and serde findings through the SRP Clippy surface; convert with the numeric/config invariants in the cleanup PR."
-expires = "2026-07-15"
-status = "active"
-
-[[debt]]
 lint = "clippy::duration_suboptimal_units"
 path = "crates/bitnet-kernels/**"
 owner = "kernels"

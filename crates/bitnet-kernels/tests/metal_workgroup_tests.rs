@@ -229,11 +229,9 @@ fn select_workgroup(op: OpKind, m: u32, n: u32) -> WorkgroupSize {
 fn estimate_occupancy(wg: &WorkgroupSize, shared_mem: usize, regs: usize) -> OccupancyEstimate {
     let threads = wg.total_threads();
     // Shared-memory–limited groups per CU.
-    let groups_by_mem = if shared_mem == 0 {
-        MAX_THREADGROUPS_PER_CU
-    } else {
-        (MAX_THREADGROUP_MEMORY / shared_mem) as u32
-    };
+    let groups_by_mem = MAX_THREADGROUP_MEMORY
+        .checked_div(shared_mem)
+        .map_or(MAX_THREADGROUPS_PER_CU, |groups| groups as u32);
     // Thread-count–limited groups per CU.
     let groups_by_threads = MAX_THREADS_PER_THREADGROUP / threads;
     let active = groups_by_mem.min(groups_by_threads).min(MAX_THREADGROUPS_PER_CU);

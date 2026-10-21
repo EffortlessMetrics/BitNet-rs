@@ -335,7 +335,7 @@ fn make_gguf_config(
         num_layers: layers,
         num_heads: heads,
         num_kv_heads: kv_heads,
-        head_dim: if heads > 0 { hidden / heads } else { 0 },
+        head_dim: hidden.checked_div(heads).unwrap_or(0),
         intermediate_size: intermediate,
         max_seq_len: ctx_len,
         rope_theta: 10000.0,

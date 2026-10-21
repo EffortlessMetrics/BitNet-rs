@@ -723,8 +723,7 @@ pub fn max_active_blocks_per_sm(
         // Assume a minimal static shared memory allocation
         1024
     };
-    let smem_limited =
-        if smem_per_block > 0 { caps.max_shared_mem_per_sm / smem_per_block } else { u32::MAX };
+    let smem_limited = caps.max_shared_mem_per_sm.checked_div(smem_per_block).unwrap_or(u32::MAX);
 
     // Register limit (simplified model: 65536 registers per SM)
     let regs_per_sm = 65536u32;
@@ -735,13 +734,14 @@ pub fn max_active_blocks_per_sm(
     };
     let warps_per_block = config.block_size.div_ceil(32);
     let regs_per_block = warps_per_block * 32 * regs_per_thread;
-    let reg_limited = if regs_per_block > 0 { regs_per_sm / regs_per_block } else { u32::MAX };
+    let reg_limited = regs_per_sm.checked_div(regs_per_block).unwrap_or(u32::MAX);
 
     let max_blocks = thread_limited.min(smem_limited).min(reg_limited).min(caps.max_blocks_per_sm);
 
     let active_warps = max_blocks * warps_per_block;
     let max_warps = caps.max_threads_per_sm / 32;
-    let occupancy_pct = if max_warps > 0 { ((active_warps * 100) / max_warps).min(100) } else { 0 };
+    let occupancy_pct = std::num::NonZeroU32::new(max_warps)
+        .map_or(0, |divisor| ((active_warps * 100) / divisor.get()).min(100));
 
     let recommended_grid = max_blocks * caps.sm_count;
 

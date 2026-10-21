@@ -86,7 +86,7 @@ fn optimal_threadgroup_3d(dim_x: u32, dim_y: u32, dim_z: u32) -> (u32, u32, u32)
     let x = SIMD_WIDTH.min(dim_x);
     let max_yz = MAX_THREADS_PER_THREADGROUP / x;
     let y = max_yz.min(dim_y);
-    let z = if y > 0 { (max_yz / y).min(dim_z).max(1) } else { 1 };
+    let z = max_yz.checked_div(y).map_or(1, |z| z.min(dim_z).max(1));
     (x, y, z)
 }
 

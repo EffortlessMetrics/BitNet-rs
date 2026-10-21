@@ -641,12 +641,12 @@ manual_ilog2 = "warn"
 decimal_bitwise_operands = "warn"
 needless_type_cast = "warn"
 manual_take = "warn"
+manual_checked_ops = "warn"
 
 # Deferred Rust 1.95 ratchets. CI Core runs with `RUSTFLAGS=-D warnings`,
 # so warning-level activation is a hard gate once these move out of
 # staging. `manual_pop_if` stays in the policy ledger only because this
 # Rust 1.95 Clippy reports it as unknown.
-manual_checked_ops = "allow"
 duration_suboptimal_units = "allow"
 unnecessary_trailing_comma = "allow"
 # Additional `clippy::all` findings newly exposed by the Rust 1.95
