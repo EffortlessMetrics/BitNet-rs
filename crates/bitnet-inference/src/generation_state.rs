@@ -215,9 +215,7 @@ impl GenerationTracker {
     }
 
     pub fn elapsed(&self) -> Duration {
-        self.start_time
-            .map(|s| s.elapsed())
-            .unwrap_or(Duration::ZERO)
+        self.start_time.map(|s| s.elapsed()).unwrap_or(Duration::ZERO)
     }
 
     pub fn tokens_per_second(&self) -> f64 {
@@ -306,9 +304,7 @@ mod tests {
             );
         }
 
-        let mut tracker = GenerationTracker::new(3)
-            .with_eos(2)
-            .with_repetition_window(4);
+        let mut tracker = GenerationTracker::new(3).with_eos(2).with_repetition_window(4);
         assert_derived_debug(&tracker);
         tracker.start_prefill(5);
         assert_derived_debug(&tracker);
@@ -411,15 +407,9 @@ mod tests {
         assert_eq!(tracker.on_token(7), GenState::Prefill);
         assert_eq!(tracker.generated_tokens(), 0);
         tracker.start_generation();
-        assert_eq!(
-            tracker.on_token(7),
-            GenState::Stopped(StopReason::MaxTokens)
-        );
+        assert_eq!(tracker.on_token(7), GenState::Stopped(StopReason::MaxTokens));
         assert_eq!(tracker.generated_tokens(), 1);
-        assert_eq!(
-            tracker.on_token(8),
-            GenState::Stopped(StopReason::MaxTokens)
-        );
+        assert_eq!(tracker.on_token(8), GenState::Stopped(StopReason::MaxTokens));
         assert_eq!(tracker.generated_tokens(), 1);
         tracker.fail();
         assert_eq!(tracker.on_token(9), GenState::Failed);
