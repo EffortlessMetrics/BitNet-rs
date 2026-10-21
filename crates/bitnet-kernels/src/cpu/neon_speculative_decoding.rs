@@ -815,7 +815,7 @@ mod tests {
 
         assert_eq!(results.len(), 3);
         for r in &results {
-            assert!(r.target_prob > 0.9, "target_prob too low: {}", r.target_prob,);
+            assert!(r.target_prob > 0.9, "target_prob too low: {}", r.target_prob);
         }
     }
 
@@ -902,7 +902,7 @@ mod tests {
         // Ratio is ~0.01/0.97 ≈ 0.01 → almost certainly rejected.
         // Replacement should be token 3 (highest residual).
         if let Some(replacement) = result.replacement_token {
-            assert_eq!(replacement, 3, "replacement should be the high-residual token",);
+            assert_eq!(replacement, 3, "replacement should be the high-residual token");
         }
     }
 
@@ -1018,8 +1018,8 @@ mod tests {
 
         assert_eq!(result.accepted_counts.len(), 2);
         // Both sequences should have high acceptance.
-        assert!(result.accepted_counts[0] >= 1, "seq 0 accepted: {}", result.accepted_counts[0],);
-        assert!(result.accepted_counts[1] >= 1, "seq 1 accepted: {}", result.accepted_counts[1],);
+        assert!(result.accepted_counts[0] >= 1, "seq 0 accepted: {}", result.accepted_counts[0]);
+        assert!(result.accepted_counts[1] >= 1, "seq 1 accepted: {}", result.accepted_counts[1]);
     }
 
     // ── Log-Probability Comparison Tests ────────────────────────────
@@ -1046,9 +1046,9 @@ mod tests {
 
         assert_eq!(result.num_positions, 4);
         // Each diff is 0.5; total = 2.0, max = 0.5, mean = 0.5.
-        assert!((result.total_abs_diff - 2.0).abs() < 0.01, "total: {}", result.total_abs_diff,);
-        assert!((result.max_abs_diff - 0.5).abs() < 0.01, "max: {}", result.max_abs_diff,);
-        assert!((result.mean_abs_diff - 0.5).abs() < 0.01, "mean: {}", result.mean_abs_diff,);
+        assert!((result.total_abs_diff - 2.0).abs() < 0.01, "total: {}", result.total_abs_diff);
+        assert!((result.max_abs_diff - 0.5).abs() < 0.01, "max: {}", result.max_abs_diff);
+        assert!((result.mean_abs_diff - 0.5).abs() < 0.01, "mean: {}", result.mean_abs_diff);
     }
 
     #[test]

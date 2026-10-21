@@ -116,7 +116,7 @@ promoted only the clean lints from staged policy into `[workspace.lints.clippy]`
 
 ### Lint ratchets (PR 5)
 
-The following staged lints are active after the PR 5 measurement pass:
+The following staged lints are active after the PR 5 measurement pass and subsequent focused cleanups:
 
 | Lint | Level | Reason |
 |---|---|---|
@@ -125,6 +125,7 @@ The following staged lints are active after the PR 5 measurement pass:
 | `decimal_bitwise_operands` | `warn` | Make bit masks visually inspectable (also staged at 1.94) |
 | `manual_take` | `warn` | Use standard ownership helper instead of local reimplementation |
 | `needless_type_cast` | `warn` | Avoid stale numeric type drift (also staged at 1.94) |
+| `unnecessary_trailing_comma` | `warn` | Redundant format-macro tail commas were removed in a focused source cleanup. |
 
 The following lints remain deferred with policy debt or a toolchain note:
 
@@ -132,7 +133,6 @@ The following lints remain deferred with policy debt or a toolchain note:
 |---|---|---|
 | `manual_checked_ops` | deferred | Measured findings in kernel arithmetic and model config paths need invariant-preserving cleanup. |
 | `duration_suboptimal_units` | deferred | Measured duration-unit findings need workspace-wide cleanup rather than partial activation. |
-| `unnecessary_trailing_comma` | deferred | Measured kernel formatting findings are mechanical but noisy and belong in their own cleanup. |
 | `manual_pop_if` | deferred | The installed Rust 1.95 Clippy reports this lint as unknown, so it remains staged until the toolchain exposes it. |
 
 Because CI Core uses `RUSTFLAGS = "-Dwarnings"` and Clippy with

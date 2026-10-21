@@ -374,7 +374,7 @@ impl FusedActivation {
         }
         if !bias.is_empty() && bias.len() < out_features {
             return Err(KernelError::InvalidArguments {
-                reason: format!("bias length {} < out_features {}", bias.len(), out_features,),
+                reason: format!("bias length {} < out_features {}", bias.len(), out_features),
             }
             .into());
         }

@@ -284,7 +284,7 @@ pub fn embedding_lookup_cpu(
     }
     if token_ids.len() < config.seq_len {
         return Err(KernelError::InvalidArguments {
-            reason: format!("token_ids length {} < seq_len ({})", token_ids.len(), config.seq_len,),
+            reason: format!("token_ids length {} < seq_len ({})", token_ids.len(), config.seq_len),
         }
         .into());
     }
