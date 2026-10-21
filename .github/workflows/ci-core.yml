@@ -48,6 +48,7 @@ on:
       # Workflow files - core and related CI workflows
       - '.github/workflows/ci-core.yml'
       - '.github/workflows/pr-plan.yml'
+      - '.github/workflows/pr-gate.yml'
       - '.github/workflows/coverage.yml'
       - '.github/workflows/docs-automation.yml'
       - 'scripts/ci_rustdoc_plan.py'
@@ -87,6 +88,7 @@ on:
       - 'Makefile'
       - '.github/workflows/ci-core.yml'
       - '.github/workflows/pr-plan.yml'
+      - '.github/workflows/pr-gate.yml'
       - '.github/workflows/docs-automation.yml'
       - 'scripts/ci_rustdoc_plan.py'
       - 'scripts/test_ci_*_plan.py'
