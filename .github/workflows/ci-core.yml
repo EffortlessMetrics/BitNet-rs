@@ -381,6 +381,7 @@ jobs:
               "bitnet-quantization",
               "bitnet-kernels",
               "bitnet-inference",
+              "bitnet-server",
               "bitnet-bdd-grid-core",
               "bitnet-bdd-grid",
               "bitnet-feature-contract",

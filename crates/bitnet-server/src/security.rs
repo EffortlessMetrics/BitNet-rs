@@ -487,21 +487,13 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Respon
 /// Request sanitization middleware
 pub async fn request_sanitization_middleware(
     State(validator): State<Arc<SecurityValidator>>,
-    request: Request,
+    mut request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
     // For inference requests, we'll validate in the handler
     // This middleware focuses on general request sanitization
 
-    // Check request size
-    if let Some(content_length) = request.headers().get("content-length")
-        && let Ok(length_str) = content_length.to_str()
-        && let Ok(length) = length_str.parse::<usize>()
-        && length > validator.config.max_prompt_length * 2
-    {
-        warn!(content_length = length, "Request too large");
-        return Err(StatusCode::PAYLOAD_TOO_LARGE);
-    }
+    apply_request_body_limit(&mut request, validator.config.max_prompt_length)?;
 
     // Check Content-Type for JSON endpoints
     let content_type = request.headers().get("content-type").and_then(|ct| ct.to_str().ok());
@@ -518,9 +510,56 @@ pub async fn request_sanitization_middleware(
     Ok(next.run(request).await)
 }
 
+/// Enforce the configured byte limit when Json/Bytes-based extractors read the
+/// request, including when Content-Length is absent or understates its size.
+/// HTTP framing remains the transport's responsibility; chunked bodies are
+/// allowed within the same limit as bodies with a declared length.
+pub(crate) fn apply_request_body_limit(
+    request: &mut Request,
+    max_prompt_length: usize,
+) -> Result<(), StatusCode> {
+    let limit = max_prompt_length.saturating_mul(2);
+    // Retain the early rejection for a declared oversized body.
+    if let Some(content_length) = request.headers().get("content-length")
+        && let Ok(length_str) = content_length.to_str()
+        && let Ok(length) = length_str.parse::<usize>()
+        && length > limit
+    {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    axum::extract::DefaultBodyLimit::max(limit).apply(request);
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn request_body_limit_also_applies_to_sanitization_middleware() -> anyhow::Result<()> {
+        use axum::{Json, body::Body, middleware, routing::post};
+        use tower::ServiceExt;
+
+        let validator = Arc::new(SecurityValidator::new(SecurityConfig {
+            max_prompt_length: 4,
+            ..Default::default()
+        })?);
+        let app = axum::Router::new()
+            .route("/", post(|Json(value): Json<serde_json::Value>| async { Json(value) }))
+            .layer(middleware::from_fn_with_state(validator, request_sanitization_middleware));
+        for (body, expected) in
+            [("[1,2,3] ", StatusCode::OK), ("[1,2,3]  ", StatusCode::PAYLOAD_TOO_LARGE)]
+        {
+            let request = Request::builder()
+                .method("POST")
+                .uri("/")
+                .header("content-type", "application/json")
+                .body(Body::from(body))?;
+            let response = app.clone().oneshot(request).await?;
+            assert_eq!(response.status(), expected);
+        }
+        Ok(())
+    }
 
     #[test]
     fn test_prompt_validation() {
