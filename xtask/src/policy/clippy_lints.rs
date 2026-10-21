@@ -647,14 +647,14 @@ status = "active"
     }
 
     #[test]
-    fn reports_active_and_deferred_lints() {
+    fn reports_active_and_deferred_lints() -> Result<()> {
         let dir = std::env::temp_dir().join(format!(
             "clippy-lints-{}-{}",
             std::process::id(),
             chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
         ));
         fs::create_dir_all(&dir).unwrap();
-        write_pinned_toolchain(&dir).unwrap();
+        write_pinned_toolchain(&dir)?;
         let lints = dir.join("clippy-lints.toml");
         let debt = dir.join("clippy-debt.toml");
         let manifest = dir.join("Cargo.toml");
@@ -710,17 +710,18 @@ manual_checked_ops = "allow"
         assert_eq!(report.active.len(), 1);
         assert_eq!(report.deferred.len(), 1);
         assert!(report.errors.is_empty(), "{:?}", report.errors);
+        Ok(())
     }
 
     #[test]
-    fn due_lints_without_activation_or_debt_are_errors() {
+    fn due_lints_without_activation_or_debt_are_errors() -> Result<()> {
         let dir = std::env::temp_dir().join(format!(
             "clippy-lints-errors-{}-{}",
             std::process::id(),
             chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
         ));
         fs::create_dir_all(&dir).unwrap();
-        write_pinned_toolchain(&dir).unwrap();
+        write_pinned_toolchain(&dir)?;
         let lints = dir.join("clippy-lints.toml");
         let debt = dir.join("clippy-debt.toml");
         let manifest = dir.join("Cargo.toml");
@@ -791,5 +792,6 @@ manual_take = "deny"
             "{:?}",
             report.errors
         );
+        Ok(())
     }
 }
