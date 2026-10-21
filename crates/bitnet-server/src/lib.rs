@@ -711,11 +711,11 @@ impl BitNetServer {
         // Start rate limiter cleanup
         let concurrency_manager = Arc::clone(&self.concurrency_manager);
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(300)); // 5 minutes
+            let mut interval = tokio::time::interval(Duration::from_mins(5)); // 5 minutes
             loop {
                 interval.tick().await;
                 // Cleanup rate limiters inactive for 1 hour
-                concurrency_manager.cleanup_rate_limiters(Duration::from_secs(3600)).await;
+                concurrency_manager.cleanup_rate_limiters(Duration::from_hours(1)).await;
             }
         });
 

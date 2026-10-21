@@ -431,7 +431,7 @@ pub fn configure_cors(config: &SecurityConfig) -> tower_http::cors::CorsLayer {
         .allow_origin(allow_origin)
         .allow_methods(Any)
         .allow_headers(Any)
-        .max_age(std::time::Duration::from_secs(3600))
+        .max_age(std::time::Duration::from_hours(1))
 }
 
 /// Input validation helper for JSON payloads

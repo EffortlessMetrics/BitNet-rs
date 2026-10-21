@@ -372,7 +372,7 @@ fn test_given_latency_histogram_when_values_recorded_then_percentiles_available(
 #[test]
 fn test_given_throughput_tracker_when_tokens_recorded_then_tps_positive() {
     // Given a throughput tracker
-    let mut tracker = ThroughputTracker::new(Duration::from_secs(60));
+    let mut tracker = ThroughputTracker::new(Duration::from_mins(1));
 
     // When recording token generation
     tracker.record(10);

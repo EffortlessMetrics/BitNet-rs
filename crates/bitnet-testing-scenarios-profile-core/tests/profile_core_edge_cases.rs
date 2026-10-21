@@ -34,8 +34,8 @@ fn configuration_context_all_fields_settable() {
             max_disk_gb: Some(100),
         }),
         time_constraints: Some(TimeConstraints {
-            max_total_duration: Some(Duration::from_secs(3600)),
-            max_test_duration: Some(Duration::from_secs(600)),
+            max_total_duration: Some(Duration::from_hours(1)),
+            max_test_duration: Some(Duration::from_mins(10)),
         }),
         quality_requirements: Some(QualityRequirements {
             min_coverage: Some(0.9),
@@ -59,7 +59,7 @@ fn configuration_context_all_fields_settable() {
 #[test]
 fn test_config_profile_default_timeout() {
     let cfg = TestConfigProfile::default();
-    assert_eq!(cfg.test_timeout, Duration::from_secs(300));
+    assert_eq!(cfg.test_timeout, Duration::from_mins(5));
 }
 
 #[test]
@@ -131,13 +131,13 @@ fn fixture_profile_default_cache_size() {
 #[test]
 fn fixture_profile_default_cleanup_interval() {
     let fp = FixtureProfile::default();
-    assert_eq!(fp.cleanup_interval, Duration::from_secs(24 * 60 * 60)); // 1 day
+    assert_eq!(fp.cleanup_interval, Duration::from_hours(24)); // 1 day
 }
 
 #[test]
 fn fixture_profile_default_download_timeout() {
     let fp = FixtureProfile::default();
-    assert_eq!(fp.download_timeout, Duration::from_secs(300));
+    assert_eq!(fp.download_timeout, Duration::from_mins(5));
 }
 
 #[test]

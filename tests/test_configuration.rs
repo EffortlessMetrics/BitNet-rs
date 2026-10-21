@@ -361,7 +361,7 @@ impl TestCase for EnvironmentOverrideTest {
             .map_err(|e| TestError::execution(format!("Failed to load env config: {}", e)))?;
         assert_eq!(
             config.test_timeout,
-            Duration::from_secs(120),
+            Duration::from_mins(2),
             "Environment override for timeout failed"
         );
 
@@ -484,7 +484,7 @@ impl TestCase for ConfigurationValidationTest {
 
         // Test invalid timeout (too high)
         let mut invalid_config = TestConfig::default();
-        invalid_config.test_timeout = Duration::from_secs(7200); // 2 hours
+        invalid_config.test_timeout = Duration::from_hours(2); // 2 hours
         assert!(
             validate_config(&invalid_config).is_err(),
             "Excessive timeout should fail validation"
@@ -793,7 +793,7 @@ impl TestCase for FeatureFlagCombinationTest {
         let mut performance_config = TestConfig::default();
         performance_config.reporting.generate_performance = true;
         performance_config.max_parallel_tests = num_cpus::get();
-        performance_config.test_timeout = Duration::from_secs(60);
+        performance_config.test_timeout = Duration::from_mins(1);
         validate_config(&performance_config).map_err(|e| {
             TestError::assertion(format!("Performance config validation failed: {}", e))
         })?;
@@ -815,8 +815,8 @@ impl TestCase for FeatureFlagCombinationTest {
         let mut fixture_config = TestConfig::default();
         fixture_config.fixtures.auto_download = true;
         fixture_config.fixtures.max_cache_size = 5 * BYTES_PER_MB * 1024; // 5GB
-        fixture_config.fixtures.cleanup_interval = Duration::from_secs(12 * 60 * 60); // 12 hours
-        fixture_config.fixtures.download_timeout = Duration::from_secs(600); // 10 minutes
+        fixture_config.fixtures.cleanup_interval = Duration::from_hours(12); // 12 hours
+        fixture_config.fixtures.download_timeout = Duration::from_mins(10); // 10 minutes
         fixture_config.fixtures.custom_fixtures.push(CustomFixture {
             name: "large-model".to_string(),
             url: "https://example.com/large.bin".to_string(),
@@ -966,7 +966,7 @@ impl TestCase for PlatformSpecificConfigurationTest {
         if is_ci {
             let mut ci_optimized_config = base_config.clone();
             ci_optimized_config.max_parallel_tests = std::cmp::min(num_cpus::get(), 4); // Conservative in CI
-            ci_optimized_config.test_timeout = Duration::from_secs(300); // Longer timeout in CI
+            ci_optimized_config.test_timeout = Duration::from_mins(5); // Longer timeout in CI
             ci_optimized_config.reporting.generate_coverage = true;
             ci_optimized_config.reporting.formats.push(ReportFormat::Junit);
             validate_config(&ci_optimized_config).map_err(|e| {
@@ -982,7 +982,7 @@ impl TestCase for PlatformSpecificConfigurationTest {
             let mut container_config = base_config.clone();
             container_config.max_parallel_tests = std::cmp::min(num_cpus::get(), 2); // Very conservative in containers
             container_config.fixtures.max_cache_size = BYTES_PER_MB * 1024; // 1GB in containers
-            container_config.test_timeout = Duration::from_secs(600); // Longer timeout in containers
+            container_config.test_timeout = Duration::from_mins(10); // Longer timeout in containers
             validate_config(&container_config).map_err(|e| {
                 TestError::assertion(format!("Container config validation failed: {}", e))
             })?;
@@ -1056,7 +1056,7 @@ impl TestCase for ConfigurationMigrationTest {
         );
         assert_eq!(
             migrated_config.test_timeout,
-            Duration::from_secs(300),
+            Duration::from_mins(5),
             "Legacy timeout should be migrated"
         );
         assert_eq!(
@@ -1135,7 +1135,7 @@ impl TestCase for ConfigurationMigrationTest {
         );
         assert_eq!(
             future_config.test_timeout,
-            Duration::from_secs(600),
+            Duration::from_mins(10),
             "Future config timeout should be parsed"
         );
         assert_eq!(future_config.log_level, "debug", "Future config log level should be parsed");
@@ -1173,15 +1173,15 @@ impl TestCase for ConfigurationCompatibilityTest {
         // Test v0.1.0 configuration format
         let v0_1_0_config = TestConfig {
             max_parallel_tests: 4,
-            test_timeout: Duration::from_secs(300),
+            test_timeout: Duration::from_mins(5),
             cache_dir: PathBuf::from("tests/cache"),
             log_level: "info".to_string(),
             coverage_threshold: 0.9,
             fixtures: FixtureConfig {
                 auto_download: true,
                 max_cache_size: 10 * BYTES_PER_MB * 1024,
-                cleanup_interval: Duration::from_secs(24 * 60 * 60),
-                download_timeout: Duration::from_secs(300),
+                cleanup_interval: Duration::from_hours(24),
+                download_timeout: Duration::from_mins(5),
                 base_url: None,
                 custom_fixtures: vec![],
             },

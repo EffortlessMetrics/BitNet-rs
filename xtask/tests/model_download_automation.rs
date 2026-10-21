@@ -59,7 +59,7 @@ impl XtaskTestConfig {
             cache_dir: env::var("BITNET_MODEL_CACHE")
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| std::env::temp_dir().join("bitnet_test_cache")),
-            timeout: Duration::from_secs(300), // 5 minutes
+            timeout: Duration::from_mins(5), // 5 minutes
             enable_network_tests: !env::var("BITNET_NO_NETWORK").unwrap_or_default().eq("1"),
             enable_cpp_tests: env::var("BITNET_CPP_DIR").is_ok(),
         }

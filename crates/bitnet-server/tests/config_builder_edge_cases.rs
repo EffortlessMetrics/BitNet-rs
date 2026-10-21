@@ -110,8 +110,8 @@ fn server_settings_defaults() {
     assert_eq!(settings.host, "0.0.0.0");
     assert_eq!(settings.port, 8080);
     assert!(settings.workers.is_none());
-    assert_eq!(settings.keep_alive, std::time::Duration::from_secs(60));
-    assert_eq!(settings.request_timeout, std::time::Duration::from_secs(300));
+    assert_eq!(settings.keep_alive, std::time::Duration::from_mins(1));
+    assert_eq!(settings.request_timeout, std::time::Duration::from_mins(5));
     assert_eq!(settings.graceful_shutdown_timeout, std::time::Duration::from_secs(30));
     assert!(settings.default_model_path.is_none());
     assert!(settings.default_tokenizer_path.is_none());

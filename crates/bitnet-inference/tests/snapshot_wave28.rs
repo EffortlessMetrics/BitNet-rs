@@ -85,7 +85,7 @@ fn snapshot_generation_budget_default() {
 #[test]
 fn snapshot_generation_budget_with_limits() {
     let budget = GenerationBudget::new(1024)
-        .with_time_limit(std::time::Duration::from_secs(60))
+        .with_time_limit(std::time::Duration::from_mins(1))
         .with_memory_limit(1024 * 1024 * 512);
     insta::assert_debug_snapshot!(budget);
 }

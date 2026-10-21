@@ -409,7 +409,7 @@ fn metrics_collector_record_model_load_zero_duration() {
 fn metrics_collector_record_model_load_large_duration() {
     let config = MonitoringConfig::default();
     let collector = MetricsCollector::new(&config).unwrap();
-    collector.record_model_load_time(Duration::from_secs(86400 * 365));
+    collector.record_model_load_time(Duration::from_hours(8760));
 }
 
 // ---------------------------------------------------------------------------

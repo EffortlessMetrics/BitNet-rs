@@ -53,7 +53,7 @@ impl Default for ServerConfig {
             cors_origins: vec!["*".into()],
             max_connections: 1024,
             max_body_bytes: 4 * 1024 * 1024,
-            request_timeout: Duration::from_secs(60),
+            request_timeout: Duration::from_mins(1),
         }
     }
 }

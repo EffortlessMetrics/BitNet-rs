@@ -1153,7 +1153,7 @@ mod tests {
             .submit(
                 BatchRequest::new(1, Priority::NORMAL, 8)
                     .with_arrival(base)
-                    .with_deadline(base + Duration::from_secs(60)),
+                    .with_deadline(base + Duration::from_mins(1)),
             )
             .unwrap();
         sched

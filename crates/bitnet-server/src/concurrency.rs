@@ -31,7 +31,7 @@ impl Default for ConcurrencyConfig {
             max_concurrent_requests: 100,
             max_requests_per_second: 50,
             max_requests_per_minute: 1000,
-            rate_limit_window: Duration::from_secs(60),
+            rate_limit_window: Duration::from_mins(1),
             backpressure_threshold: 0.8, // 80% of max concurrent requests
             circuit_breaker_enabled: true,
             circuit_breaker_failure_threshold: 10,
@@ -569,7 +569,7 @@ mod tests {
         assert_eq!(stats.per_ip_limiter_count, 1);
 
         // Cleanup with very long duration - should NOT remove it (it was just used)
-        manager.cleanup_rate_limiters(Duration::from_secs(3600)).await;
+        manager.cleanup_rate_limiters(Duration::from_hours(1)).await;
         let stats = manager.get_stats().await;
         assert_eq!(stats.per_ip_limiter_count, 1);
 

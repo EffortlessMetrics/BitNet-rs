@@ -351,7 +351,7 @@ mod tests {
 
     #[test]
     fn test_time_remaining_some() {
-        let budget = GenerationBudget::new(100).with_time_limit(Duration::from_secs(60));
+        let budget = GenerationBudget::new(100).with_time_limit(Duration::from_mins(1));
         let tracker = BudgetTracker::new(budget);
         let remaining = tracker.time_remaining().unwrap();
         assert!(remaining.as_secs() >= 59);

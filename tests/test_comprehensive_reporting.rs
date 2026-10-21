@@ -228,12 +228,12 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                 TestResult {
                     test_name: "test_performance_regression".to_string(),
                     status: TestStatus::Timeout,
-                    duration: Duration::from_secs(300), // 5 minutes timeout
+                    duration: Duration::from_mins(5), // 5 minutes timeout
                     metrics: TestMetrics {
                         memory_peak: Some(4096 * BYTES_PER_MB), // 4 GB
                         memory_average: Some(3072 * BYTES_PER_MB), // 3 GB
                         cpu_time: Some(Duration::from_secs(295)),
-                        wall_time: Duration::from_secs(300),
+                        wall_time: Duration::from_mins(5),
                         custom_metrics: {
                             let mut metrics = HashMap::new();
                             metrics.insert("partial_progress".to_string(), 0.73);
@@ -246,7 +246,7 @@ fn create_comprehensive_test_data() -> Vec<TestSuiteResult> {
                     error: Some("Test exceeded maximum execution time of 300 seconds. Performance regression detected: current implementation is 3.2x slower than baseline.".to_string()),
                     stack_trace: Some("at test_performance_regression:89\n  at benchmark_runner::execute:234\n  at timeout_handler::abort:12".to_string()),
                     artifacts: Vec::new(),
-                    start_time: std::time::SystemTime::now() - Duration::from_secs(300),
+                    start_time: std::time::SystemTime::now() - Duration::from_mins(5),
                     end_time: std::time::SystemTime::now(),
                     metadata: {
                         let mut metadata = HashMap::new();

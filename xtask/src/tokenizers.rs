@@ -166,7 +166,7 @@ fn download_from_source(source: TokenizerSource, dest: &Path, verbose: bool) -> 
 /// Single download attempt
 fn download_once(source: TokenizerSource, dest: &Path, verbose: bool) -> Result<()> {
     let client = Client::builder()
-        .timeout(Duration::from_secs(300)) // 5 minute timeout
+        .timeout(Duration::from_mins(5)) // 5 minute timeout
         .user_agent("bitnet-xtask/0.1 (+https://github.com/microsoft/BitNet-rs)")
         .build()?;
 

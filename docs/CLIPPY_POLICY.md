@@ -124,6 +124,7 @@ The following staged lints are active after the PR 5 measurement pass:
 | `manual_ilog2` | `warn` | Prefer standard integer log helper (also staged at 1.94) |
 | `decimal_bitwise_operands` | `warn` | Make bit masks visually inspectable (also staged at 1.94) |
 | `manual_take` | `warn` | Use standard ownership helper instead of local reimplementation |
+| `duration_suboptimal_units` | `warn` | Express exactly divisible duration constants in the largest stable unit without changing timeout values. |
 | `manual_checked_ops` | `warn` | Preserve unsigned zero fallbacks with checked division; keep potentially overflowing numerator work conditional on a nonzero divisor. |
 | `needless_type_cast` | `warn` | Avoid stale numeric type drift (also staged at 1.94) |
 
@@ -131,7 +132,6 @@ The following lints remain deferred with policy debt or a toolchain note:
 
 | Lint | Status | Reason |
 |---|---|---|
-| `duration_suboptimal_units` | deferred | Measured duration-unit findings need workspace-wide cleanup rather than partial activation. |
 | `unnecessary_trailing_comma` | deferred | Measured kernel formatting findings are mechanical but noisy and belong in their own cleanup. |
 | `manual_pop_if` | availability-gated | The pinned compiler does not provide this lint. A live Clippy inventory requires it absent from Cargo today and active at `warn` when it becomes available. |
 

@@ -72,7 +72,7 @@ async fn test_high_concurrency_quantization_load() -> Result<()> {
         concurrent_requests: 120,
         requests_per_batch: 8,
         batch_timeout: Duration::from_millis(50),
-        max_test_duration: Duration::from_secs(60),
+        max_test_duration: Duration::from_mins(1),
         device_distribution: DeviceDistribution {
             cpu_percentage: 0.4,
             gpu_percentage: 0.4,
@@ -141,7 +141,7 @@ async fn test_sustained_load_memory_stability() -> Result<()> {
         concurrent_requests: 80,
         requests_per_batch: 6,
         batch_timeout: Duration::from_millis(75),
-        max_test_duration: Duration::from_secs(120), // Extended duration
+        max_test_duration: Duration::from_mins(2), // Extended duration
         device_distribution: DeviceDistribution {
             cpu_percentage: 0.5,
             gpu_percentage: 0.5,
@@ -259,7 +259,7 @@ async fn test_device_fallback_under_load() -> Result<()> {
         concurrent_requests: 150, // Higher load to trigger fallbacks
         requests_per_batch: 12,
         batch_timeout: Duration::from_millis(30),
-        max_test_duration: Duration::from_secs(60),
+        max_test_duration: Duration::from_mins(1),
         device_distribution: DeviceDistribution {
             cpu_percentage: 0.1,
             gpu_percentage: 0.8, // Force GPU preference
