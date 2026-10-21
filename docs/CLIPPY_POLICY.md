@@ -133,7 +133,15 @@ The following lints remain deferred with policy debt or a toolchain note:
 | `manual_checked_ops` | deferred | Measured findings in kernel arithmetic and model config paths need invariant-preserving cleanup. |
 | `duration_suboptimal_units` | deferred | Measured duration-unit findings need workspace-wide cleanup rather than partial activation. |
 | `unnecessary_trailing_comma` | deferred | Measured kernel formatting findings are mechanical but noisy and belong in their own cleanup. |
-| `manual_pop_if` | deferred | The installed Rust 1.95 Clippy reports this lint as unknown, so it remains staged until the toolchain exposes it. |
+| `manual_pop_if` | availability-gated | The pinned compiler does not provide this lint. A live Clippy inventory requires it absent from Cargo today and active at `warn` when it becomes available. |
+
+`check-lint-policy` records the compiler's verbose version and individual lint
+inventory from `clippy-driver -W help`. The compiler release must match the
+policy MSRV. An unavailable lint needs an explicit `activate_when_available`
+contract, cannot be declared even at `allow`, and cannot carry source-code debt.
+An empty or failed inventory is an error. When the compiler exposes the lint,
+the usual activation and debt checks apply. Policy CI tests both absence and
+later availability, including rejection of missing or under-level activation.
 
 Because CI Core uses `RUSTFLAGS = "-Dwarnings"` and Clippy with
 `-D warnings`, warning-level Clippy lints can still behave as hard failures in

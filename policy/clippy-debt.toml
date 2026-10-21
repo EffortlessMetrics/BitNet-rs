@@ -34,14 +34,6 @@ expires = "2026-07-15"
 status = "active"
 
 [[debt]]
-lint = "clippy::manual_pop_if"
-path = "workspace"
-owner = "clippy-policy"
-reason = "The installed Rust 1.95 Clippy reports this lint as unknown; keep it staged until the toolchain exposes the lint."
-expires = "2026-07-15"
-status = "active"
-
-[[debt]]
 lint = "clippy::duration_suboptimal_units"
 path = "crates/bitnet-kernels/**"
 owner = "kernels"
