@@ -5,7 +5,8 @@ name: CI (Core)
 # Triggers include Rust inputs plus docs/policy/receipt surfaces that can use
 # the no-Rust fast path. Repository rules may still expect this workflow's
 # contexts before PR merges, so the workflow emits truthful success signals
-# without compiling Rust when no Rust inputs changed.
+# without building runtime crates when no Rust inputs changed. Documentation
+# has its own risk route and owns workspace CPU Rustdoc for selected changes.
 #
 # CI cost / verification policy: see docs/ci/cost-and-verification-policy.md
 # (rationale for the well-below-$1-per-PR target and the verification ladder).
@@ -45,6 +46,12 @@ on:
       - '.github/workflows/ci-core.yml'
       - '.github/workflows/pr-plan.yml'
       - '.github/workflows/coverage.yml'
+      - '.github/workflows/docs-automation.yml'
+      - 'scripts/ci_rustdoc_plan.py'
+      - 'scripts/test_ci_rustdoc_plan.py'
+      - 'scripts/docs_automation.sh'
+      - 'src/**'
+      - '.cargo/**'
 
       # CI configuration - codecov config affects verification signal
       - 'codecov.yml'
@@ -74,6 +81,12 @@ on:
       - 'Makefile'
       - '.github/workflows/ci-core.yml'
       - '.github/workflows/pr-plan.yml'
+      - '.github/workflows/docs-automation.yml'
+      - 'scripts/ci_rustdoc_plan.py'
+      - 'scripts/test_ci_rustdoc_plan.py'
+      - 'scripts/docs_automation.sh'
+      - 'src/**'
+      - '.cargo/**'
   workflow_dispatch:
 
 concurrency:
@@ -106,7 +119,14 @@ jobs:
       policy_docs_only: ${{ steps.classify.outputs.policy_docs_only }}
       fast_path_checks_required: ${{ steps.classify.outputs.fast_path_checks_required }}
       changed_files: ${{ steps.classify.outputs.changed_files }}
+      rustdoc_required: ${{ steps.classify.outputs.rustdoc_required }}
     steps:
+      - name: Checkout routing contract
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4
+
+      - name: Test Rustdoc routing
+        run: python3 -m unittest discover -s scripts -p test_ci_rustdoc_plan.py
+
       - name: Classify no-Rust PR shapes
         id: classify
         env:
@@ -115,6 +135,7 @@ jobs:
           REPO: ${{ github.event.repository.name }}
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
           set -euo pipefail
 
@@ -143,7 +164,7 @@ jobs:
             while IFS= read -r path; do
               [ -n "$path" ] || continue
               case "$path" in
-                crates/*|crossval/*|tests/*|tools/bitnet-task/*|xtask/*|fuzz/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|Makefile)
+                crates/*|crossval/*|tests/*|tools/bitnet-task/*|xtask/*|fuzz/*|src/*|.cargo/*|Cargo.toml|Cargo.lock|rust-toolchain.toml|Makefile)
                   no_rust_inputs=false
                   ;;
               esac
@@ -206,6 +227,10 @@ jobs:
             fi
           fi
 
+          rustdoc_required=$(python3 scripts/ci_rustdoc_plan.py \
+            --event "$EVENT_NAME" --changed-files "$changed_files" --labels-json "$LABELS_JSON")
+          echo "rustdoc_required=${rustdoc_required}" >> "$GITHUB_OUTPUT"
+          echo "rustdoc_required=${rustdoc_required}"
           echo "tracker_only=${tracker_only}" >> "$GITHUB_OUTPUT"
           echo "no_rust_inputs=${no_rust_inputs}" >> "$GITHUB_OUTPUT"
           echo "docs_only=${docs_only}" >> "$GITHUB_OUTPUT"
@@ -740,29 +765,29 @@ jobs:
     needs: [classify-changes]
     steps:
       - name: No-Rust fast path
-        if: needs.classify-changes.outputs.no_rust_inputs == 'true'
+        if: needs.classify-changes.outputs.rustdoc_required != 'true'
         run: |
-          echo "No Rust inputs changed: skipping rustdoc."
+          echo "Rustdoc route unselected: leaf Rust, policy or tracking change; workspace proof remains selected for documentation/API risk and main/manual events."
 
       - name: Checkout code
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.rustdoc_required == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install Rust toolchain
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.rustdoc_required == 'true'
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.95.0"
 
       - name: Cache Rust dependencies
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.rustdoc_required == 'true'
         uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0  # v2
         with:
           shared-key: ci-core-docs
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build documentation
-        if: needs.classify-changes.outputs.no_rust_inputs != 'true'
+        if: needs.classify-changes.outputs.rustdoc_required == 'true'
         env:
           RUSTDOCFLAGS: -A warnings
         run: cargo doc --locked --no-deps --workspace --no-default-features --features cpu

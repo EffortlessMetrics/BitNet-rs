@@ -173,7 +173,11 @@ enum Task {
     /// Equivalent of scripts/start.sh
     Start,
     /// Equivalent of scripts/docs_automation.sh
-    DocsAutomation,
+    DocsAutomation {
+        /// CI Core owns workspace CPU Rustdoc; retain local Rustdoc by default.
+        #[arg(long)]
+        skip_rustdoc: bool,
+    },
     /// Equivalent of scripts/docs-test.sh
     DocsTest,
     /// Equivalent of scripts/vendor_ggml_quants.sh
@@ -321,7 +325,7 @@ fn main() -> Result<()> {
         Task::TestIq2sBackend => cmd_test_iq2s_backend(&root),
         Task::SmokeInference { model, tokenizer } => cmd_smoke_inference(&root, &model, &tokenizer),
         Task::Start => cmd_start(&root),
-        Task::DocsAutomation => cmd_docs_automation(&root),
+        Task::DocsAutomation { skip_rustdoc } => cmd_docs_automation(&root, skip_rustdoc),
         Task::DocsTest => cmd_docs_test(&root),
         Task::VendorGgmlQuants { commit } => cmd_vendor_ggml_quants(&root, commit),
         Task::GeneratePolicy { model, output } => cmd_generate_policy(&root, &model, &output),

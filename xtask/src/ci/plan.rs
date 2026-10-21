@@ -248,7 +248,8 @@ fn lane(id: &str, name: &str, lem: u64, reason: &str, blocking: bool) -> Lane {
 fn lane_catalog() -> Vec<SkippedLane> {
     vec![
         skipped_lane("pr-plan", "PR Plan", false),
-        skipped_lane("ci-core-build-test", "CI (Core) - build/test/clippy/docs", true),
+        skipped_lane("ci-core-build-test", "CI (Core) - build/test/clippy", true),
+        skipped_lane("rustdoc-workspace", "Workspace CPU Rustdoc", true),
         skipped_lane("feature-matrix-pr", "Feature Matrix (PR smoke)", true),
         skipped_lane("feature-matrix-full-cli", "Feature Matrix (full-cli PR smoke)", true),
         skipped_lane("feature-matrix-full", "Feature Matrix (full)", false),
@@ -320,7 +321,7 @@ fn pick_lanes(
     if touched_get("rust_core") {
         lanes.push(lane(
             "ci-core-build-test",
-            "CI (Core) - build/test/clippy/docs",
+            "CI (Core) - build/test/clippy",
             22,
             "rust_core changed",
             true,
@@ -328,6 +329,15 @@ fn pick_lanes(
     }
     if policy_lane_changed(changed) {
         lanes.push(lane("policy", "Policy", 6, "policy-relevant paths changed", true));
+    }
+    if (any_changed && rustdoc_changed(changed)) || has("full-ci") {
+        lanes.push(lane(
+            "rustdoc-workspace",
+            "Workspace CPU Rustdoc",
+            8,
+            "documentation/public-API/manifest risk or full-ci label",
+            true,
+        ));
     }
     if has("bdd") || has("grid") || has("full-ci") {
         lanes.push(lane("bdd-grid-check", "BDD Grid Check", 4, "bdd/grid/full-ci label", true));
@@ -532,6 +542,24 @@ fn public_api_changed(files: &[String]) -> bool {
             || path == "MIGRATION.md"
             || path.starts_with("docs/release/")
     })
+}
+
+fn rustdoc_changed(files: &[String]) -> bool {
+    files.is_empty()
+        || manifest_or_toolchain_changed(files)
+        || public_api_changed(files)
+        || files.iter().any(|path| {
+            (!is_tracker_path(path) && (path.starts_with("docs/") || path.ends_with(".md")))
+                || matches!(
+                    path.as_str(),
+                    "src/lib.rs"
+                        | ".github/workflows/ci-core.yml"
+                        | ".github/workflows/docs-automation.yml"
+                        | "scripts/ci_rustdoc_plan.py"
+                        | "scripts/test_ci_rustdoc_plan.py"
+                        | "scripts/docs_automation.sh"
+                )
+        })
 }
 
 fn macos_changed(files: &[String]) -> bool {
@@ -1243,11 +1271,11 @@ mod tests {
     fn docs_only_posture() {
         let plan = build_plan(&s(&["docs/foo.md", "README.md"]), &[]);
         assert_eq!(plan.posture, "docs-only");
-        assert_eq!(plan.estimated_lem, 9); // route jobs plus always-on guards
+        assert_eq!(plan.estimated_lem, 17); // route jobs, guards and selected workspace Rustdoc
         assert!(plan.classification.no_rust_inputs);
         assert!(plan.classification.docs_only);
         assert!(!plan.classification.tracker_only);
-        assert_eq!(plan.budget.posture, "pennies");
+        assert_eq!(plan.budget.posture, "default");
     }
 
     #[test]
@@ -1268,6 +1296,39 @@ mod tests {
         assert!(names.iter().any(|n| n.contains("Compatibility (MSRV)")));
         assert!(plan.classification.manifest_or_toolchain_changed);
         assert!(plan.classification.public_api_changed);
+    }
+
+    #[test]
+    fn rustdoc_plan_selects_owned_risk_and_skips_leaf_or_tracking_changes() {
+        for path in [
+            "docs/api.md",
+            "README.md",
+            "Cargo.lock",
+            "crates/x/src/lib.rs",
+            "crates/x/src/api/types.rs",
+            "src/lib.rs",
+            "scripts/ci_rustdoc_plan.py",
+        ] {
+            let plan = build_plan(&s(&[path]), &[]);
+            assert!(
+                plan.selected_lanes.iter().any(|lane| lane.id == "rustdoc-workspace"),
+                "{path}"
+            );
+        }
+        for path in [
+            "crates/x/src/leaf.rs",
+            "docs/tracking/state.md",
+            ".codex/campaigns/state.md",
+            "policy/clippy-debt.toml",
+        ] {
+            let plan = build_plan(&s(&[path]), &[]);
+            assert!(
+                !plan.selected_lanes.iter().any(|lane| lane.id == "rustdoc-workspace"),
+                "{path}"
+            );
+        }
+        let forced = build_plan(&s(&["crates/x/src/leaf.rs"]), &s(&["full-ci"]));
+        assert!(forced.selected_lanes.iter().any(|lane| lane.id == "rustdoc-workspace"));
     }
 
     #[test]
