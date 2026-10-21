@@ -263,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_gguf_q8_sidecar_descriptor_is_metadata_only_and_inert() {
+    fn dense_gguf_q8_sidecar_descriptor_is_metadata_only_and_inert() -> Result<()> {
         let info = q8_info("blk.0.attn_q.weight", vec![2, 64], 136);
         let mut data = vec![0u8; 136];
         data.extend_from_slice(&[1, 2, 3, 4]);
@@ -271,8 +271,9 @@ mod tests {
         let descriptor = match DenseGgufQ8SidecarDescriptor::from_tensor(&info, &data) {
             Ok(Some(descriptor)) => descriptor,
             result => {
-                assert!(false, "expected sidecar descriptor, got {result:?}");
-                return;
+                return Err(BitNetError::Validation(format!(
+                    "expected sidecar descriptor, got {result:?}"
+                )));
             }
         };
 
@@ -291,6 +292,7 @@ mod tests {
         assert!(!descriptor.dense_runtime_replaced);
         assert!(!descriptor.speedup_claim);
         assert!(descriptor.generated_id_preservation_required_before_runtime_use);
+        Ok(())
     }
 
     #[test]
@@ -309,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_gguf_q8_sidecar_embedding_shape_matches_loader_heuristic() {
+    fn dense_gguf_q8_sidecar_embedding_shape_matches_loader_heuristic() -> Result<()> {
         let transposed = q8_info("token_embd.weight", vec![64, 32768], 2_228_224);
         let token_major = q8_info("token_embd.weight", vec![32768, 64], 2_228_224);
         let data = vec![0u8; 2_228_224];
@@ -318,16 +320,18 @@ mod tests {
             match DenseGgufQ8SidecarDescriptor::from_tensor(&transposed, &data) {
                 Ok(Some(descriptor)) => descriptor,
                 result => {
-                    assert!(false, "expected transposed descriptor, got {result:?}");
-                    return;
+                    return Err(BitNetError::Validation(format!(
+                        "expected transposed descriptor, got {result:?}"
+                    )));
                 }
             };
         let token_major_descriptor =
             match DenseGgufQ8SidecarDescriptor::from_tensor(&token_major, &data) {
                 Ok(Some(descriptor)) => descriptor,
                 result => {
-                    assert!(false, "expected token-major descriptor, got {result:?}");
-                    return;
+                    return Err(BitNetError::Validation(format!(
+                        "expected token-major descriptor, got {result:?}"
+                    )));
                 }
             };
 
@@ -335,22 +339,25 @@ mod tests {
         assert!(transposed_descriptor.shape_reshaped_without_transpose);
         assert_eq!(token_major_descriptor.runtime_candle_shape, vec![32768, 64]);
         assert!(!token_major_descriptor.shape_reshaped_without_transpose);
+        Ok(())
     }
 
     #[test]
-    fn dense_gguf_q8_sidecar_rejects_truncated_payload() {
+    fn dense_gguf_q8_sidecar_rejects_truncated_payload() -> Result<()> {
         let info = q8_info("blk.0.ffn_down.weight", vec![4, 32], 135);
         let data = vec![0u8; 135];
 
         let err = match DenseGgufQ8SidecarDescriptor::from_tensor(&info, &data) {
             Err(err) => err,
             result => {
-                assert!(false, "expected truncated payload error, got {result:?}");
-                return;
+                return Err(BitNetError::Validation(format!(
+                    "expected truncated payload error, got {result:?}"
+                )));
             }
         };
 
         assert!(err.to_string().contains("expected at least 136"));
+        Ok(())
     }
 
     #[test]
