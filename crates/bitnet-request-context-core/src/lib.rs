@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_not_expired() {
-        let ctx = RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_secs(60));
+        let ctx = RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_mins(1));
         assert!(!ctx.is_expired());
     }
 
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_remaining() {
-        let ctx = RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_secs(60));
+        let ctx = RequestContext::new(RequestId::new("r")).with_deadline(Duration::from_mins(1));
         assert!(ctx.remaining().is_some());
     }
 

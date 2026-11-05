@@ -196,7 +196,7 @@ impl OptimizedMemoryPool {
 
     /// Cleanup expired buffers
     fn cleanup_expired_buffers(&mut self) {
-        let _expire_time = Duration::from_secs(300); // 5 minutes
+        let _expire_time = Duration::from_mins(5); // 5 minutes
         let now = Instant::now();
 
         let mut total_freed = 0;
@@ -243,7 +243,7 @@ impl OptimizedMemoryPool {
         let now = Instant::now();
 
         for (ptr, info) in &self.allocated_buffers {
-            if now.duration_since(info.timestamp) > Duration::from_secs(3600) {
+            if now.duration_since(info.timestamp) > Duration::from_hours(1) {
                 let msg = format!(
                     "Device {}: potential leak: {} bytes at {:p}",
                     self.device_id, info.size, ptr

@@ -301,7 +301,7 @@ async fn test_error_pattern_detection() -> Result<(), Box<dyn std::error::Error>
         std::env::set_var("CI", "true");
     }
 
-    let timeout_error = TestError::timeout(Duration::from_secs(60));
+    let timeout_error = TestError::timeout(Duration::from_mins(1));
     let execution_context = TestExecutionContext {
         test_suite: "ci_tests".to_string(),
         execution_time: Duration::from_secs(65),

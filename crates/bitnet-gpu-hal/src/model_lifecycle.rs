@@ -48,7 +48,7 @@ impl Default for LifecycleConfig {
             warmup_iterations: 3,
             warmup_prompt: "warmup".to_string(),
             cooldown_drain_timeout: Duration::from_secs(30),
-            auto_unload_timeout: Some(Duration::from_secs(300)),
+            auto_unload_timeout: Some(Duration::from_mins(5)),
             max_loaded_models: 4,
             memory_budget_bytes: 8 * 1024 * 1024 * 1024, // 8 GiB
         }
@@ -1194,7 +1194,7 @@ mod tests {
             warmup_iterations: 2,
             warmup_prompt: "test".to_string(),
             cooldown_drain_timeout: Duration::from_secs(5),
-            auto_unload_timeout: Some(Duration::from_secs(60)),
+            auto_unload_timeout: Some(Duration::from_mins(1)),
             max_loaded_models: 4,
             memory_budget_bytes: 1024 * 1024 * 1024, // 1 GiB
         }

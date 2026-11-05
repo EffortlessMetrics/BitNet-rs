@@ -513,7 +513,8 @@ impl ProfileSummary {
         for (i, &count) in buckets.iter().enumerate() {
             let lo = min + i as u64 * bucket_size;
             let hi = lo + bucket_size - 1;
-            let bar_len = if max_count > 0 { (count * bar_width) / max_count } else { 0 };
+            let bar_len = std::num::NonZeroUsize::new(max_count)
+                .map_or(0, |divisor| (count * bar_width) / divisor.get());
             let bar: String = "#".repeat(bar_len);
             out.push_str(&format!("  {:>4}-{:<4}ms | {:<20} {}\n", lo, hi, bar, count));
         }

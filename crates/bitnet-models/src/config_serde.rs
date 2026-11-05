@@ -45,7 +45,7 @@ impl PortableConfig {
     }
 
     pub fn head_dim(&self) -> usize {
-        if self.num_heads == 0 { 0 } else { self.hidden_size / self.num_heads }
+        self.hidden_size.checked_div(self.num_heads).unwrap_or(0)
     }
 
     pub fn effective_kv_heads(&self) -> usize {
@@ -54,7 +54,7 @@ impl PortableConfig {
 
     pub fn gqa_group_size(&self) -> usize {
         let kv = self.effective_kv_heads();
-        if kv == 0 { 0 } else { self.num_heads / kv }
+        self.num_heads.checked_div(kv).unwrap_or(0)
     }
 
     pub fn to_pairs(&self) -> Vec<(String, String)> {
@@ -314,6 +314,27 @@ impl SerializableConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checked_division_preserves_portable_config_boundaries() {
+        let mut cfg = PortableConfig {
+            hidden_size: usize::MAX,
+            num_heads: 0,
+            num_kv_heads: Some(0),
+            ..PortableConfig::default()
+        };
+        assert_eq!(cfg.head_dim(), 0);
+        assert_eq!(cfg.gqa_group_size(), 0);
+        cfg.num_heads = 1;
+        assert_eq!(cfg.head_dim(), usize::MAX);
+        cfg.num_heads = 2;
+        assert_eq!(cfg.head_dim(), usize::MAX / 2);
+        cfg.num_heads = usize::MAX;
+        cfg.num_kv_heads = Some(2);
+        assert_eq!(cfg.gqa_group_size(), usize::MAX / 2);
+        cfg.num_kv_heads = None;
+        assert_eq!(cfg.gqa_group_size(), 1);
+    }
 
     #[test]
     fn test_default() {

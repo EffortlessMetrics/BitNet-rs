@@ -31,18 +31,14 @@ impl Default for CorsConfig {
         Self {
             allowed_origins: vec!["*".into()],
             allow_credentials: false,
-            max_age: Duration::from_secs(3600),
+            max_age: Duration::from_hours(1),
         }
     }
 }
 
 impl CorsConfig {
     pub fn restrictive(origins: Vec<String>) -> Self {
-        Self {
-            allowed_origins: origins,
-            allow_credentials: true,
-            max_age: Duration::from_secs(600),
-        }
+        Self { allowed_origins: origins, allow_credentials: true, max_age: Duration::from_mins(10) }
     }
 
     pub fn is_wildcard(&self) -> bool {
@@ -115,7 +111,7 @@ impl Default for MiddlewareConfig {
             log_level: LogLevel::Info,
             request_id: true,
             compression: true,
-            timeout: Duration::from_secs(300),
+            timeout: Duration::from_mins(5),
         }
     }
 }
@@ -129,7 +125,7 @@ impl MiddlewareConfig {
             log_level: LogLevel::Debug,
             request_id: true,
             compression: false,
-            timeout: Duration::from_secs(600),
+            timeout: Duration::from_mins(10),
         }
     }
 
@@ -150,7 +146,7 @@ impl MiddlewareConfig {
             log_level: LogLevel::Warn,
             request_id: true,
             compression: true,
-            timeout: Duration::from_secs(120),
+            timeout: Duration::from_mins(2),
         }
     }
 
@@ -223,7 +219,7 @@ mod tests {
     #[test]
     fn test_timeout() {
         let m = MiddlewareConfig::default();
-        assert_eq!(m.timeout, Duration::from_secs(300));
+        assert_eq!(m.timeout, Duration::from_mins(5));
     }
 
     #[test]

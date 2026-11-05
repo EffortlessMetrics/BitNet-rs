@@ -162,13 +162,13 @@ fn server_settings_default_workers_none() {
 #[test]
 fn server_settings_default_keep_alive() {
     let ss = ServerSettings::default();
-    assert_eq!(ss.keep_alive, Duration::from_secs(60));
+    assert_eq!(ss.keep_alive, Duration::from_mins(1));
 }
 
 #[test]
 fn server_settings_default_timeout() {
     let ss = ServerSettings::default();
-    assert_eq!(ss.request_timeout, Duration::from_secs(300));
+    assert_eq!(ss.request_timeout, Duration::from_mins(5));
 }
 
 // ---------------------------------------------------------------------------

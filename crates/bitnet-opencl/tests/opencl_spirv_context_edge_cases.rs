@@ -268,7 +268,7 @@ fn mock_pool(max_contexts: usize) -> ContextPool {
     let config = ContextPoolConfig {
         max_contexts,
         memory_limit: 100 * 1024 * 1024, // 100 MiB
-        idle_timeout: Duration::from_secs(60),
+        idle_timeout: Duration::from_mins(1),
         lazy_creation: true,
     };
     ContextPool::new(config, factory)
@@ -365,7 +365,7 @@ fn context_pool_creation_failure() {
     let config = ContextPoolConfig {
         max_contexts: 4,
         memory_limit: 1_000_000_000,
-        idle_timeout: Duration::from_secs(60),
+        idle_timeout: Duration::from_mins(1),
         lazy_creation: true,
     };
     let pool = ContextPool::new(config, factory);
@@ -380,7 +380,7 @@ fn context_pool_config_default() {
     let cfg = ContextPoolConfig::default();
     assert_eq!(cfg.max_contexts, 4);
     assert_eq!(cfg.memory_limit, 2 * 1024 * 1024 * 1024);
-    assert_eq!(cfg.idle_timeout, Duration::from_secs(300));
+    assert_eq!(cfg.idle_timeout, Duration::from_mins(5));
     assert!(cfg.lazy_creation);
 }
 

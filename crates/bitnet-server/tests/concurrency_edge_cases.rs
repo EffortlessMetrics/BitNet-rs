@@ -17,7 +17,7 @@ fn concurrency_config_defaults() {
     assert_eq!(config.max_concurrent_requests, 100);
     assert_eq!(config.max_requests_per_second, 50);
     assert_eq!(config.max_requests_per_minute, 1000);
-    assert_eq!(config.rate_limit_window, Duration::from_secs(60));
+    assert_eq!(config.rate_limit_window, Duration::from_mins(1));
     assert_eq!(config.backpressure_threshold, 0.8);
     assert!(config.circuit_breaker_enabled);
     assert_eq!(config.circuit_breaker_failure_threshold, 10);
@@ -57,7 +57,7 @@ fn concurrency_config_custom_values() {
         max_concurrent_requests: 10,
         max_requests_per_second: 5,
         max_requests_per_minute: 100,
-        rate_limit_window: Duration::from_secs(120),
+        rate_limit_window: Duration::from_mins(2),
         backpressure_threshold: 0.5,
         circuit_breaker_enabled: false,
         circuit_breaker_failure_threshold: 3,
@@ -434,7 +434,7 @@ async fn circuit_breaker_opens_after_threshold_failures() {
     let config = ConcurrencyConfig {
         circuit_breaker_enabled: true,
         circuit_breaker_failure_threshold: 3,
-        circuit_breaker_timeout: Duration::from_secs(60),
+        circuit_breaker_timeout: Duration::from_mins(1),
         per_ip_rate_limit: None,
         global_rate_limit: None,
         ..ConcurrencyConfig::default()
@@ -458,7 +458,7 @@ async fn circuit_breaker_rejects_when_open() {
     let config = ConcurrencyConfig {
         circuit_breaker_enabled: true,
         circuit_breaker_failure_threshold: 2,
-        circuit_breaker_timeout: Duration::from_secs(60),
+        circuit_breaker_timeout: Duration::from_mins(1),
         per_ip_rate_limit: None,
         global_rate_limit: None,
         ..ConcurrencyConfig::default()

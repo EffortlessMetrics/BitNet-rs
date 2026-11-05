@@ -63,7 +63,7 @@ fn performance_scenario_is_sequential() {
 fn performance_scenario_has_long_timeout() {
     let mgr = ScenarioConfigManager::default();
     let cfg = mgr.get_scenario_config(&TestingScenario::Performance);
-    assert!(cfg.test_timeout >= Duration::from_secs(300), "Performance timeout should be >= 300s");
+    assert!(cfg.test_timeout >= Duration::from_mins(5), "Performance timeout should be >= 300s");
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn resolve_timeout_takes_exact_max() {
     let mgr = ScenarioConfigManager::default();
     let cfg = mgr.resolve(&TestingScenario::Performance, &EnvironmentType::Ci);
     // Performance has 1800s timeout; CI inherits the 300s default, so max is 1800s.
-    assert_eq!(cfg.test_timeout, Duration::from_secs(1800));
+    assert_eq!(cfg.test_timeout, Duration::from_mins(30));
 }
 
 #[test]

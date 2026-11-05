@@ -1147,10 +1147,10 @@ mod tests {
         let cfg = AsyncConfig::default()
             .with_thread_count(8)
             .with_queue_depth(512)
-            .with_timeout(Duration::from_secs(60));
+            .with_timeout(Duration::from_mins(1));
         assert_eq!(cfg.thread_count, 8);
         assert_eq!(cfg.queue_depth, 512);
-        assert_eq!(cfg.timeout, Duration::from_secs(60));
+        assert_eq!(cfg.timeout, Duration::from_mins(1));
     }
 
     #[test]

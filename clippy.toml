@@ -12,3 +12,9 @@ trivial-copy-size-limit = 64
 
 # Allow certain patterns common in ML/systems code
 allow-mixed-uninlined-format-args = true  # Performance in hot paths
+
+# Lifecycle field access is owned by the getter and private setter. This lint
+# governs field expressions/destructuring; it does not forbid initialization.
+disallowed-fields = [
+    { path = "bitnet_inference::generation_state::GenerationTracker::state", reason = "Use state() and the existing lifecycle methods; owner access is receipted." },
+]

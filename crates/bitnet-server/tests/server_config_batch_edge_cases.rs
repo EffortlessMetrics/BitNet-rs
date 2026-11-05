@@ -175,8 +175,8 @@ fn server_config_default_values() {
 #[test]
 fn server_settings_default_timeouts() {
     let config = ServerConfig::default();
-    assert_eq!(config.server.keep_alive, Duration::from_secs(60));
-    assert_eq!(config.server.request_timeout, Duration::from_secs(300));
+    assert_eq!(config.server.keep_alive, Duration::from_mins(1));
+    assert_eq!(config.server.request_timeout, Duration::from_mins(5));
     assert_eq!(config.server.graceful_shutdown_timeout, Duration::from_secs(30));
 }
 

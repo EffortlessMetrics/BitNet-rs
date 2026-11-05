@@ -411,7 +411,7 @@ fn w18_metrics_report_build() {
     h.record(45.0);
     h.record(60.0);
 
-    let t = ThroughputTracker::new(Duration::from_secs(60));
+    let t = ThroughputTracker::new(Duration::from_mins(1));
     let mp = MemoryProfiler::new();
     mp.record_allocation(4_194_304);
 

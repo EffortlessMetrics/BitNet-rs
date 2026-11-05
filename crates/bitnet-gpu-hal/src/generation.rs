@@ -729,7 +729,7 @@ mod tests {
             StopCondition::MaxTokens(100),
             StopCondition::EosToken(999),
             StopCondition::StopSequence(vec![vec![50, 60]]),
-            StopCondition::MaxTime(Duration::from_secs(60)),
+            StopCondition::MaxTime(Duration::from_mins(1)),
         ]);
         let tokens = vec![1, 2, 3];
         assert!(check_stop_conditions(&tokens, &cfg, Duration::from_secs(1)).is_none());

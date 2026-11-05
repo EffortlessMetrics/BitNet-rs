@@ -208,13 +208,13 @@ impl ConnectionPool {
         let semaphore = self.connection_semaphore.clone();
 
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(60)); // Check every minute
+            let mut interval = tokio::time::interval(Duration::from_mins(1)); // Check every minute
 
             loop {
                 interval.tick().await;
 
                 let now = Instant::now();
-                let timeout_duration = Duration::from_secs(300); // 5 minute timeout
+                let timeout_duration = Duration::from_mins(5); // 5 minute timeout
                 let mut timed_out_connections = Vec::new();
 
                 // Find timed out connections

@@ -1599,7 +1599,7 @@ mod tests {
     fn latency_custom_buckets() {
         let mut l = LatencyTracker::with_buckets(100, &[1000, 10_000]);
         l.record(Duration::from_micros(500));
-        l.record(Duration::from_micros(5_000));
+        l.record(Duration::from_millis(5));
         let buckets = l.histogram_buckets();
         assert_eq!(*buckets.get(&1000).unwrap(), 1);
         assert_eq!(*buckets.get(&10_000).unwrap(), 2);

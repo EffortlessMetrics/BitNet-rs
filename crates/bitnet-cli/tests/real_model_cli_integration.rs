@@ -34,7 +34,7 @@ impl CLITestConfig {
             bitnet_cli_path: PathBuf::from(format!("{}/{}/bitnet-cli", target_dir, profile)),
             model_path: env::var("BITNET_GGUF").ok().map(PathBuf::from),
             tokenizer_path: env::var("BITNET_TOKENIZER").ok().map(PathBuf::from),
-            timeout: Duration::from_secs(120),
+            timeout: Duration::from_mins(2),
             enable_gpu_tests: env::var("BITNET_DEVICE").map(|d| d.contains("gpu")).unwrap_or(false),
         }
     }
@@ -176,10 +176,7 @@ fn test_cli_performance_benchmarking_commands() {
     let execution_time = start_time.elapsed();
 
     // Validate benchmark execution
-    assert!(
-        execution_time < Duration::from_secs(300),
-        "Benchmark should complete within 5 minutes"
-    );
+    assert!(execution_time < Duration::from_mins(5), "Benchmark should complete within 5 minutes");
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -448,7 +445,7 @@ fn test_cli_batch_inference_functionality() {
     let batch_time = start_time.elapsed();
 
     // Validate batch execution
-    assert!(batch_time < Duration::from_secs(240), "Batch should complete within 4 minutes");
+    assert!(batch_time < Duration::from_mins(4), "Batch should complete within 4 minutes");
 
     if !batch_output.status.success() {
         let stderr = String::from_utf8_lossy(&batch_output.stderr);

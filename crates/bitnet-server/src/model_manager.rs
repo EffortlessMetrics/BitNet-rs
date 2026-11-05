@@ -31,7 +31,7 @@ impl Default for ModelManagerConfig {
         Self {
             max_concurrent_loads: 2,
             model_cache_size: 3,
-            load_timeout: Duration::from_secs(300), // 5 minutes
+            load_timeout: Duration::from_mins(5), // 5 minutes
             validation_enabled: true,
             memory_limit_gb: Some(16.0),
         }

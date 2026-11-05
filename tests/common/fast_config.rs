@@ -59,7 +59,7 @@ pub fn unit_test_config() -> TestConfig {
 
     // Optimize for unit tests
     config.max_parallel_tests = 4;
-    config.test_timeout = Duration::from_secs(60);
+    config.test_timeout = Duration::from_mins(1);
 
     // Enable basic reporting
     config.reporting.formats = vec![ReportFormat::Json, ReportFormat::Html];
@@ -74,7 +74,7 @@ pub fn quick_integration_config() -> TestConfig {
 
     // Balanced settings for integration tests
     config.max_parallel_tests = 2;
-    config.test_timeout = Duration::from_secs(120);
+    config.test_timeout = Duration::from_mins(2);
     config.log_level = "info".to_string();
 
     // Enable basic coverage
@@ -273,7 +273,7 @@ mod tests {
     fn test_apply_fast_overrides() {
         let mut original = TestConfig {
             max_parallel_tests: 8,
-            test_timeout: Duration::from_secs(300),
+            test_timeout: Duration::from_mins(5),
             ..Default::default()
         };
         original.reporting.generate_coverage = true;

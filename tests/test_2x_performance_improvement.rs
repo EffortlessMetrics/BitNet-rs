@@ -29,7 +29,7 @@ async fn test_2x_performance_improvement_over_cpp_baseline() {
         min_speedup_required: 2.0, // Require at least 2x improvement
         iterations: 5,             // Sufficient for reliable measurements
         warmup_iterations: 2,
-        timeout: Duration::from_secs(60),
+        timeout: Duration::from_mins(1),
         cpp_binary_path: None, // Use synthetic baseline for demonstration
         test_data_dir: temp_dir.path().to_path_buf(),
     };
@@ -306,7 +306,7 @@ async fn test_performance_consistency() {
         min_speedup_required: 2.0,
         iterations: 10, // More iterations for consistency testing
         warmup_iterations: 3,
-        timeout: Duration::from_secs(60),
+        timeout: Duration::from_mins(1),
         cpp_binary_path: None,
         test_data_dir: temp_dir.path().to_path_buf(),
     };
@@ -359,7 +359,7 @@ async fn integration_test_complete_2x_performance_validation() {
         min_speedup_required: 2.0,
         iterations: 5,
         warmup_iterations: 2,
-        timeout: Duration::from_secs(60),
+        timeout: Duration::from_mins(1),
         cpp_binary_path: None,
         test_data_dir: temp_dir.path().to_path_buf(),
     };

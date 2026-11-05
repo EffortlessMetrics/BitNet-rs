@@ -263,7 +263,7 @@ pub fn matmul_avx2_microkernel(
         return Ok(());
     }
     // K = number of FMA steps.
-    let k_len = if mr == 0 { 0 } else { a_panel.len() / mr };
+    let k_len = a_panel.len().checked_div(mr).unwrap_or(0);
     if k_len == 0 {
         return Ok(());
     }

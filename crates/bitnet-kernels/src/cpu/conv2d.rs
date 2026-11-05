@@ -281,7 +281,7 @@ pub fn depthwise_conv2d(
     if let Some(b) = bias
         && b.len() != channels
     {
-        return Err(invalid_args(&format!("bias length {} != channels {channels}", b.len(),)));
+        return Err(invalid_args(&format!("bias length {} != channels {channels}", b.len())));
     }
 
     let mut output = vec![0.0f32; batch_size * channels * out_h * out_w];
@@ -360,7 +360,7 @@ pub fn im2col(
         )));
     }
     if group >= config.groups {
-        return Err(invalid_args(&format!("group index {group} >= groups {}", config.groups,)));
+        return Err(invalid_args(&format!("group index {group} >= groups {}", config.groups)));
     }
 
     let col_h = ic_per_group * config.kernel_h * config.kernel_w;

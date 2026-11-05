@@ -7064,7 +7064,7 @@ fn fetch_models_cmd(lock_path: &Path) -> Result<()> {
 
     // Create HTTP client with sensible defaults
     let client = Client::builder()
-        .timeout(Duration::from_secs(300))
+        .timeout(Duration::from_mins(5))
         .user_agent("bitnet-xtask-fetcher/1.0")
         .build()
         .context("Failed to create HTTP client")?;

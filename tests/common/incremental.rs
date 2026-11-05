@@ -388,7 +388,7 @@ impl Default for IncrementalConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            max_age: Duration::from_secs(24 * 60 * 60), // 24 hours
+            max_age: Duration::from_hours(24), // 24 hours
             force_full_patterns: vec![
                 "Cargo.toml".to_string(),
                 "build.rs".to_string(),

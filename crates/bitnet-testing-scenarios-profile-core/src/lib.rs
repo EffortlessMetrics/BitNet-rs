@@ -147,8 +147,8 @@ impl Default for FixtureProfile {
         Self {
             auto_download: true,
             max_cache_size: 10 * 1024 * 1024 * 1024,
-            cleanup_interval: Duration::from_secs(24 * 60 * 60),
-            download_timeout: Duration::from_secs(300),
+            cleanup_interval: Duration::from_hours(24),
+            download_timeout: Duration::from_mins(5),
             base_url: None,
         }
     }
@@ -186,7 +186,7 @@ impl Default for TestConfigProfile {
     fn default() -> Self {
         Self {
             max_parallel_tests: get_optimal_parallel_tests(),
-            test_timeout: Duration::from_secs(300),
+            test_timeout: Duration::from_mins(5),
             cache_dir: PathBuf::from("tests/cache"),
             log_level: "info".to_string(),
             coverage_threshold: 0.9,

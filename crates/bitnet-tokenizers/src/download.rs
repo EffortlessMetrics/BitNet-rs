@@ -41,7 +41,7 @@ impl SmartTokenizerDownload {
 
         let client = reqwest::Client::builder()
             .user_agent("BitNet-rs/0.1.0")
-            .timeout(std::time::Duration::from_secs(300))
+            .timeout(std::time::Duration::from_mins(5))
             .build()
             .map_err(|e| {
                 BitNetError::Config(format!("HTTP client initialization failed: {}", e))

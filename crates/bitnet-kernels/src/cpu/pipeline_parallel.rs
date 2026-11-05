@@ -254,7 +254,7 @@ pub fn pipeline_forward(
     }
     if input.len() != batch * dim {
         return Err(BitNetError::Kernel(KernelError::InvalidArguments {
-            reason: format!("input length {} != batch ({}) * dim ({})", input.len(), batch, dim,),
+            reason: format!("input length {} != batch ({}) * dim ({})", input.len(), batch, dim),
         }));
     }
 

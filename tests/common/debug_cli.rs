@@ -272,7 +272,7 @@ impl DebugCli {
 
         // Slow tests
         for test in &report.test_summaries {
-            if test.duration > Duration::from_secs(300) {
+            if test.duration > Duration::from_mins(5) {
                 // > 5 minutes
                 issues.push(PerformanceIssue {
                     test_name: test.test_name.clone(),
@@ -349,7 +349,7 @@ impl DebugCli {
             recommendations.push("Consider optimizing memory usage in tests".to_string());
         }
 
-        if report.performance_summary.average_test_duration > Duration::from_secs(60) {
+        if report.performance_summary.average_test_duration > Duration::from_mins(1) {
             recommendations.push("Investigate slow tests and consider optimization".to_string());
         }
 
@@ -365,7 +365,7 @@ impl DebugCli {
 
         // Suggest timeout increases for slow tests
         for test in &report.test_summaries {
-            if test.duration > Duration::from_secs(180) {
+            if test.duration > Duration::from_mins(3) {
                 fixes.push(QuickFix {
                     title: format!("Increase timeout for {}", test.test_name),
                     description: "Test appears to be slow, consider increasing timeout".to_string(),
@@ -404,7 +404,7 @@ impl DebugCli {
                     *error_counts.entry(issue.clone()).or_insert(0) += 1;
                 }
 
-                if test.duration > Duration::from_secs(120) {
+                if test.duration > Duration::from_mins(2) {
                     *slow_tests.entry(test.test_name.clone()).or_insert(0) += 1;
                 }
             }

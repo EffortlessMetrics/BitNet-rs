@@ -444,7 +444,7 @@ fn concurrency_config_defaults() {
     assert_eq!(config.max_concurrent_requests, 100);
     assert_eq!(config.max_requests_per_second, 50);
     assert_eq!(config.max_requests_per_minute, 1000);
-    assert_eq!(config.rate_limit_window, Duration::from_secs(60));
+    assert_eq!(config.rate_limit_window, Duration::from_mins(1));
     assert!((config.backpressure_threshold - 0.8).abs() < f64::EPSILON);
     assert!(config.circuit_breaker_enabled);
     assert_eq!(config.circuit_breaker_failure_threshold, 10);
@@ -528,7 +528,7 @@ async fn concurrency_manager_cleanup_empty() {
     let config = ConcurrencyConfig::default();
     let manager = ConcurrencyManager::new(config);
     // Should not panic with empty rate limiters
-    manager.cleanup_rate_limiters(Duration::from_secs(60)).await;
+    manager.cleanup_rate_limiters(Duration::from_mins(1)).await;
 }
 
 // ---------------------------------------------------------------------------

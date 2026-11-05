@@ -60,7 +60,7 @@ impl ApiGateway {
             endpoints: HashMap::new(),
             middlewares: Vec::new(),
             transformer: RequestTransformer::default(),
-            rate_limiter: RateLimiter::new(100, Duration::from_secs(60)),
+            rate_limiter: RateLimiter::new(100, Duration::from_mins(1)),
         }
     }
 
@@ -171,7 +171,7 @@ impl ApiGateway {
             let key = req.api_key.as_deref().unwrap_or("anonymous").to_string();
             let rl_key = format!("{}:{}", ep.route_key(), key);
             // Temporarily adjust limiter for per-endpoint limit.
-            let mut ep_limiter = RateLimiter::new(limit, Duration::from_secs(60));
+            let mut ep_limiter = RateLimiter::new(limit, Duration::from_mins(1));
             if !ep_limiter.check(&rl_key) {
                 return Self::finalize(
                     ApiResponse::error(
@@ -866,7 +866,7 @@ mod tests {
 
     #[test]
     fn test_rate_limiter_allows_under_limit() {
-        let mut rl = RateLimiter::new(3, Duration::from_secs(60));
+        let mut rl = RateLimiter::new(3, Duration::from_mins(1));
         assert!(rl.check("key1"));
         assert!(rl.check("key1"));
         assert!(rl.check("key1"));
@@ -874,7 +874,7 @@ mod tests {
 
     #[test]
     fn test_rate_limiter_blocks_over_limit() {
-        let mut rl = RateLimiter::new(2, Duration::from_secs(60));
+        let mut rl = RateLimiter::new(2, Duration::from_mins(1));
         assert!(rl.check("key1"));
         assert!(rl.check("key1"));
         assert!(!rl.check("key1")); // 3rd should fail
@@ -882,7 +882,7 @@ mod tests {
 
     #[test]
     fn test_rate_limiter_separate_keys() {
-        let mut rl = RateLimiter::new(1, Duration::from_secs(60));
+        let mut rl = RateLimiter::new(1, Duration::from_mins(1));
         assert!(rl.check("key1"));
         assert!(rl.check("key2"));
         assert!(!rl.check("key1"));
@@ -891,7 +891,7 @@ mod tests {
 
     #[test]
     fn test_rate_limiter_reset() {
-        let mut rl = RateLimiter::new(1, Duration::from_secs(60));
+        let mut rl = RateLimiter::new(1, Duration::from_mins(1));
         assert!(rl.check("key1"));
         assert!(!rl.check("key1"));
         rl.reset();

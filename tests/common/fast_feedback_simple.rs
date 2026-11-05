@@ -44,8 +44,8 @@ pub struct FastFeedbackConfig {
 impl Default for FastFeedbackConfig {
     fn default() -> Self {
         Self {
-            target_feedback_time: Duration::from_secs(2 * 60), // 2 minutes
-            max_feedback_time: Duration::from_secs(5 * 60),    // 5 minutes
+            target_feedback_time: Duration::from_mins(2), // 2 minutes
+            max_feedback_time: Duration::from_mins(5),    // 5 minutes
             enable_incremental: true,
             enable_caching: true,
             enable_smart_selection: true,
@@ -54,7 +54,7 @@ impl Default for FastFeedbackConfig {
             enable_parallel: true,
             max_parallel_fast: 4, // Conservative default
             fail_fast: true,
-            cache_validity: Duration::from_secs(60 * 60), // 1 hour
+            cache_validity: Duration::from_hours(1), // 1 hour
         }
     }
 }
@@ -144,7 +144,7 @@ impl FastFeedbackSystem {
     pub fn for_ci() -> Self {
         let config = FastFeedbackConfig {
             target_feedback_time: Duration::from_secs(90), // 1.5 minutes for CI
-            max_feedback_time: Duration::from_secs(3 * 60), // 3 minutes max
+            max_feedback_time: Duration::from_mins(3),     // 3 minutes max
             speed_profile: SpeedProfile::Lightning,
             fail_fast: true,
             max_parallel_fast: 2, // Conservative for CI
@@ -157,7 +157,7 @@ impl FastFeedbackSystem {
     pub fn for_development() -> Self {
         let config = FastFeedbackConfig {
             target_feedback_time: Duration::from_secs(30), // 30 seconds for dev
-            max_feedback_time: Duration::from_secs(2 * 60), // 2 minutes max
+            max_feedback_time: Duration::from_mins(2),     // 2 minutes max
             speed_profile: SpeedProfile::Lightning,
             enable_incremental: true,
             fail_fast: false, // See all failures in dev
@@ -523,7 +523,7 @@ impl FastFeedbackSystem {
 
     fn has_recent_execution_history(&self) -> bool {
         self.execution_history.last_execution_time
-            .map(|last| last.elapsed() < Duration::from_secs(60 * 60)) // 1 hour
+            .map(|last| last.elapsed() < Duration::from_hours(1)) // 1 hour
             .unwrap_or(false)
     }
 
@@ -575,7 +575,7 @@ mod tests {
     #[tokio::test]
     async fn test_fast_feedback_system_creation() {
         let system = FastFeedbackSystem::with_defaults();
-        assert_eq!(system.config.target_feedback_time, Duration::from_secs(2 * 60));
+        assert_eq!(system.config.target_feedback_time, Duration::from_mins(2));
         assert!(system.config.enable_incremental);
     }
 
@@ -603,7 +603,7 @@ mod tests {
             ..Default::default()
         };
 
-        let quality = system.assess_feedback_quality(&result, Duration::from_secs(60));
+        let quality = system.assess_feedback_quality(&result, Duration::from_mins(1));
         assert_eq!(quality, FeedbackQuality::Complete);
     }
 

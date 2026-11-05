@@ -476,14 +476,14 @@ impl LossScaler {
             if self.current_scale < self.min_scale {
                 self.current_scale = self.min_scale;
             }
-            log::debug!("LossScaler overflow: scale reduced to {}", self.current_scale,);
+            log::debug!("LossScaler overflow: scale reduced to {}", self.current_scale);
             return false;
         }
         self.steps_since_last_overflow += 1;
         if self.steps_since_last_overflow >= self.growth_interval {
             self.current_scale *= self.growth_factor;
             self.steps_since_last_overflow = 0;
-            log::debug!("LossScaler growth: scale increased to {}", self.current_scale,);
+            log::debug!("LossScaler growth: scale increased to {}", self.current_scale);
         }
         true
     }

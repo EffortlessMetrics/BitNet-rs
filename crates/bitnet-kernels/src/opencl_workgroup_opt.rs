@@ -359,7 +359,7 @@ impl OccupancyCalculator {
         let max_wf = self.profile.max_wavefronts_per_core();
 
         // Workgroups per core limited by thread slots.
-        let wgs_by_threads = if subgroups_per_wg == 0 { 0 } else { max_wf / subgroups_per_wg };
+        let wgs_by_threads = max_wf.checked_div(subgroups_per_wg).unwrap_or(0);
 
         // Workgroups per core limited by SLM.
         let wgs_by_slm = planner.concurrent_workgroups(constraints.required_local_memory_bytes);

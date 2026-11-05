@@ -254,7 +254,7 @@ pub fn interleave(a: &[f32], b: &[f32]) -> Vec<f32> {
 /// `n`.
 pub fn chunk(data: &[f32], n: usize) -> Vec<Vec<f32>> {
     assert!(n > 0, "n must be > 0");
-    assert!(data.len().is_multiple_of(n), "data length {} not divisible by {n}", data.len(),);
+    assert!(data.len().is_multiple_of(n), "data length {} not divisible by {n}", data.len());
     let chunk_len = data.len() / n;
     (0..n)
         .map(|i| {

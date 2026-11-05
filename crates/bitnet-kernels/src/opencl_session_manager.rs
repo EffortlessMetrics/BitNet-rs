@@ -117,7 +117,7 @@ impl Default for SessionConfig {
             temperature: 0.7,
             top_p: 0.9,
             stop_sequences: Vec::new(),
-            timeout: Duration::from_secs(60),
+            timeout: Duration::from_mins(1),
             seed: None,
         }
     }
@@ -665,7 +665,7 @@ pub struct SessionPoolConfig {
 
 impl Default for SessionPoolConfig {
     fn default() -> Self {
-        Self { max_sessions: 16, idle_timeout: Duration::from_secs(300) }
+        Self { max_sessions: 16, idle_timeout: Duration::from_mins(5) }
     }
 }
 
@@ -841,6 +841,17 @@ impl fmt::Debug for SessionPool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn duration_unit_cleanup_preserves_session_defaults_and_zero_rejection() {
+        let config = SessionConfig::default();
+        assert_eq!(config.timeout.as_secs(), 60);
+        assert_eq!(config.timeout.subsec_nanos(), 0);
+        assert!(config.validate().is_ok());
+        let invalid = SessionConfig { timeout: Duration::ZERO, ..config };
+        assert!(invalid.validate().is_err());
+        assert_eq!(SessionPoolConfig::default().idle_timeout.as_secs(), 300);
+    }
 
     // Helper to build a valid default config.
     fn default_cfg() -> SessionConfig {

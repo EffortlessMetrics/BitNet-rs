@@ -1638,7 +1638,7 @@ mod tests {
 
     #[test]
     fn test_request_remaining_time_positive() {
-        let r = make_request("r1").with_timeout(Duration::from_secs(60));
+        let r = make_request("r1").with_timeout(Duration::from_mins(1));
         assert!(r.remaining_time() > Duration::ZERO);
     }
 
@@ -1949,7 +1949,7 @@ mod tests {
 
     #[test]
     fn test_shutdown_drain_not_timed_out_initially() {
-        let s = GracefulShutdown::new(Duration::from_secs(60));
+        let s = GracefulShutdown::new(Duration::from_mins(1));
         assert!(!s.is_drain_timed_out());
     }
 

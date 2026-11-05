@@ -15,7 +15,7 @@ fn model_manager_config_default() {
     let cfg = ModelManagerConfig::default();
     assert_eq!(cfg.max_concurrent_loads, 2);
     assert_eq!(cfg.model_cache_size, 3);
-    assert_eq!(cfg.load_timeout, Duration::from_secs(300));
+    assert_eq!(cfg.load_timeout, Duration::from_mins(5));
     assert!(cfg.validation_enabled);
     assert_eq!(cfg.memory_limit_gb, Some(16.0));
 }
@@ -49,7 +49,7 @@ fn model_manager_config_custom() {
     let cfg = ModelManagerConfig {
         max_concurrent_loads: 8,
         model_cache_size: 10,
-        load_timeout: Duration::from_secs(60),
+        load_timeout: Duration::from_mins(1),
         validation_enabled: false,
         memory_limit_gb: None,
     };

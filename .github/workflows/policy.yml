@@ -9,6 +9,7 @@ on:
       - "rust-toolchain.toml"
       - "clippy.toml"
       - ".github/workflows/policy.yml"
+      - "scripts/check_protected_field_contract.py"
       - "xtask/**"
       - "**/*.rs"
   push:
@@ -34,6 +35,7 @@ jobs:
         uses: dtolnay/rust-toolchain@5d458579430fc14a04a08a1e7d3694f545e91ce6  # stable
         with:
           toolchain: "1.95.0"
+          components: clippy
 
       - name: Cache cargo
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
@@ -66,6 +68,19 @@ jobs:
         run: |
           cargo run --locked -p xtask --no-default-features -- check-clippy-exceptions \
             --report-dir target/bitnet/reports
+
+      - name: Prove protected generation field contract
+        run: python3 scripts/check_protected_field_contract.py
+
+      - name: Test Clippy activation contracts
+        run: |
+          cargo test --locked -p xtask --no-default-features policy::clippy_lints::tests::
+          cargo test --locked -p xtask --no-default-features ci::plan::tests::
+
+      - name: Check activated lint ratchets in policy tools
+        run: |
+          cargo clippy --locked -p xtask --all-targets --no-default-features -- \
+            -D clippy::manual_checked_ops -D clippy::duration_suboptimal_units -D clippy::unnecessary_trailing_comma
 
       - name: clippy-lint-policy check
         run: |

@@ -69,8 +69,8 @@ impl Default for FixtureConfig {
         Self {
             auto_download: true,
             max_cache_size: 10 * crate::BYTES_PER_GB, // 10 GB
-            cleanup_interval: Duration::from_secs(24 * 60 * 60), // 24 hours
-            download_timeout: Duration::from_secs(300), // 5 minutes
+            cleanup_interval: Duration::from_hours(24), // 24 hours
+            download_timeout: Duration::from_mins(5), // 5 minutes
             base_url: None,
             custom_fixtures: Vec::new(),
         }
@@ -452,7 +452,7 @@ pub fn ci_config() -> TestConfig {
     config.max_parallel_tests = (config.max_parallel_tests / 2).max(1);
 
     // Shorter timeout in CI for faster feedback
-    config.test_timeout = Duration::from_secs(120);
+    config.test_timeout = Duration::from_mins(2);
 
     // More verbose logging in CI
     config.log_level = "debug".to_string();
@@ -472,7 +472,7 @@ pub fn ci_config() -> TestConfig {
 pub fn dev_config() -> TestConfig {
     let mut config = TestConfig {
         max_parallel_tests: get_optimal_parallel_tests(),
-        test_timeout: Duration::from_secs(600),
+        test_timeout: Duration::from_mins(10),
         log_level: "info".to_string(),
         ..Default::default()
     };
@@ -490,7 +490,7 @@ pub fn dev_config() -> TestConfig {
 pub fn minimal_config() -> TestConfig {
     let mut config = TestConfig {
         max_parallel_tests: 1,
-        test_timeout: Duration::from_secs(60),
+        test_timeout: Duration::from_mins(1),
         log_level: "warn".to_string(),
         ..Default::default()
     };
@@ -671,7 +671,7 @@ mod tests {
     fn test_minimal_config() {
         let config = minimal_config();
         assert_eq!(config.max_parallel_tests, 1);
-        assert_eq!(config.test_timeout, Duration::from_secs(60));
+        assert_eq!(config.test_timeout, Duration::from_mins(1));
         assert_eq!(config.log_level, "warn");
         assert!(!config.reporting.generate_coverage);
         assert!(!config.crossval.enabled);

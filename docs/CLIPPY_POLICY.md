@@ -116,7 +116,8 @@ promoted only the clean lints from staged policy into `[workspace.lints.clippy]`
 
 ### Lint ratchets (PR 5)
 
-The following staged lints are active after the PR 5 measurement pass:
+The following staged lints are active after the PR 5 measurement pass and
+subsequent focused cleanups:
 
 | Lint | Level | Reason |
 |---|---|---|
@@ -124,28 +125,47 @@ The following staged lints are active after the PR 5 measurement pass:
 | `manual_ilog2` | `warn` | Prefer standard integer log helper (also staged at 1.94) |
 | `decimal_bitwise_operands` | `warn` | Make bit masks visually inspectable (also staged at 1.94) |
 | `manual_take` | `warn` | Use standard ownership helper instead of local reimplementation |
+| `unnecessary_trailing_comma` | `warn` | Keep format macro calls clean after the source-wide cleanup. |
+| `duration_suboptimal_units` | `warn` | Express exactly divisible duration constants in the largest stable unit without changing timeout values. |
+| `manual_checked_ops` | `warn` | Preserve unsigned zero fallbacks with checked division; keep potentially overflowing numerator work conditional on a nonzero divisor. |
 | `needless_type_cast` | `warn` | Avoid stale numeric type drift (also staged at 1.94) |
 
 The following lints remain deferred with policy debt or a toolchain note:
 
 | Lint | Status | Reason |
 |---|---|---|
-| `manual_checked_ops` | deferred | Measured findings in kernel arithmetic and model config paths need invariant-preserving cleanup. |
-| `duration_suboptimal_units` | deferred | Measured duration-unit findings need workspace-wide cleanup rather than partial activation. |
-| `unnecessary_trailing_comma` | deferred | Measured kernel formatting findings are mechanical but noisy and belong in their own cleanup. |
-| `manual_pop_if` | deferred | The installed Rust 1.95 Clippy reports this lint as unknown, so it remains staged until the toolchain exposes it. |
+| `manual_pop_if` | availability-gated | The pinned compiler does not provide this lint. A live Clippy inventory requires it absent from Cargo today and active at `warn` when it becomes available. |
+
+`check-lint-policy` records the compiler's verbose version and individual lint
+inventory from `clippy-driver -W help`. The compiler release must match the
+policy MSRV. An unavailable lint needs an explicit `activate_when_available`
+contract, cannot be declared even at `allow`, and cannot carry source-code debt.
+An empty or failed inventory is an error. When the compiler exposes the lint,
+the usual activation and debt checks apply. Policy CI tests both absence and
+later availability, including rejection of missing or under-level activation.
 
 Because CI Core uses `RUSTFLAGS = "-Dwarnings"` and Clippy with
 `-D warnings`, warning-level Clippy lints can still behave as hard failures in
 default lanes. If measurement finds hits, PR 5 either fixes them in scope or
 keeps the lint staged with a real debt entry.
 
-### `disallowed_fields` (PR 5 prerequisite)
+### Protected generation-state field
 
-`disallowed_fields` is not activated globally until protected seam definitions
-are present in `clippy.toml`. Candidate seams are listed in
-`docs/development/RUST_1_95_ROLLOUT.md`. Activation is a deliberate step after
-the seams are specified, not an automatic promotion.
+`disallowed_fields` is active at `deny` for
+`bitnet_inference::generation_state::GenerationTracker::state`. The field
+remains private. Existing lifecycle methods retain their behavior, reading
+through `state()` and writing through one private `set_state()` method. Only
+those two owner accessors have receipted lint expectations; `Debug` uses the
+getter and preserves the derived field order and ordinary/alternate formatting; unfulfilled
+expectations are denied. This is compile-time API field-access discipline,
+not authorization or a complete transition invariant: the lint rejects reads,
+writes and destructuring, but does not reject struct initialization.
+
+Policy CI checks the exact two source sites and receipts, compiles the real
+owner module and runs its lifecycle tests, proves method access succeeds and
+child-module direct read/write/destructuring fail with the actual Clippy lint,
+then proves a stale expectation fails for each accessor. The existing exception
+checker also validates the new receipts. No module/crate-wide allow is used.
 
 ### Test carveout removal (PR 6)
 
@@ -157,11 +177,11 @@ PR 6 removed the remaining Clippy test unwrap/expect carveouts from
 
 ### Clippy debt and exceptions (PR 5–6 and later)
 
-`policy/clippy-debt.toml` currently contains placeholder entries only.
+`policy/clippy-debt.toml` currently contains no active debt entries.
 The 1.95 wave requires real entries with `owner`, `reason`, and `expiry`
 for any debt that cannot be resolved immediately. Placeholder entries
 that lack these fields are invalid under the updated checker.
 
-`policy/clippy-exceptions.toml` currently has no entries. Exceptions added
+`policy/clippy-exceptions.toml` contains the two generation-state owner receipts. Exceptions added
 during the 1.95 wave must follow the exact `#[expect]` receipt schema with
 a `clippy-NNNN` identifier.

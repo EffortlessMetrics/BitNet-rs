@@ -390,23 +390,18 @@ pub fn estimate_occupancy(
     let blocks_by_block_limit = limits.max_blocks_per_sm;
 
     // Limit 2: warps per SM.
-    let blocks_by_warps =
-        if warps_per_block > 0 { limits.max_warps_per_sm / warps_per_block } else { 0 };
+    let blocks_by_warps = limits.max_warps_per_sm.checked_div(warps_per_block).unwrap_or(0);
 
     // Limit 3: register file.
     let regs_per_block = usage.registers_per_thread * usage.threads_per_block;
-    let blocks_by_registers = if regs_per_block > 0 {
-        limits.registers_per_sm / regs_per_block
-    } else {
-        limits.max_blocks_per_sm
-    };
+    let blocks_by_registers =
+        limits.registers_per_sm.checked_div(regs_per_block).unwrap_or(limits.max_blocks_per_sm);
 
     // Limit 4: shared memory.
-    let blocks_by_shared = if usage.shared_memory_bytes > 0 {
-        limits.shared_memory_per_sm / usage.shared_memory_bytes
-    } else {
-        limits.max_blocks_per_sm
-    };
+    let blocks_by_shared = limits
+        .shared_memory_per_sm
+        .checked_div(usage.shared_memory_bytes)
+        .unwrap_or(limits.max_blocks_per_sm);
 
     // The active block count is the minimum across all limits.
     let active_blocks =

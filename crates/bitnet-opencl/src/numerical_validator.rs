@@ -27,7 +27,7 @@ impl fmt::Display for DistributionStats {
             self.element_count, self.mean, self.std_dev, self.min, self.max,
         )?;
         if self.nan_count > 0 || self.inf_count > 0 {
-            write!(f, " [NaN={}, Inf={}]", self.nan_count, self.inf_count,)?;
+            write!(f, " [NaN={}, Inf={}]", self.nan_count, self.inf_count)?;
         }
         Ok(())
     }

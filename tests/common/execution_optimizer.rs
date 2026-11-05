@@ -25,13 +25,13 @@ pub struct ExecutionOptimizer {
 impl ExecutionOptimizer {
     /// Create new execution optimizer with 15-minute target
     pub fn new() -> Self {
-        Self::with_target_duration(Duration::from_secs(15 * 60))
+        Self::with_target_duration(Duration::from_mins(15))
     }
 
     /// Create execution optimizer with custom target duration
     pub fn with_target_duration(target_duration: Duration) -> Self {
         let config = FastConfigBuilder::with_profile(SpeedProfile::Fast)
-            .timeout(Duration::from_secs(60))
+            .timeout(Duration::from_mins(1))
             .max_parallel(num_cpus::get().min(8))
             .coverage(false)
             .build();
@@ -154,7 +154,7 @@ impl ExecutionOptimizer {
         }
 
         // Step 4: Apply timeout optimizations
-        if self.config.test_timeout < Duration::from_secs(120) {
+        if self.config.test_timeout < Duration::from_mins(2) {
             plan.optimizations_applied.push("reduced_timeouts".to_string());
         }
 
@@ -354,7 +354,7 @@ impl ExecutionOptimizer {
         let mut optimized = group.clone();
 
         // Remove slow tests first
-        optimized.tests.retain(|test| self.estimate_test_time(test) <= Duration::from_secs(60));
+        optimized.tests.retain(|test| self.estimate_test_time(test) <= Duration::from_mins(1));
 
         // If still too slow, keep only critical tests
         if optimized.estimated_duration() > remaining_time {
@@ -392,8 +392,8 @@ impl ExecutionOptimizer {
         match test.category {
             TestCategory::Unit => Duration::from_secs(5),
             TestCategory::Integration => Duration::from_secs(30),
-            TestCategory::Performance => Duration::from_secs(60),
-            TestCategory::CrossValidation => Duration::from_secs(120),
+            TestCategory::Performance => Duration::from_mins(1),
+            TestCategory::CrossValidation => Duration::from_mins(2),
         }
     }
 
@@ -558,7 +558,7 @@ mod tests {
     #[tokio::test]
     async fn test_execution_optimizer_creation() {
         let optimizer = ExecutionOptimizer::new();
-        assert_eq!(optimizer.target_duration, Duration::from_secs(15 * 60));
+        assert_eq!(optimizer.target_duration, Duration::from_mins(15));
     }
 
     #[test]
@@ -581,11 +581,11 @@ mod tests {
         let optimizer = ExecutionOptimizer::new();
 
         // Perfect efficiency
-        let score1 = optimizer.calculate_efficiency_score(Duration::from_secs(10 * 60));
+        let score1 = optimizer.calculate_efficiency_score(Duration::from_mins(10));
         assert_eq!(score1, 1.0);
 
         // 50% efficiency
-        let score2 = optimizer.calculate_efficiency_score(Duration::from_secs(30 * 60));
+        let score2 = optimizer.calculate_efficiency_score(Duration::from_mins(30));
         assert_eq!(score2, 0.5);
     }
 }

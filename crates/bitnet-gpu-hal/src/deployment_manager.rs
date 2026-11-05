@@ -1317,7 +1317,7 @@ mod tests {
     #[test]
     fn test_metrics_uptime_tracking() {
         let mut metrics = DeploymentMetrics::default();
-        metrics.add_uptime("v1", Duration::from_secs(60));
+        metrics.add_uptime("v1", Duration::from_mins(1));
         metrics.add_uptime("v1", Duration::from_secs(40));
         metrics.add_uptime("v2", Duration::from_secs(30));
         assert_eq!(*metrics.uptime_per_version.get("v1").unwrap(), Duration::from_secs(100));

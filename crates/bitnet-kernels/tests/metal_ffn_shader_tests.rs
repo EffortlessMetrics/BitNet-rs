@@ -418,7 +418,7 @@ mod tests {
 
         let zeros = activated.iter().filter(|&&v| v == 0.0).count();
         // With pseudo-random in [-1,1], roughly half should be zeroed.
-        assert!(zeros > n / 4 && zeros < 3 * n / 4, "unexpected sparsity: {zeros}/{n}",);
+        assert!(zeros > n / 4 && zeros < 3 * n / 4, "unexpected sparsity: {zeros}/{n}");
     }
 
     // ── 5. Quantized FFN (I2_S) ─────────────────────────────────
@@ -436,7 +436,7 @@ mod tests {
         let q_bytes = ffn_weight_bytes(&cfg);
         let f_bytes = ffn_float_weight_bytes(&cfg);
         // Quantized (2-bit) must be significantly smaller than f32.
-        assert!(q_bytes < f_bytes / 4, "quantized {q_bytes} should be < float/4 {f_bytes}",);
+        assert!(q_bytes < f_bytes / 4, "quantized {q_bytes} should be < float/4 {f_bytes}");
         // Buffer must be aligned.
         assert_eq!(q_bytes % UNIFORM_BUFFER_ALIGNMENT, 0);
     }
@@ -512,8 +512,8 @@ mod tests {
         let up_sep = matmul(&input, w_up, 1, hidden, inter);
 
         for i in 0..inter {
-            assert!((gate_half[i] - gate_sep[i]).abs() < 1e-4, "gate mismatch at {i}",);
-            assert!((up_half[i] - up_sep[i]).abs() < 1e-4, "up mismatch at {i}",);
+            assert!((gate_half[i] - gate_sep[i]).abs() < 1e-4, "gate mismatch at {i}");
+            assert!((up_half[i] - up_sep[i]).abs() < 1e-4, "up mismatch at {i}");
         }
     }
 
@@ -557,7 +557,7 @@ mod tests {
         assert_eq!(with_residual.len(), hidden);
         for i in 0..hidden {
             let expected = input[i] + ffn_out[i];
-            assert!((with_residual[i] - expected).abs() < 1e-7, "residual mismatch at {i}",);
+            assert!((with_residual[i] - expected).abs() < 1e-7, "residual mismatch at {i}");
         }
     }
 
@@ -591,7 +591,7 @@ mod tests {
 
         // After RMSNorm with gamma=1, RMS of output ≈ 1.
         let rms: f32 = (normed.iter().map(|v| v * v).sum::<f32>() / dim as f32).sqrt();
-        assert!((rms - 1.0).abs() < 0.01, "post-norm RMS should ≈ 1, got {rms}",);
+        assert!((rms - 1.0).abs() < 0.01, "post-norm RMS should ≈ 1, got {rms}");
     }
 
     #[test]
@@ -671,8 +671,8 @@ mod tests {
         let out_batch = matmul(&up_batch, &w_down, 2, inter, hidden);
 
         for i in 0..hidden {
-            assert!((out_batch[i] - out0[i]).abs() < 1e-4, "token 0 mismatch at {i}",);
-            assert!((out_batch[hidden + i] - out1[i]).abs() < 1e-4, "token 1 mismatch at {i}",);
+            assert!((out_batch[i] - out0[i]).abs() < 1e-4, "token 0 mismatch at {i}");
+            assert!((out_batch[hidden + i] - out1[i]).abs() < 1e-4, "token 1 mismatch at {i}");
         }
     }
 
@@ -718,7 +718,7 @@ mod tests {
             let count = threadgroup_count(inter, tg);
             assert!(count >= 1, "hidden={hidden} inter={inter}");
             // Total dispatched threads must cover the dimension.
-            assert!((count as usize) * (tg as usize) >= inter, "under-dispatch for inter={inter}",);
+            assert!((count as usize) * (tg as usize) >= inter, "under-dispatch for inter={inter}");
         }
     }
 
@@ -740,7 +740,7 @@ mod tests {
     fn test_simd_group_alignment_for_reductions() {
         for tg in (SIMD_GROUP_SIZE..=MAX_THREADS_PER_THREADGROUP).step_by(SIMD_GROUP_SIZE as usize)
         {
-            assert_eq!(tg % SIMD_GROUP_SIZE, 0, "tg={tg} not SIMD-aligned",);
+            assert_eq!(tg % SIMD_GROUP_SIZE, 0, "tg={tg} not SIMD-aligned");
             let simd_groups = tg / SIMD_GROUP_SIZE;
             assert!(simd_groups >= 1);
         }
@@ -772,7 +772,7 @@ mod tests {
             let cols = rows * 4;
             let bytes = aligned_matrix_bytes(rows, cols);
             let pages = (bytes + METAL_PAGE_SIZE - 1) / METAL_PAGE_SIZE;
-            assert!(pages * METAL_PAGE_SIZE >= bytes, "page coverage insufficient",);
+            assert!(pages * METAL_PAGE_SIZE >= bytes, "page coverage insufficient");
         }
     }
 
@@ -816,7 +816,7 @@ mod tests {
 
         // 2-bit should be ~16× smaller than f32.
         let ratio = f32_bytes as f64 / q_bytes as f64;
-        assert!(ratio > 10.0, "expected > 10× savings, got {ratio:.1}×",);
+        assert!(ratio > 10.0, "expected > 10× savings, got {ratio:.1}×");
     }
 
     #[test]
@@ -944,7 +944,7 @@ mod tests {
         }
         let gate_out = matmul(&input, &w_gate, 1, dim, dim);
         for i in 0..dim {
-            assert!((gate_out[i] - input[i]).abs() < 1e-5, "identity gate mismatch at {i}",);
+            assert!((gate_out[i] - input[i]).abs() < 1e-5, "identity gate mismatch at {i}");
         }
     }
 
@@ -1138,7 +1138,7 @@ mod tests {
         let output_batch = matmul(&gated_batch, &w_down, batch, inter, hidden);
 
         for i in 0..batch * hidden {
-            assert!((output_batch[i] - expected[i]).abs() < 1e-4, "batch SwiGLU mismatch at {i}",);
+            assert!((output_batch[i] - expected[i]).abs() < 1e-4, "batch SwiGLU mismatch at {i}");
         }
     }
 

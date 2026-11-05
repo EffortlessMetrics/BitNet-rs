@@ -1017,7 +1017,7 @@ pub(crate) fn cmd_start(root: &Path) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn cmd_docs_automation(root: &Path) -> Result<()> {
+pub(crate) fn cmd_docs_automation(root: &Path, skip_rustdoc: bool) -> Result<()> {
     println!("[docs-automation] starting documentation checks");
 
     if command_available("markdownlint-cli2") {
@@ -1066,6 +1066,11 @@ pub(crate) fn cmd_docs_automation(root: &Path) -> Result<()> {
         }
     } else {
         println!("[docs-automation] lychee is not installed; skipping link checks");
+    }
+
+    if skip_rustdoc {
+        println!("[docs-automation] workspace CPU Rustdoc is owned by CI Core Documentation");
+        return Ok(());
     }
 
     println!("[docs-automation] rustdoc build");

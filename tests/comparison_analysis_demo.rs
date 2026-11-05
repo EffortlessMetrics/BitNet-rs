@@ -237,7 +237,7 @@ fn create_sample_cross_validation_result() -> CrossValidationResult {
         summary,
         rust_metrics: PerformanceMetrics::default(),
         cpp_metrics: PerformanceMetrics::default(),
-        total_duration: Duration::from_secs(120),
+        total_duration: Duration::from_mins(2),
         timestamp: "2024-01-15T10:30:00Z".to_string(),
     }
 }

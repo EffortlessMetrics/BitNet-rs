@@ -21,7 +21,7 @@ impl ModelDims {
         intermediate: usize,
         vocab: usize,
     ) -> Self {
-        let head_dim = if heads > 0 { hidden / heads } else { 0 };
+        let head_dim = hidden.checked_div(heads).unwrap_or(0);
         Self {
             hidden_size: hidden,
             num_layers: layers,

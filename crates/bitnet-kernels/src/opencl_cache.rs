@@ -872,7 +872,7 @@ mod tests {
     fn test_entry_not_expired_without_ttl() {
         let entry = KernelCacheEntry::new(vec![], String::new(), Duration::ZERO, String::new());
         // A very generous TTL should not be expired.
-        assert!(!entry.is_expired(Duration::from_secs(3600)));
+        assert!(!entry.is_expired(Duration::from_hours(1)));
     }
 
     #[test]

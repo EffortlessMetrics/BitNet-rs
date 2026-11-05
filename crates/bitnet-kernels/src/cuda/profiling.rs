@@ -297,19 +297,15 @@ impl OccupancyCalculator {
         let blocks_by_blocks = self.max_blocks_per_sm;
 
         // Limit by shared memory.
-        let blocks_by_shared = if shared_mem_per_block == 0 {
-            self.max_blocks_per_sm
-        } else {
-            self.max_shared_mem_per_sm / shared_mem_per_block
-        };
+        let blocks_by_shared = self
+            .max_shared_mem_per_sm
+            .checked_div(shared_mem_per_block)
+            .unwrap_or(self.max_blocks_per_sm);
 
         // Limit by registers.
         let regs_per_block = registers_per_thread * threads_per_block;
-        let blocks_by_regs = if regs_per_block == 0 {
-            self.max_blocks_per_sm
-        } else {
-            self.max_registers_per_sm / regs_per_block
-        };
+        let blocks_by_regs =
+            self.max_registers_per_sm.checked_div(regs_per_block).unwrap_or(self.max_blocks_per_sm);
 
         // Find the minimum (limiting factor).
         let limits = [

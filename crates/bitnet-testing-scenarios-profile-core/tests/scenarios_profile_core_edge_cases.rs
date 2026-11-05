@@ -75,11 +75,11 @@ fn time_constraints_default_all_none() {
 #[test]
 fn time_constraints_custom() {
     let t = TimeConstraints {
-        max_total_duration: Some(Duration::from_secs(600)),
-        max_test_duration: Some(Duration::from_secs(60)),
+        max_total_duration: Some(Duration::from_mins(10)),
+        max_test_duration: Some(Duration::from_mins(1)),
     };
-    assert_eq!(t.max_total_duration, Some(Duration::from_secs(600)));
-    assert_eq!(t.max_test_duration, Some(Duration::from_secs(60)));
+    assert_eq!(t.max_total_duration, Some(Duration::from_mins(10)));
+    assert_eq!(t.max_test_duration, Some(Duration::from_mins(1)));
 }
 
 // ---------------------------------------------------------------------------
@@ -206,13 +206,13 @@ fn fixture_profile_default_cache_size_10gb() {
 #[test]
 fn fixture_profile_default_cleanup_interval_24h() {
     let f = FixtureProfile::default();
-    assert_eq!(f.cleanup_interval, Duration::from_secs(86400));
+    assert_eq!(f.cleanup_interval, Duration::from_hours(24));
 }
 
 #[test]
 fn fixture_profile_default_download_timeout_5m() {
     let f = FixtureProfile::default();
-    assert_eq!(f.download_timeout, Duration::from_secs(300));
+    assert_eq!(f.download_timeout, Duration::from_mins(5));
 }
 
 #[test]
@@ -284,7 +284,7 @@ fn test_config_profile_default_parallel_positive() {
 #[test]
 fn test_config_profile_default_timeout_5m() {
     let config = TestConfigProfile::default();
-    assert_eq!(config.test_timeout, Duration::from_secs(300));
+    assert_eq!(config.test_timeout, Duration::from_mins(5));
 }
 
 #[test]
@@ -343,8 +343,8 @@ fn config_context_with_all_constraints() {
             max_disk_gb: Some(50),
         }),
         time_constraints: Some(TimeConstraints {
-            max_total_duration: Some(Duration::from_secs(1800)),
-            max_test_duration: Some(Duration::from_secs(120)),
+            max_total_duration: Some(Duration::from_mins(30)),
+            max_test_duration: Some(Duration::from_mins(2)),
         }),
         quality_requirements: Some(QualityRequirements {
             min_coverage: Some(0.8),

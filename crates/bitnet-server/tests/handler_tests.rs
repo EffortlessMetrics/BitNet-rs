@@ -33,8 +33,8 @@ fn server_config_default_host_and_port() {
 #[test]
 fn server_config_default_timeouts() {
     let config = ServerConfig::default();
-    assert_eq!(config.server.request_timeout, Duration::from_secs(300));
-    assert_eq!(config.server.keep_alive, Duration::from_secs(60));
+    assert_eq!(config.server.request_timeout, Duration::from_mins(5));
+    assert_eq!(config.server.keep_alive, Duration::from_mins(1));
     assert_eq!(config.server.graceful_shutdown_timeout, Duration::from_secs(30));
 }
 
@@ -685,7 +685,7 @@ fn model_manager_config_defaults() {
     let cfg = ModelManagerConfig::default();
     assert_eq!(cfg.max_concurrent_loads, 2);
     assert_eq!(cfg.model_cache_size, 3);
-    assert_eq!(cfg.load_timeout, Duration::from_secs(300));
+    assert_eq!(cfg.load_timeout, Duration::from_mins(5));
     assert!(cfg.validation_enabled);
     assert_eq!(cfg.memory_limit_gb, Some(16.0));
 }

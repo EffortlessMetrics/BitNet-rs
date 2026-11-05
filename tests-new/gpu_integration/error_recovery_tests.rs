@@ -45,7 +45,7 @@ async fn test_model_forward_failure_propagation() {
     // Then: error propagates cleanly (no panic)
     assert!(result.is_err(), "forward should propagate model error");
     let err_msg = format!("{}", result.unwrap_err());
-    assert!(err_msg.contains("Mock model failure"), "error should contain root cause: {err_msg}",);
+    assert!(err_msg.contains("Mock model failure"), "error should contain root cause: {err_msg}");
 }
 
 #[test]

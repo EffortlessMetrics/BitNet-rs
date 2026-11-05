@@ -103,7 +103,7 @@ impl Default for SessionConfig {
             max_history_tokens: 4096,
             context_window: 2048,
             system_prompt: None,
-            session_timeout: Duration::from_secs(1800),
+            session_timeout: Duration::from_mins(30),
             truncation_strategy: TruncationStrategy::KeepSystemAndRecent,
         }
     }
@@ -644,7 +644,7 @@ mod tests {
             max_history_tokens: 100,
             context_window: 50,
             system_prompt: None,
-            session_timeout: Duration::from_secs(300),
+            session_timeout: Duration::from_mins(5),
             truncation_strategy: TruncationStrategy::KeepRecent,
         }
     }
@@ -1349,7 +1349,7 @@ mod tests {
         assert_eq!(cfg.max_history_tokens, 4096);
         assert_eq!(cfg.context_window, 2048);
         assert!(cfg.system_prompt.is_none());
-        assert_eq!(cfg.session_timeout, Duration::from_secs(1800));
+        assert_eq!(cfg.session_timeout, Duration::from_mins(30));
         assert_eq!(cfg.truncation_strategy, TruncationStrategy::KeepSystemAndRecent);
     }
 

@@ -1304,7 +1304,7 @@ mod tests {
                 let m = Arc::clone(&m);
                 std::thread::spawn(move || {
                     for _ in 0..100 {
-                        m.record_encode(1, 5, Duration::from_nanos(1000));
+                        m.record_encode(1, 5, Duration::from_micros(1));
                     }
                 })
             })

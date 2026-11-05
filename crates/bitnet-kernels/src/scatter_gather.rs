@@ -169,13 +169,13 @@ pub fn gather_cpu(
 
     if indices.len() < out_len {
         return Err(KernelError::InvalidArguments {
-            reason: format!("gather indices length {} < expected {}", indices.len(), out_len,),
+            reason: format!("gather indices length {} < expected {}", indices.len(), out_len),
         }
         .into());
     }
     if output.len() < out_len {
         return Err(KernelError::InvalidArguments {
-            reason: format!("gather output length {} < expected {}", output.len(), out_len,),
+            reason: format!("gather output length {} < expected {}", output.len(), out_len),
         }
         .into());
     }
@@ -236,19 +236,19 @@ pub fn scatter_cpu(
 
     if src.len() < elem_count {
         return Err(KernelError::InvalidArguments {
-            reason: format!("scatter src length {} < expected {}", src.len(), elem_count,),
+            reason: format!("scatter src length {} < expected {}", src.len(), elem_count),
         }
         .into());
     }
     if indices.len() < elem_count {
         return Err(KernelError::InvalidArguments {
-            reason: format!("scatter indices length {} < expected {}", indices.len(), elem_count,),
+            reason: format!("scatter indices length {} < expected {}", indices.len(), elem_count),
         }
         .into());
     }
     if dst.len() < d_rows * d_cols {
         return Err(KernelError::InvalidArguments {
-            reason: format!("scatter dst length {} < expected {}", dst.len(), d_rows * d_cols,),
+            reason: format!("scatter dst length {} < expected {}", dst.len(), d_rows * d_cols),
         }
         .into());
     }
@@ -317,7 +317,7 @@ pub fn index_select_cpu(
     }
     if output.len() < out_len {
         return Err(KernelError::InvalidArguments {
-            reason: format!("index_select output length {} < expected {}", output.len(), out_len,),
+            reason: format!("index_select output length {} < expected {}", output.len(), out_len),
         }
         .into());
     }
@@ -325,7 +325,7 @@ pub fn index_select_cpu(
     for (out_row, &idx) in indices.iter().enumerate() {
         if bounds_check && idx >= s_rows {
             return Err(KernelError::InvalidArguments {
-                reason: format!("index_select index {idx} out of bounds for {} rows", s_rows,),
+                reason: format!("index_select index {idx} out of bounds for {} rows", s_rows),
             }
             .into());
         }

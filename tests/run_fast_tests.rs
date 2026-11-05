@@ -24,7 +24,7 @@ fn main() {
     println!("Target: Complete test execution in <15 minutes");
 
     let start_time = Instant::now();
-    let target_duration = Duration::from_secs(15 * 60); // 15 minutes
+    let target_duration = Duration::from_mins(15); // 15 minutes
 
     // Set environment variables for fast execution
     unsafe {
@@ -90,8 +90,8 @@ fn run_optimized_tests() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ✅ Critical integration tests completed");
 
     // Strategy 3: Run remaining tests if time allows
-    let remaining_time = Duration::from_secs(15 * 60); // This would be calculated from actual remaining time
-    if remaining_time > Duration::from_secs(60) {
+    let remaining_time = Duration::from_mins(15); // This would be calculated from actual remaining time
+    if remaining_time > Duration::from_mins(1) {
         println!("📋 Phase 3: Additional tests (time permitting)");
         let _ = run_additional_tests(); // Don't fail if these timeout
         println!("   ✅ Additional tests completed (or skipped due to time)");
@@ -190,7 +190,7 @@ mod tests {
 
         let duration = start.elapsed();
         assert!(
-            duration < Duration::from_secs(15 * 60),
+            duration < Duration::from_mins(15),
             "Test execution should complete in <15 minutes, took: {:?}",
             duration
         );

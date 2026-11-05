@@ -44,7 +44,7 @@ impl InferenceTestConfig {
                 .ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(32),
-            timeout: Duration::from_secs(120),
+            timeout: Duration::from_mins(2),
             enable_metrics: !env::var("BITNET_FAST_TESTS").unwrap_or_default().eq("1"),
         }
     }
@@ -1182,7 +1182,7 @@ mod timing_metrics_validation_tests {
     #[test]
     fn test_validate_timing_metrics_realistic_inference_times() {
         let metrics = InferenceMetrics {
-            total_duration: Duration::from_millis(2000),
+            total_duration: Duration::from_secs(2),
             prefill_duration: Duration::from_millis(500),
             decode_duration: Duration::from_millis(1500),
             tokens_per_second: 16.0,

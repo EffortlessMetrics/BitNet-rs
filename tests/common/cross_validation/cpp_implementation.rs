@@ -970,7 +970,7 @@ mod tests {
 
         let metrics = implementation.convert_performance_metrics(cpp_metrics);
 
-        assert_eq!(metrics.model_load_time, Duration::from_millis(1000));
+        assert_eq!(metrics.model_load_time, Duration::from_secs(1));
         assert_eq!(metrics.tokenization_time, Duration::from_millis(50));
         assert_eq!(metrics.inference_time, Duration::from_millis(200));
         assert_eq!(metrics.total_time, Duration::from_millis(1250));

@@ -38,7 +38,7 @@ impl ModelLoadingTestConfig {
             model_path: env::var("BITNET_GGUF").ok().map(PathBuf::from),
             validation_level: env::var("BITNET_VALIDATION_LEVEL")
                 .unwrap_or_else(|_| "strict".to_string()),
-            timeout: Duration::from_secs(60),
+            timeout: Duration::from_mins(1),
         }
     }
 

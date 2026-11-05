@@ -205,7 +205,7 @@ pub fn f32_to_bf16_neon(input: &[f32]) -> Vec<u16> {
 ///
 /// Panics if `a.len() != b.len()`.
 pub fn mixed_dot_f16_f32(a: &[f16], b: &[f32]) -> f32 {
-    assert_eq!(a.len(), b.len(), "mixed_dot: length mismatch {} vs {}", a.len(), b.len(),);
+    assert_eq!(a.len(), b.len(), "mixed_dot: length mismatch {} vs {}", a.len(), b.len());
     #[cfg(target_arch = "aarch64")]
     {
         use std::arch::aarch64::*;
@@ -244,7 +244,7 @@ pub fn mixed_dot_f16_f32(a: &[f16], b: &[f32]) -> f32 {
 ///
 /// Panics if `dst.len() < src.len()`.
 pub fn accumulate_f16_to_f32(src: &[f16], dst: &mut [f32]) {
-    assert!(dst.len() >= src.len(), "accumulate: dst len {} < src len {}", dst.len(), src.len(),);
+    assert!(dst.len() >= src.len(), "accumulate: dst len {} < src len {}", dst.len(), src.len());
     let len = src.len();
 
     #[cfg(target_arch = "aarch64")]

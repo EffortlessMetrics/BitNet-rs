@@ -60,7 +60,7 @@ async fn test_error_debug_info() -> Result<(), Box<dyn std::error::Error>> {
 async fn test_troubleshooting_steps() -> Result<(), Box<dyn std::error::Error>> {
     use bitnet_tests::errors::TestError;
 
-    let timeout_error = TestError::timeout(Duration::from_secs(60));
+    let timeout_error = TestError::timeout(Duration::from_mins(1));
     let steps = timeout_error.troubleshooting_steps();
 
     assert!(!steps.is_empty());

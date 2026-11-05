@@ -1227,7 +1227,7 @@ mod tests {
         let fp16 = MixedPrecisionGrad::fp32_to_fp16(&data);
         let back = MixedPrecisionGrad::fp16_to_fp32(&fp16);
         for (i, (&orig, &rt)) in data.iter().zip(back.iter()).enumerate() {
-            assert!((orig - rt).abs() < 0.01, "element {i}: {orig} != {rt}",);
+            assert!((orig - rt).abs() < 0.01, "element {i}: {orig} != {rt}");
         }
     }
 
@@ -1625,7 +1625,7 @@ mod tests {
         let valid = scaler.unscale(&mut buf);
         assert!(valid);
         for (i, &v) in original.iter().enumerate() {
-            assert!((buf.data()[i] - v).abs() < 1e-5, "element {i}: {} != {v}", buf.data()[i],);
+            assert!((buf.data()[i] - v).abs() < 1e-5, "element {i}: {} != {v}", buf.data()[i]);
         }
     }
 

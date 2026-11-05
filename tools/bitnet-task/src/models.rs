@@ -183,7 +183,7 @@ pub(crate) fn cmd_generate_policy(root: &Path, model: &str, output: &str) -> Res
     println!("  export BITNET_CORRECTION_POLICY={}", output_path.display());
     println!("  export BITNET_DETERMINISTIC=1 BITNET_SEED=42 RAYON_NUM_THREADS=1");
     println!("  RUST_LOG=info,bitnet_models=debug ./scripts/debug_inference.sh \\");
-    println!("    \"{}\" \\", model_path.to_string_lossy(),);
+    println!("    \"{}\" \\", model_path.to_string_lossy());
     println!("    models/llama3-tokenizer/tokenizer.json \\");
     println!("    \"Answer in one short sentence: Why is the sky blue?\"");
     Ok(())

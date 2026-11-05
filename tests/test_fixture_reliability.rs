@@ -185,7 +185,7 @@ async fn test_realistic_fixture_cleanup() -> TestResult<()> {
         if *make_old {
             // Make file appear old by setting modification time
             // Note: This is a best-effort approach and may not work on all systems
-            let old_time = SystemTime::now() - Duration::from_secs(48 * 60 * 60); // 48 hours ago
+            let old_time = SystemTime::now() - Duration::from_hours(48); // 48 hours ago
             if let Ok(file) = std::fs::File::open(&file_path) {
                 // Try to set the file time (may fail on some systems, but that's OK for testing)
                 let _ = file.set_modified(old_time);

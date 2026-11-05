@@ -90,24 +90,25 @@ review_after = "2026-06-07"
 expires = "2026-11-07"
 
 [[lane]]
-id = "ci-core-docs"
+id = "rustdoc-workspace"
 workflow = ".github/workflows/ci-core.yml"
 job = "Documentation"
 kind = "docs"
-tier = "frontdoor"
-default_pr = true
+tier = "risk-gated"
+default_pr = false
 blocking = true
 runner = "ubuntu_22_04"
 base_lem = 8
 owner = "docs"
-intent = "Ensure Rust documentation builds for the workspace CPU surface."
-failure_mode = "Public docs or rustdoc examples drift from compilable API."
-proof_obligation = "Run cargo doc --workspace --no-default-features --features cpu."
-evidence = ["job logs"]
-allowed_triggers = ["pull_request", "push", "workflow_dispatch"]
-duplicate_of = ["docs-automation if overlapping"]
-review_after = "2026-06-07"
-expires = "2026-08-07"
+intent = "Own workspace CPU Rustdoc on documentation, manifest and public-API risk; exclude ordinary leaf Rust PRs."
+failure_mode = "Selected documentation/API changes pass without workspace Rustdoc proof, or duplicate builds waste default PR capacity."
+proof_obligation = "Test the route, then run cargo doc --locked --no-deps --workspace --no-default-features --features cpu when selected; emit an explicit unselected Documentation result otherwise."
+evidence = ["routing unit tests", "Documentation job logs", "CI Core Success"]
+allowed_triggers = ["pull_request:path-gated", "push", "workflow_dispatch"]
+labels = ["full-ci"]
+duplicate_of = []
+review_after = "2026-11-01"
+expires = "2026-11-07"
 
 [[lane]]
 id = "feature-matrix-pr"

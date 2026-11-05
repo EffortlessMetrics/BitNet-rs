@@ -451,7 +451,10 @@ impl RecoveryMetrics {
 
     /// Average recovery time in milliseconds, or 0 if none recorded.
     pub const fn avg_recovery_time_ms(&self) -> u64 {
-        if self.recovery_count == 0 { 0 } else { self.recovery_time_sum_ms / self.recovery_count }
+        match self.recovery_time_sum_ms.checked_div(self.recovery_count) {
+            Some(average) => average,
+            None => 0,
+        }
     }
 }
 
@@ -703,7 +706,7 @@ mod tests {
     fn exponential_backoff_huge_attempt() {
         let b = BackoffStrategy::Exponential { base_ms: 100, max_ms: 5000 };
         // Should not panic on very large attempt numbers
-        assert_eq!(b.delay_for_attempt(64), Duration::from_millis(5000));
+        assert_eq!(b.delay_for_attempt(64), Duration::from_secs(5));
     }
 
     #[test]

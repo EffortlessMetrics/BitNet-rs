@@ -1065,7 +1065,7 @@ impl ComparisonAnalysisReporter {
                 confidence: 0.5,
                 significant: false,
             },
-            recovery_time: Duration::from_secs(24 * 3600), // 24 hours
+            recovery_time: Duration::from_hours(24), // 24 hours
             patterns: Vec::new(),
         }
     }

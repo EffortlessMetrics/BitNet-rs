@@ -454,7 +454,7 @@ fn gather_rows(shards: &[&[f32]], rows: usize, cols: usize) -> Result<Vec<f32>> 
 
 fn gather_cols(shards: &[&[f32]], rows: usize, cols: usize) -> Result<Vec<f32>> {
     let shard_cols: Vec<usize> =
-        shards.iter().map(|s| if rows == 0 { 0 } else { s.len() / rows }).collect();
+        shards.iter().map(|s| s.len().checked_div(rows).unwrap_or(0)).collect();
     let total_cols: usize = shard_cols.iter().sum();
     if total_cols != cols {
         return Err(SimdTensorParallelError::ShapeMismatch(format!(

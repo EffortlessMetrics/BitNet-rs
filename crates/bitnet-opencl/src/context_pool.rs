@@ -53,7 +53,7 @@ impl Default for ContextPoolConfig {
         Self {
             max_contexts: 4,
             memory_limit: 2 * 1024 * 1024 * 1024, // 2 GiB
-            idle_timeout: Duration::from_secs(300),
+            idle_timeout: Duration::from_mins(5),
             lazy_creation: true,
         }
     }

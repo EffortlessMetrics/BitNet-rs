@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 #[derive(Debug, Deserialize, Default)]
 struct LintsFile {
@@ -27,6 +28,8 @@ struct PlannedLint {
     level: String,
     #[serde(default)]
     activate_when_msrv: String,
+    #[serde(default)]
+    activate_when_available: bool,
     #[serde(default)]
     reason: String,
 }
@@ -62,7 +65,56 @@ pub struct Report {
     pub active: Vec<LintStatus>,
     pub deferred: Vec<LintStatus>,
     pub missing: Vec<LintStatus>,
+    pub unavailable: Vec<LintStatus>,
+    pub toolchain: Option<ToolchainLintInventory>,
     pub debt_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ToolchainLintInventory {
+    release: String,
+    compiler_version: String,
+    lints: BTreeSet<String>,
+}
+
+fn clippy_driver_output(args: &[&str]) -> Result<String> {
+    let output = Command::new("clippy-driver")
+        .args(args)
+        .output()
+        .context("querying the installed Clippy toolchain; install its clippy component")?;
+    if !output.status.success() {
+        bail!("clippy-driver {args:?} failed: {}", String::from_utf8_lossy(&output.stderr));
+    }
+    String::from_utf8(output.stdout).context("Clippy toolchain output was not UTF-8")
+}
+
+fn parse_lint_inventory(help: &str) -> Result<BTreeSet<String>> {
+    let lints: BTreeSet<_> = help
+        .lines()
+        .filter_map(|line| {
+            let mut columns = line.split_whitespace();
+            let name = columns.next()?;
+            let level = columns.next()?;
+            (name.starts_with("clippy::") && matches!(level, "allow" | "warn" | "deny" | "forbid"))
+                .then(|| name.replace('-', "_"))
+        })
+        .collect();
+    if lints.is_empty() {
+        bail!("clippy-driver -W help did not report any Clippy lints; availability is unproven");
+    }
+    Ok(lints)
+}
+
+fn discover_toolchain_lints() -> Result<ToolchainLintInventory> {
+    let compiler_version = clippy_driver_output(&["-Vv"])?;
+    let release = compiler_version
+        .lines()
+        .find_map(|line| line.strip_prefix("release: "))
+        .context("Clippy verbose version omitted its compiler release")?
+        .trim()
+        .to_string();
+    let lints = parse_lint_inventory(&clippy_driver_output(&["-W", "help"])?)?;
+    Ok(ToolchainLintInventory { release, compiler_version, lints })
 }
 
 #[derive(Debug, Serialize)]
@@ -81,12 +133,14 @@ pub fn run(
     report_dir: PathBuf,
     fail_on_error: bool,
 ) -> Result<()> {
-    let report = check(&lints_path, &debt_path, &manifest, &report_dir)?;
+    let inventory = discover_toolchain_lints()?;
+    let report = check(&lints_path, &debt_path, &manifest, &report_dir, &inventory)?;
     println!(
-        "clippy-lint-policy: {} active, {} deferred, {} missing, {} errors, {} warnings",
+        "clippy-lint-policy: {} active, {} deferred, {} missing, {} unavailable, {} errors, {} warnings",
         report.active.len(),
         report.deferred.len(),
         report.missing.len(),
+        report.unavailable.len(),
         report.errors.len(),
         report.warnings.len()
     );
@@ -107,8 +161,9 @@ fn check(
     debt_path: &Path,
     manifest: &Path,
     report_dir: &Path,
+    inventory: &ToolchainLintInventory,
 ) -> Result<Report> {
-    let mut report = Report::default();
+    let mut report = Report { toolchain: Some(inventory.clone()), ..Report::default() };
 
     let lints_text = fs::read_to_string(lints_path)
         .with_context(|| format!("reading {}", lints_path.display()))?;
@@ -119,6 +174,28 @@ fn check(
     }
     if lints.msrv.is_empty() {
         report.errors.push(format!("{} missing `msrv`", lints_path.display()));
+    }
+    if inventory.release.split('.').take(2).ne(lints.msrv.split('.').take(2)) {
+        report.errors.push(format!(
+            "Clippy compiler release {} does not match policy MSRV {}; lint availability must be measured on the pinned release",
+            inventory.release, lints.msrv
+        ));
+    }
+
+    let toolchain_path = manifest.with_file_name("rust-toolchain.toml");
+    let toolchain_text = fs::read_to_string(&toolchain_path)
+        .with_context(|| format!("reading pinned toolchain {}", toolchain_path.display()))?;
+    let toolchain: toml::Value = toml::from_str(&toolchain_text)?;
+    let pinned_release = toolchain
+        .get("toolchain")
+        .and_then(|value| value.get("channel"))
+        .and_then(toml::Value::as_str)
+        .context("rust-toolchain.toml omitted toolchain.channel")?;
+    if inventory.release != pinned_release {
+        report.errors.push(format!(
+            "Clippy compiler release {} does not match pinned toolchain {pinned_release}",
+            inventory.release
+        ));
     }
 
     let debt: DebtFile = if debt_path.exists() {
@@ -160,6 +237,28 @@ fn check(
             activate_when_msrv: planned.activate_when_msrv.clone(),
             debt_entries,
         };
+        if !inventory.lints.contains(&planned.name) {
+            if !planned.activate_when_available {
+                report.errors.push(format!(
+                    "{} is not available in Clippy {}; its activation contract needs an explicit availability gate",
+                    planned.name, inventory.release
+                ));
+            }
+            if cargo_level.is_some() {
+                report.errors.push(format!(
+                    "unavailable lint {} must be absent from workspace Clippy lints, not declared at any level",
+                    planned.name
+                ));
+            }
+            if debt_entries > 0 {
+                report.errors.push(format!(
+                    "unavailable lint {} cannot be represented by source-code debt",
+                    planned.name
+                ));
+            }
+            report.unavailable.push(status);
+            continue;
+        }
         match cargo_level.as_deref() {
             Some(level) if level == planned.level => report.active.push(status),
             Some("allow") if debt_entries > 0 => report.deferred.push(status),
@@ -310,6 +409,135 @@ mod tests {
     use super::*;
     use std::io::Write;
 
+    fn inventory(names: &[&str]) -> ToolchainLintInventory {
+        ToolchainLintInventory {
+            release: "1.95.0".into(),
+            compiler_version: "test fixture: rustc 1.95.0".into(),
+            lints: names.iter().map(|name| (*name).into()).collect(),
+        }
+    }
+
+    fn write_pinned_toolchain(dir: &Path) -> Result<()> {
+        fs::write(dir.join("rust-toolchain.toml"), "[toolchain]\nchannel = \"1.95.0\"\n")?;
+        Ok(())
+    }
+
+    fn availability_report(
+        available: bool,
+        gated: bool,
+        level: Option<&str>,
+        with_debt: bool,
+        release: &str,
+    ) -> Result<Report> {
+        let dir = tempfile::tempdir()?;
+        write_pinned_toolchain(dir.path())?;
+        let lints = dir.path().join("clippy-lints.toml");
+        let debt = dir.path().join("clippy-debt.toml");
+        let manifest = dir.path().join("Cargo.toml");
+        fs::write(
+            &lints,
+            format!(
+                r#"
+schema_version = "1.0"
+msrv = "1.95"
+[[planned]]
+name = "clippy::manual_pop_if"
+level = "warn"
+activate_when_msrv = "1.95"
+activate_when_available = {gated}
+reason = "Use the compiler-provided predicate-and-pop lint."
+"#
+            ),
+        )?;
+        let debt_entry = if with_debt {
+            r#"
+[[debt]]
+lint = "clippy::manual_pop_if"
+path = "crates/x/**"
+owner = "test"
+reason = "Synthetic debt used to test rejection."
+expires = "2099-01-01"
+status = "active"
+"#
+        } else {
+            ""
+        };
+        fs::write(&debt, format!("schema_version = \"1.0\"\n{debt_entry}"))?;
+        let declaration =
+            level.map_or_else(String::new, |level| format!("manual_pop_if = \"{level}\""));
+        fs::write(&manifest, format!("[workspace.lints.clippy]\n{declaration}\n"))?;
+        let mut toolchain = inventory(if available { &["clippy::manual_pop_if"] } else { &[] });
+        toolchain.release = release.into();
+        check(&lints, &debt, &manifest, dir.path(), &toolchain)
+    }
+
+    #[test]
+    fn parses_individual_lints_without_confusing_group_membership() -> Result<()> {
+        let lints = parse_lint_inventory(
+            "clippy::manual-checked-ops warn use checked arithmetic\n\
+             clippy::disallowed-fields allow protect fields\n\
+             clippy::all clippy::manual-checked-ops, clippy::disallowed-fields\n\
+             unused warn unused code\n",
+        )?;
+        assert_eq!(
+            lints,
+            inventory(&["clippy::manual_checked_ops", "clippy::disallowed_fields"]).lints
+        );
+        assert!(parse_lint_inventory("clippy::all clippy::manual-checked-ops\n").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn unavailable_lint_requires_explicit_gate_and_no_declaration_or_debt() -> Result<()> {
+        let report = availability_report(false, true, None, false, "1.95.0")?;
+        assert!(report.errors.is_empty(), "{:?}", report.errors);
+        assert_eq!(report.unavailable.len(), 1);
+        assert!(report.active.is_empty());
+        for level in [Some("warn"), Some("allow")] {
+            let report = availability_report(false, true, level, false, "1.95.0")?;
+            assert!(
+                report.errors.iter().any(|error| error.contains("must be absent")),
+                "{:?}",
+                report.errors
+            );
+        }
+        let ungated = availability_report(false, false, None, false, "1.95.0")?;
+        assert!(ungated.errors.iter().any(|error| error.contains("explicit availability gate")));
+        let debt = availability_report(false, true, None, true, "1.95.0")?;
+        assert!(
+            debt.errors
+                .iter()
+                .any(|error| error.contains("cannot be represented by source-code debt"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn availability_gate_requires_activation_when_lint_arrives() -> Result<()> {
+        let missing = availability_report(true, true, None, false, "1.95.0")?;
+        assert!(missing.errors.iter().any(|error| error.contains("absent")));
+        let allowed = availability_report(true, true, Some("allow"), false, "1.95.0")?;
+        assert!(allowed.errors.iter().any(|error| error.contains("without debt")));
+        let active = availability_report(true, true, Some("warn"), false, "1.95.0")?;
+        assert!(active.errors.is_empty(), "{:?}", active.errors);
+        assert_eq!(active.active.len(), 1);
+        assert!(active.unavailable.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_inventory_from_another_compiler_release() -> Result<()> {
+        for release in ["1.96.0", "1.95.1", "1.95.0-nightly"] {
+            let report = availability_report(false, true, None, false, release)?;
+            assert!(
+                report.errors.iter().any(|error| error.contains("does not match pinned toolchain")),
+                "{release}: {:?}",
+                report.errors
+            );
+        }
+        Ok(())
+    }
+
     #[test]
     fn validates_debt_expiry() {
         let debt = DebtFile {
@@ -330,13 +558,14 @@ mod tests {
     }
 
     #[test]
-    fn reports_active_and_deferred_lints() {
+    fn reports_active_and_deferred_lints() -> Result<()> {
         let dir = std::env::temp_dir().join(format!(
             "clippy-lints-{}-{}",
             std::process::id(),
             chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
         ));
         fs::create_dir_all(&dir).unwrap();
+        write_pinned_toolchain(&dir)?;
         let lints = dir.join("clippy-lints.toml");
         let debt = dir.join("clippy-debt.toml");
         let manifest = dir.join("Cargo.toml");
@@ -384,20 +613,24 @@ manual_checked_ops = "allow"
 "#
         )
         .unwrap();
-        let report = check(&lints, &debt, &manifest, &dir).unwrap();
+        let toolchain =
+            inventory(&["clippy::same_length_and_capacity", "clippy::manual_checked_ops"]);
+        let report = check(&lints, &debt, &manifest, &dir, &toolchain)?;
         assert_eq!(report.active.len(), 1);
         assert_eq!(report.deferred.len(), 1);
         assert!(report.errors.is_empty(), "{:?}", report.errors);
+        Ok(())
     }
 
     #[test]
-    fn due_lints_without_activation_or_debt_are_errors() {
+    fn due_lints_without_activation_or_debt_are_errors() -> Result<()> {
         let dir = std::env::temp_dir().join(format!(
             "clippy-lints-errors-{}-{}",
             std::process::id(),
             chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
         ));
         fs::create_dir_all(&dir).unwrap();
+        write_pinned_toolchain(&dir)?;
         let lints = dir.join("clippy-lints.toml");
         let debt = dir.join("clippy-debt.toml");
         let manifest = dir.join("Cargo.toml");
@@ -437,7 +670,12 @@ manual_take = "deny"
 "#
         )
         .unwrap();
-        let report = check(&lints, &debt, &manifest, &dir).unwrap();
+        let toolchain = inventory(&[
+            "clippy::same_length_and_capacity",
+            "clippy::manual_take",
+            "clippy::needless_type_cast",
+        ]);
+        let report = check(&lints, &debt, &manifest, &dir, &toolchain)?;
         assert_eq!(report.errors.len(), 3, "{:?}", report.errors);
         assert!(
             report
@@ -460,5 +698,6 @@ manual_take = "deny"
             "{:?}",
             report.errors
         );
+        Ok(())
     }
 }

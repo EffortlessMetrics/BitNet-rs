@@ -32,7 +32,7 @@ impl Default for ProtocolConfig {
     fn default() -> Self {
         Self {
             max_request_size: 4 * 1024 * 1024, // 4 MiB
-            timeout: Duration::from_secs(60),
+            timeout: Duration::from_mins(1),
             streaming_enabled: true,
             max_tokens_limit: 4096,
             default_model: "bitnet-b1.58-2B-4T".to_string(),
@@ -924,7 +924,7 @@ mod tests {
     fn config_default_values() {
         let cfg = default_config();
         assert_eq!(cfg.max_request_size, 4 * 1024 * 1024);
-        assert_eq!(cfg.timeout, Duration::from_secs(60));
+        assert_eq!(cfg.timeout, Duration::from_mins(1));
         assert!(cfg.streaming_enabled);
         assert_eq!(cfg.max_tokens_limit, 4096);
     }

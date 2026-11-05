@@ -1122,7 +1122,7 @@ impl ProfileExporter for PprofExporter {
         for s in samples {
             let stack =
                 s.metadata.get("stack").cloned().unwrap_or_else(|| s.collector_name.clone());
-            out.push_str(&format!("{stack} {value}\n", value = s.value,));
+            out.push_str(&format!("{stack} {value}\n", value = s.value));
         }
         out.into_bytes()
     }

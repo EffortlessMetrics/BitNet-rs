@@ -643,7 +643,7 @@ impl KVCacheManager {
         let memory_pool = self.memory_pool.clone();
         let statistics = self.statistics.clone();
 
-        let mut interval = tokio::time::interval(Duration::from_secs(60)); // Optimize every minute
+        let mut interval = tokio::time::interval(Duration::from_mins(1)); // Optimize every minute
 
         loop {
             interval.tick().await;
@@ -653,7 +653,7 @@ impl KVCacheManager {
             let expired_sessions: Vec<String> = {
                 let cache_read = cache.read().await;
                 cache_read.iter()
-                    .filter(|(_, entry)| now.duration_since(entry.last_accessed) > Duration::from_secs(3600)) // 1 hour timeout
+                    .filter(|(_, entry)| now.duration_since(entry.last_accessed) > Duration::from_hours(1)) // 1 hour timeout
                     .map(|(session_id, _)| session_id.clone())
                     .collect()
             };

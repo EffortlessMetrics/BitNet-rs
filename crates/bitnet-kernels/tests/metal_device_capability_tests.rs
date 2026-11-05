@@ -268,7 +268,7 @@ fn test_simd_group_size_is_32() {
     ];
 
     for device in &devices {
-        assert_eq!(device.simd_group_size, 32, "{} SIMD group size must be 32", device.name,);
+        assert_eq!(device.simd_group_size, 32, "{} SIMD group size must be 32", device.name);
     }
 }
 
@@ -284,7 +284,7 @@ fn test_capability_comparison() {
     let families: Vec<u32> =
         ["M1", "M2", "M3", "M4"].iter().map(|k| capabilities[*k].gpu_family).collect();
     for window in families.windows(2) {
-        assert!(window[1] > window[0], "GPU family must increase: {} -> {}", window[0], window[1],);
+        assert!(window[1] > window[0], "GPU family must increase: {} -> {}", window[0], window[1]);
     }
 
     // All share the same max threads per threadgroup

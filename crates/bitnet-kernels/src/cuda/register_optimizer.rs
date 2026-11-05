@@ -444,18 +444,16 @@ impl SpillDetector {
         let regs_per_warp = regs_per_warp_raw.div_ceil(alloc_unit) * alloc_unit;
 
         let regs_per_block = regs_per_warp * warps_per_block;
-        let max_blocks_by_regs = if regs_per_block > 0 {
-            regs_per_sm / regs_per_block
-        } else {
-            self.arch.max_blocks_per_sm()
-        };
+        let max_blocks_by_regs = regs_per_sm
+            .checked_div(regs_per_block)
+            .unwrap_or_else(|| self.arch.max_blocks_per_sm());
 
         let max_blocks_by_threads = max_threads / threads_per_block.max(1);
-        let max_blocks_by_smem = if shared_mem_per_block > 0 {
-            self.arch.max_shared_mem_per_sm() / shared_mem_per_block
-        } else {
-            self.arch.max_blocks_per_sm()
-        };
+        let max_blocks_by_smem = self
+            .arch
+            .max_shared_mem_per_sm()
+            .checked_div(shared_mem_per_block)
+            .unwrap_or_else(|| self.arch.max_blocks_per_sm());
 
         let achievable_blocks =
             max_blocks_by_regs.min(max_blocks_by_threads).min(max_blocks_by_smem);
@@ -592,21 +590,19 @@ impl OccupancyTradeoff {
             regs_per_warp_raw.div_ceil(alloc_unit) * alloc_unit
         };
         let regs_per_block = regs_per_warp * warps_per_block;
-        let blocks_by_regs = if regs_per_block > 0 {
-            regs_per_sm / regs_per_block
-        } else {
-            self.arch.max_blocks_per_sm()
-        };
+        let blocks_by_regs = regs_per_sm
+            .checked_div(regs_per_block)
+            .unwrap_or_else(|| self.arch.max_blocks_per_sm());
 
         // Thread-limited blocks.
         let blocks_by_threads = self.arch.max_threads_per_sm() / threads_per_block.max(1);
 
         // Shared-memory-limited blocks.
-        let blocks_by_smem = if shared_mem_per_block > 0 {
-            self.arch.max_shared_mem_per_sm() / shared_mem_per_block
-        } else {
-            self.arch.max_blocks_per_sm()
-        };
+        let blocks_by_smem = self
+            .arch
+            .max_shared_mem_per_sm()
+            .checked_div(shared_mem_per_block)
+            .unwrap_or_else(|| self.arch.max_blocks_per_sm());
 
         let blocks_by_max = self.arch.max_blocks_per_sm();
 
@@ -789,11 +785,10 @@ impl RegisterPartitioner {
         let warps_per_block = threads_per_block.div_ceil(WARP_SIZE);
         let regs_per_block = regs_per_warp * warps_per_block;
 
-        let blocks = if regs_per_block > 0 {
-            (regs_per_sm / regs_per_block).min(self.arch.max_blocks_per_sm())
-        } else {
-            self.arch.max_blocks_per_sm()
-        };
+        let blocks = regs_per_sm.checked_div(regs_per_block).map_or_else(
+            || self.arch.max_blocks_per_sm(),
+            |blocks| blocks.min(self.arch.max_blocks_per_sm()),
+        );
 
         let max_blocks_by_threads = self.arch.max_threads_per_sm() / threads_per_block.max(1);
         let effective_blocks = blocks.min(max_blocks_by_threads);

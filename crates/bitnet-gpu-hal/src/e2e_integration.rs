@@ -192,7 +192,7 @@ impl Default for E2EConfig {
             max_tokens: 16,
             temperature: 0.0,
             seed: Some(42),
-            timeout: Duration::from_secs(300),
+            timeout: Duration::from_mins(5),
             prompts: vec!["Hello".to_string()],
             expected_vocab_size: None,
             validate_roundtrip: true,

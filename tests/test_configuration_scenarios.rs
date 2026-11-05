@@ -151,7 +151,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
     }
     if let Some(tft) = ctx.time_constraints.target_feedback_time {
         // <=120s: fast feedback: disable heavy generators, use JSON only, limit parallelism
-        if tft <= Duration::from_secs(120) {
+        if tft <= Duration::from_mins(2) {
             cfg.reporting.generate_coverage = false;
             cfg.reporting.generate_performance = false;
             cfg.reporting.formats = vec![ReportFormat::Json];
@@ -215,7 +215,7 @@ fn get_context_config(manager: &ScenarioConfigManager, ctx: &TestConfigContext) 
     // ----- Final clamp: fast-feedback must stay minimal -------------------------
     // NOTE: This final clamp is intentionally LAST and overrides any prior merges.
     if let Some(tft) = ctx.time_constraints.target_feedback_time {
-        if tft <= Duration::from_secs(120) {
+        if tft <= Duration::from_mins(2) {
             cfg.reporting.generate_coverage = false;
             cfg.reporting.generate_performance = false;
             cfg.reporting.include_artifacts = false; // Skip artifacts too
@@ -522,7 +522,7 @@ impl TestCase for ScenarioConfigurationTest {
         assert_eq!(perf_config.max_parallel_tests, 1, "Performance tests are sequential by design");
         assert_eq!(
             perf_config.test_timeout,
-            Duration::from_secs(1800),
+            Duration::from_mins(30),
             "Performance tests should have long timeout"
         );
         assert!(
@@ -567,7 +567,7 @@ impl TestCase for ScenarioConfigurationTest {
         assert_eq!(debug_config.max_parallel_tests, 1, "Debug should be sequential");
         assert_eq!(
             debug_config.test_timeout,
-            Duration::from_secs(3600),
+            Duration::from_hours(1),
             "Debug should have long timeout"
         );
         assert_eq!(debug_config.log_level, "trace", "Debug should use trace logging");
@@ -779,15 +779,15 @@ impl TestCase for TimeConstraintsTest {
         let mut context = TestConfigContext::default();
 
         // Test test timeout constraint
-        context.time_constraints.max_test_timeout = Duration::from_secs(60);
+        context.time_constraints.max_test_timeout = Duration::from_mins(1);
         let config = get_context_config(&manager, &context);
         assert!(
-            config.test_timeout <= Duration::from_secs(60),
+            config.test_timeout <= Duration::from_mins(1),
             "Test timeout constraint should be applied"
         );
 
         // Test fast feedback constraint
-        context.time_constraints.target_feedback_time = Some(Duration::from_secs(120));
+        context.time_constraints.target_feedback_time = Some(Duration::from_mins(2));
         let config = get_context_config(&manager, &context);
         assert!(!config.reporting.generate_coverage, "Fast feedback should disable coverage");
         assert!(
@@ -972,7 +972,7 @@ impl TestCase for TestConfigContextTest {
         context.environment = EnvironmentType::CI;
         context.resource_constraints.max_parallel_tests = Some(1);
         context.resource_constraints.network_access = false;
-        context.time_constraints.max_test_timeout = Duration::from_secs(300);
+        context.time_constraints.max_test_timeout = Duration::from_mins(5);
         context.quality_requirements.min_coverage = 0.85;
         context.quality_requirements.performance_monitoring = true;
         context.platform_settings.os = Some("linux".to_string());
@@ -995,7 +995,7 @@ impl TestCase for TestConfigContextTest {
 
         // Verify time constraints are applied
         assert!(
-            config.test_timeout <= Duration::from_secs(300),
+            config.test_timeout <= Duration::from_mins(5),
             "Time constraint should limit timeout"
         );
 
@@ -1144,12 +1144,12 @@ impl TestCase for EnvironmentDetectionTest {
         let context = context_from_environment();
         assert_eq!(
             context.time_constraints.max_total_duration,
-            Duration::from_secs(1800),
+            Duration::from_mins(30),
             "Should detect duration constraint"
         );
         assert_eq!(
             context.time_constraints.target_feedback_time,
-            Some(Duration::from_secs(120)),
+            Some(Duration::from_mins(2)),
             "Should detect feedback time"
         );
         assert!(context.time_constraints.fail_fast, "Should detect fail-fast setting");
@@ -1448,7 +1448,7 @@ impl TestCase for ComplexScenarioTest {
         context.environment = EnvironmentType::CI;
         context.resource_constraints.max_parallel_tests = Some(1);
         context.resource_constraints.max_memory_mb = 2048;
-        context.time_constraints.max_test_timeout = Duration::from_secs(300);
+        context.time_constraints.max_test_timeout = Duration::from_mins(5);
         context.quality_requirements.performance_monitoring = true;
         context.platform_settings.os = Some("linux".to_string());
 
@@ -1467,7 +1467,7 @@ impl TestCase for ComplexScenarioTest {
         let mut context = TestConfigContext::default();
         context.scenario = TestingScenario::Unit;
         context.environment = EnvironmentType::Local;
-        context.time_constraints.target_feedback_time = Some(Duration::from_secs(60));
+        context.time_constraints.target_feedback_time = Some(Duration::from_mins(1));
         context.quality_requirements.comprehensive_reporting = false;
 
         let config = get_context_config(&manager, &context);
@@ -1543,7 +1543,7 @@ impl TestCase for ConfigurationMergingTest {
         assert_eq!(config.log_level, "debug", "Environment should override scenario logging");
 
         // Test that constraints override both scenario and environment
-        context.time_constraints.target_feedback_time = Some(Duration::from_secs(60));
+        context.time_constraints.target_feedback_time = Some(Duration::from_mins(1));
         let config = get_context_config(&manager, &context);
         assert!(
             !config.reporting.generate_coverage,
@@ -1602,10 +1602,10 @@ impl TestCase for EdgeCaseConfigurationTest {
         );
 
         // Test very long timeout
-        context.time_constraints.max_test_timeout = Duration::from_secs(86400); // 24 hours
+        context.time_constraints.max_test_timeout = Duration::from_hours(24); // 24 hours
         let config = get_context_config(&manager, &context);
         assert!(
-            config.test_timeout <= Duration::from_secs(86400),
+            config.test_timeout <= Duration::from_hours(24),
             "Should respect very long timeout"
         );
 
@@ -1684,7 +1684,7 @@ mod shim_unit_tests {
     fn test_fast_feedback_forces_json_and_caps_parallelism() {
         let mgr = ScenarioConfigManager::new();
         let mut ctx = TestConfigContext::default();
-        ctx.time_constraints.target_feedback_time = Some(Duration::from_secs(60));
+        ctx.time_constraints.target_feedback_time = Some(Duration::from_mins(1));
         ctx.resource_constraints.max_parallel_tests = Some(32);
 
         let cfg = get_context_config(&mgr, &ctx);

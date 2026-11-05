@@ -215,7 +215,7 @@ impl SparseMatrix {
     pub fn from_dense(dense: &[f32], rows: usize, cols: usize, threshold: f32) -> Result<Self> {
         if rows * cols != dense.len() {
             return Err(KernelError::InvalidArguments {
-                reason: format!("Dense length {} != rows*cols = {}", dense.len(), rows * cols,),
+                reason: format!("Dense length {} != rows*cols = {}", dense.len(), rows * cols),
             }
             .into());
         }
@@ -663,7 +663,7 @@ impl BlockSparse {
         }
         if data.len() != rows * cols {
             return Err(KernelError::InvalidArguments {
-                reason: format!("Dense length {} != {rows}×{cols} = {}", data.len(), rows * cols,),
+                reason: format!("Dense length {} != {rows}×{cols} = {}", data.len(), rows * cols),
             }
             .into());
         }
@@ -759,13 +759,13 @@ impl BlockSparse {
     pub fn spmv(&self, x: &[f32], y: &mut [f32]) -> Result<()> {
         if x.len() != self.cols {
             return Err(KernelError::InvalidArguments {
-                reason: format!("BlockSparse SpMV: x.len()={} != cols={}", x.len(), self.cols,),
+                reason: format!("BlockSparse SpMV: x.len()={} != cols={}", x.len(), self.cols),
             }
             .into());
         }
         if y.len() != self.rows {
             return Err(KernelError::InvalidArguments {
-                reason: format!("BlockSparse SpMV: y.len()={} != rows={}", y.len(), self.rows,),
+                reason: format!("BlockSparse SpMV: y.len()={} != rows={}", y.len(), self.rows),
             }
             .into());
         }

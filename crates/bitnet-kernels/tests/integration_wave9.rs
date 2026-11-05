@@ -737,7 +737,7 @@ fn packed_embedding_round_trip() {
 
     assert_eq!(unpacked.len(), original.len());
     for (i, (&o, &u)) in original.iter().zip(&unpacked).enumerate() {
-        assert!((o - u).abs() < 0.1, "packed_emb[{i}]: orig={o}, unpacked={u}",);
+        assert!((o - u).abs() < 0.1, "packed_emb[{i}]: orig={o}, unpacked={u}");
     }
 }
 

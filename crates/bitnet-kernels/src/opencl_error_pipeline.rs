@@ -706,7 +706,7 @@ mod tests {
     fn test_retry_exponential_doubles() {
         let s = RetryStrategy::Exponential {
             base: Duration::from_millis(100),
-            max: Duration::from_millis(10_000),
+            max: Duration::from_secs(10),
         };
         assert_eq!(s.delay(0), Duration::from_millis(100));
         assert_eq!(s.delay(1), Duration::from_millis(200));
@@ -770,7 +770,7 @@ mod tests {
 
     #[test]
     fn test_circuit_breaker_rejects_when_open() {
-        let mut cb = CircuitBreaker::new(1, 1, Duration::from_secs(60));
+        let mut cb = CircuitBreaker::new(1, 1, Duration::from_mins(1));
         cb.record_failure();
         assert_eq!(cb.state(), CircuitState::Open);
         assert!(!cb.allow_request());
@@ -936,7 +936,7 @@ mod tests {
 
     #[test]
     fn test_health_probe_not_due_after_recent_check() {
-        let mut probe = HealthProbe::new(Duration::from_secs(60), Duration::from_millis(100), 3);
+        let mut probe = HealthProbe::new(Duration::from_mins(1), Duration::from_millis(100), 3);
         probe.record_check(Some(Duration::from_millis(10)));
         assert!(!probe.is_check_due());
     }
