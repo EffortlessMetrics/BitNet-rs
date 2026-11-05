@@ -186,5 +186,5 @@ fn reduction_row_wise_sum_and_max() {
     let matrix = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]; // 2×3
     let sums = reduction::reduce_rows_f32(&matrix, 2, 3, ReductionOp::Sum).unwrap();
     let maxes = reduction::reduce_rows_f32(&matrix, 2, 3, ReductionOp::Max).unwrap();
-    insta::assert_snapshot!(format!("sums={} maxes={}", fmt_f32(&sums), fmt_f32(&maxes),));
+    insta::assert_snapshot!(format!("sums={} maxes={}", fmt_f32(&sums), fmt_f32(&maxes)));
 }

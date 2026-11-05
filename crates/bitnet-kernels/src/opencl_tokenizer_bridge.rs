@@ -342,7 +342,7 @@ impl<'a> BatchPadder<'a> {
             TruncationStrategy::TruncateEnd => Ok(seq[..max_len].to_vec()),
             TruncationStrategy::TruncateStart => Ok(seq[seq.len() - max_len..].to_vec()),
             TruncationStrategy::Error => {
-                Err(format!("sequence length {} exceeds max_seq_len {}", seq.len(), max_len,))
+                Err(format!("sequence length {} exceeds max_seq_len {}", seq.len(), max_len))
             }
         }
     }

@@ -916,7 +916,7 @@ pub fn block_sparse_matmul(
 /// Returns `KernelError::GpuError` — scaffold only.
 #[cfg(any(feature = "gpu", feature = "cuda"))]
 pub fn launch_sparse_spmv(_sparse: &SparseTensor, _x: &[f32], _y: &mut [f32]) -> Result<()> {
-    log::debug!("sparse SpMV CUDA stub: rows={}, nnz={}", _sparse.rows, _sparse.nnz(),);
+    log::debug!("sparse SpMV CUDA stub: rows={}, nnz={}", _sparse.rows, _sparse.nnz());
     Err(KernelError::GpuError {
         reason: "sparse SpMV CUDA kernel not yet compiled — scaffold only".into(),
     }

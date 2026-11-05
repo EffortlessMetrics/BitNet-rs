@@ -747,7 +747,7 @@ pub fn launch_fused_softmax_mask_cuda(
     config: &FusedElementwiseLaunchConfig,
     _scale: f32,
 ) -> Result<()> {
-    log::debug!("fused softmax+mask CUDA: n={}, grid={:?}", config.n, config.grid_dim(),);
+    log::debug!("fused softmax+mask CUDA: n={}, grid={:?}", config.n, config.grid_dim());
     Err(KernelError::GpuError {
         reason: "fused softmax+mask CUDA kernel not yet \
                  compiled — scaffold only"
@@ -766,7 +766,7 @@ pub fn launch_fused_add_rmsnorm_cuda(
     config: &FusedElementwiseLaunchConfig,
     _eps: f32,
 ) -> Result<()> {
-    log::debug!("fused add+RMSNorm CUDA: n={}, grid={:?}", config.n, config.grid_dim(),);
+    log::debug!("fused add+RMSNorm CUDA: n={}, grid={:?}", config.n, config.grid_dim());
     Err(KernelError::GpuError {
         reason: "fused add+RMSNorm CUDA kernel not yet \
                  compiled — scaffold only"
@@ -784,7 +784,7 @@ pub fn launch_fused_scale_add_cuda(
     config: &FusedElementwiseLaunchConfig,
     _scale: f32,
 ) -> Result<()> {
-    log::debug!("fused scale+add CUDA: n={}, grid={:?}", config.n, config.grid_dim(),);
+    log::debug!("fused scale+add CUDA: n={}, grid={:?}", config.n, config.grid_dim());
     Err(KernelError::GpuError {
         reason: "fused scale+add CUDA kernel not yet \
                  compiled — scaffold only"

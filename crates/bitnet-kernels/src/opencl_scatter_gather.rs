@@ -155,19 +155,19 @@ impl GatherOp {
 
         if src.len() < s_rows * s_cols {
             return Err(KernelError::InvalidArguments {
-                reason: format!("gather src len {} < {}", src.len(), s_rows * s_cols,),
+                reason: format!("gather src len {} < {}", src.len(), s_rows * s_cols),
             }
             .into());
         }
         if indices.len() < out_len {
             return Err(KernelError::InvalidArguments {
-                reason: format!("gather indices len {} < {}", indices.len(), out_len,),
+                reason: format!("gather indices len {} < {}", indices.len(), out_len),
             }
             .into());
         }
         if output.len() < out_len {
             return Err(KernelError::InvalidArguments {
-                reason: format!("gather output len {} < {}", output.len(), out_len,),
+                reason: format!("gather output len {} < {}", output.len(), out_len),
             }
             .into());
         }
@@ -273,19 +273,19 @@ impl ScatterOp {
 
         if src.len() < elem_count {
             return Err(KernelError::InvalidArguments {
-                reason: format!("scatter src len {} < {}", src.len(), elem_count,),
+                reason: format!("scatter src len {} < {}", src.len(), elem_count),
             }
             .into());
         }
         if indices.len() < elem_count {
             return Err(KernelError::InvalidArguments {
-                reason: format!("scatter indices len {} < {}", indices.len(), elem_count,),
+                reason: format!("scatter indices len {} < {}", indices.len(), elem_count),
             }
             .into());
         }
         if dst.len() < d_rows * d_cols {
             return Err(KernelError::InvalidArguments {
-                reason: format!("scatter dst len {} < {}", dst.len(), d_rows * d_cols,),
+                reason: format!("scatter dst len {} < {}", dst.len(), d_rows * d_cols),
             }
             .into());
         }
@@ -363,13 +363,13 @@ impl IndexSelect {
 
         if src.len() < s_rows * s_cols {
             return Err(KernelError::InvalidArguments {
-                reason: format!("index_select src len {} < {}", src.len(), s_rows * s_cols,),
+                reason: format!("index_select src len {} < {}", src.len(), s_rows * s_cols),
             }
             .into());
         }
         if output.len() < out_len {
             return Err(KernelError::InvalidArguments {
-                reason: format!("index_select output len {} < {}", output.len(), out_len,),
+                reason: format!("index_select output len {} < {}", output.len(), out_len),
             }
             .into());
         }
@@ -377,7 +377,7 @@ impl IndexSelect {
         for (out_row, &idx) in indices.iter().enumerate() {
             if self.bounds_check && idx >= s_rows {
                 return Err(KernelError::InvalidArguments {
-                    reason: format!("index_select index {idx} >= rows {s_rows}",),
+                    reason: format!("index_select index {idx} >= rows {s_rows}"),
                 }
                 .into());
             }
@@ -559,7 +559,7 @@ impl TopKSelect {
         }
         if self.k > input.len() {
             return Err(KernelError::InvalidArguments {
-                reason: format!("topk: k ({}) > input len ({})", self.k, input.len(),),
+                reason: format!("topk: k ({}) > input len ({})", self.k, input.len()),
             }
             .into());
         }
@@ -598,7 +598,7 @@ impl TopKSelect {
     pub fn execute_2d(&self, input: &[f32], rows: usize, cols: usize) -> Result<Vec<TopKResult>> {
         if input.len() < rows * cols {
             return Err(KernelError::InvalidArguments {
-                reason: format!("topk_2d: input len {} < rows*cols {}", input.len(), rows * cols,),
+                reason: format!("topk_2d: input len {} < rows*cols {}", input.len(), rows * cols),
             }
             .into());
         }

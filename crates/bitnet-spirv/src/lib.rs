@@ -460,13 +460,13 @@ mod tests {
         let mut bin = build_test_spirv(1, 0);
         bin[0] ^= 0xFF;
         let msg = validation_message(SpirVValidator::check_magic(&bin));
-        assert!(msg.as_deref().is_some_and(|msg| msg.contains("bad magic")), "got: {msg:?}",);
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("bad magic")), "got: {msg:?}");
     }
 
     #[test]
     fn check_magic_rejects_too_short() {
         let msg = validation_message(SpirVValidator::check_magic(&[0x03, 0x02, 0x23]));
-        assert!(msg.as_deref().is_some_and(|msg| msg.contains("too short")), "got: {msg:?}",);
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("too short")), "got: {msg:?}");
     }
 
     #[test]
@@ -479,7 +479,7 @@ mod tests {
     #[test]
     fn check_length_rejects_short_input() {
         let msg = validation_message(SpirVValidator::check_length(&[0u8; 19]));
-        assert!(msg.as_deref().is_some_and(|msg| msg.contains("19 bytes")), "got: {msg:?}",);
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("19 bytes")), "got: {msg:?}");
     }
 
     #[test]
@@ -501,13 +501,13 @@ mod tests {
         // 2.0 wrong major
         let bin = build_test_spirv(2, 0);
         let msg = validation_message(SpirVValidator::check_version(&bin));
-        assert!(msg.as_deref().is_some_and(|msg| msg.contains("unsupported")), "got: {msg:?}",);
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("unsupported")), "got: {msg:?}");
     }
 
     #[test]
     fn check_version_rejects_too_short_for_version_word() {
         let msg = validation_message(SpirVValidator::check_version(&[0u8; 7]));
-        assert!(msg.as_deref().is_some_and(|msg| msg.contains("version word")), "got: {msg:?}",);
+        assert!(msg.as_deref().is_some_and(|msg| msg.contains("version word")), "got: {msg:?}");
     }
 
     #[test]
@@ -620,7 +620,7 @@ mod tests {
         assert!(!c.is_empty());
 
         let got = c.get("h1");
-        assert!(got.as_ref().is_some_and(|module| module.source_hash == "h1"), "got: {got:?}",);
+        assert!(got.as_ref().is_some_and(|module| module.source_hash == "h1"), "got: {got:?}");
 
         assert!(c.get("missing").is_none());
     }

@@ -674,9 +674,7 @@ pub fn embedding_rms_norm(
     eps: f32,
 ) -> Result<()> {
     if gamma.len() != embed_dim {
-        return Err(shape_error(
-            format!("gamma length {} != embed_dim({embed_dim})", gamma.len(),),
-        ));
+        return Err(shape_error(format!("gamma length {} != embed_dim({embed_dim})", gamma.len())));
     }
     if embed_dim == 0 || embeddings.is_empty() {
         return Ok(());

@@ -59,13 +59,13 @@ fn validate_gating_buffers(gate: &[f32], up: &[f32], output: &[f32]) -> Result<u
     }
     if gate.len() != up.len() {
         return Err(KernelError::InvalidArguments {
-            reason: format!("gating gate length {} != up length {}", gate.len(), up.len(),),
+            reason: format!("gating gate length {} != up length {}", gate.len(), up.len()),
         }
         .into());
     }
     if output.len() < gate.len() {
         return Err(KernelError::InvalidArguments {
-            reason: format!("gating output length {} < input length {}", output.len(), gate.len(),),
+            reason: format!("gating output length {} < input length {}", output.len(), gate.len()),
         }
         .into());
     }

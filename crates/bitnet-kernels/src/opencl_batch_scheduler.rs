@@ -1453,7 +1453,7 @@ mod tests {
         }
         let (slots, _) = sched.schedule_batch();
         let total_reserved: u64 = slots.iter().map(|s| s.reserved_memory_bytes).sum();
-        assert!(total_reserved <= total, "scheduled {total_reserved} bytes but budget is {total}",);
+        assert!(total_reserved <= total, "scheduled {total_reserved} bytes but budget is {total}");
     }
 
     #[test]
@@ -1467,7 +1467,7 @@ mod tests {
                     .unwrap();
             }
             let (slots, _) = sched.schedule_batch();
-            assert!(slots.len() <= max, "max_batch_size={max} but got {} slots", slots.len(),);
+            assert!(slots.len() <= max, "max_batch_size={max} but got {} slots", slots.len());
         }
     }
 

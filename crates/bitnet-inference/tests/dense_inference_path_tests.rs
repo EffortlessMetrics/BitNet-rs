@@ -18,7 +18,7 @@ use bitnet_inference::simple_forward::{Weights, logits_for_token};
 fn assert_close(actual: &[f32], expected: &[f32], tol: f32, label: &str) {
     assert_eq!(actual.len(), expected.len(), "{label}: length mismatch");
     for (i, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
-        assert!((a - e).abs() < tol, "{label}[{i}]: expected {e:.6}, got {a:.6} (tol={tol})",);
+        assert!((a - e).abs() < tol, "{label}[{i}]: expected {e:.6}, got {a:.6} (tol={tol})");
     }
 }
 

@@ -1556,6 +1556,6 @@ mod tests {
     fn gemma_has_more_rules_than_llama() {
         let llama = WeightMapper::for_architecture(ModelArchitecture::Llama);
         let gemma = WeightMapper::for_architecture(ModelArchitecture::Gemma);
-        assert!(gemma.rule_count() > llama.rule_count(), "Gemma should have extra norm rules",);
+        assert!(gemma.rule_count() > llama.rule_count(), "Gemma should have extra norm rules");
     }
 }

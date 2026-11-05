@@ -1893,7 +1893,7 @@ mod tests {
         rope_backward_cpu(&forward_out, &mut roundtrip, &cfg).unwrap();
 
         for (i, (a, b)) in roundtrip.iter().zip(original.iter()).enumerate() {
-            assert!((a - b).abs() < 1e-4, "roundtrip mismatch at {i}: {a} vs {b}",);
+            assert!((a - b).abs() < 1e-4, "roundtrip mismatch at {i}: {a} vs {b}");
         }
     }
 
@@ -1941,7 +1941,7 @@ mod tests {
         rope_backward_cpu(&forward_out, &mut roundtrip, &cfg).unwrap();
 
         for (i, (a, b)) in roundtrip.iter().zip(original.iter()).enumerate() {
-            assert!((a - b).abs() < 1e-4, "interleaved roundtrip at {i}: {a} vs {b}",);
+            assert!((a - b).abs() < 1e-4, "interleaved roundtrip at {i}: {a} vs {b}");
         }
     }
 

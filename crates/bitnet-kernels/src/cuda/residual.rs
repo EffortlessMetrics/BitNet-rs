@@ -587,7 +587,7 @@ pub fn launch_residual_add(
     _residual: &[f32],
     config: &ResidualConfig,
 ) -> Result<Vec<f32>> {
-    log::debug!("residual_add CUDA stub: n={}, grid={:?}", config.n, config.grid_dim(),);
+    log::debug!("residual_add CUDA stub: n={}, grid={:?}", config.n, config.grid_dim());
     Err(KernelError::GpuError {
         reason: "residual_add CUDA kernel not yet compiled — scaffold only".into(),
     }
@@ -606,7 +606,7 @@ pub fn launch_gated_residual(
     _gate: &[f32],
     config: &ResidualConfig,
 ) -> Result<Vec<f32>> {
-    log::debug!("gated_residual CUDA stub: n={}, grid={:?}", config.n, config.grid_dim(),);
+    log::debug!("gated_residual CUDA stub: n={}, grid={:?}", config.n, config.grid_dim());
     Err(KernelError::GpuError {
         reason: "gated_residual CUDA kernel not yet compiled — scaffold only".into(),
     }

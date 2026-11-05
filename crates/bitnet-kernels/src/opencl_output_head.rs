@@ -99,7 +99,7 @@ impl OutputHead {
             && b.len() != config.vocab_size
         {
             return Err(KernelError::InvalidArguments {
-                reason: format!("bias length {} != vocab_size({})", b.len(), config.vocab_size,),
+                reason: format!("bias length {} != vocab_size({})", b.len(), config.vocab_size),
             }
             .into());
         }

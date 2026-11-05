@@ -340,7 +340,7 @@ pub fn launch_reduce_rows_cuda(
     let expected_in = config.n_reductions * config.reduce_dim;
     if input.len() != expected_in {
         return Err(KernelError::InvalidArguments {
-            reason: format!("input length mismatch: expected {expected_in}, got {}", input.len(),),
+            reason: format!("input length mismatch: expected {expected_in}, got {}", input.len()),
         }
         .into());
     }
@@ -476,7 +476,7 @@ pub fn launch_reduce_rows_f32(
         let mut output = vec![0.0f32; rows];
         match launch_reduce_rows_cuda(matrix, &mut output, &config) {
             Ok(()) => {
-                log::debug!("Row reduction completed on CUDA ({}×{})", rows, cols,);
+                log::debug!("Row reduction completed on CUDA ({}×{})", rows, cols);
                 return Ok(output);
             }
             Err(e) => {

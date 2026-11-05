@@ -1621,7 +1621,7 @@ mod tests {
         for &(_name, source_code) in COMMON_KERNELS {
             let src = ShaderSource::new(source_code, Vec::new(), "sm_80");
             let key = src.content_hash(algo);
-            assert!(cache.get(key).is_some(), "common kernel should be cached",);
+            assert!(cache.get(key).is_some(), "common kernel should be cached");
         }
     }
 

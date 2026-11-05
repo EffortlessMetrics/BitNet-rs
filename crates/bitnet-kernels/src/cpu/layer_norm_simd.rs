@@ -1264,7 +1264,7 @@ mod tests {
 
         let scalar = layer_norm_f32(&input, &gamma, Some(&beta), &config).unwrap();
         let avx = layer_norm_avx2(&input, &gamma, Some(&beta), &config).unwrap();
-        assert!(approx_eq(&scalar, &avx, TOL), "AVX2 layer norm with affine diverged from scalar",);
+        assert!(approx_eq(&scalar, &avx, TOL), "AVX2 layer norm with affine diverged from scalar");
     }
 
     #[test]

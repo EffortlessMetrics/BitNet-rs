@@ -602,7 +602,7 @@ mod tests {
         layernorm_no_bias(&input, &weight, &mut out_no_bias, 1, dim, 1e-5).unwrap();
 
         for (i, (&a, &b)) in out_with_bias.iter().zip(out_no_bias.iter()).enumerate() {
-            assert!((a - b).abs() < 1e-6, "mismatch at {i}: with_bias={a}, no_bias={b}",);
+            assert!((a - b).abs() < 1e-6, "mismatch at {i}: with_bias={a}, no_bias={b}");
         }
     }
 

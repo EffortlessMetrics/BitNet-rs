@@ -388,6 +388,68 @@ fn dense_q8_transformer_hook_name(descriptor: &DenseGgufQ8SidecarDescriptor) -> 
     })
 }
 
+impl Model for BitNetModel {
+    fn config(&self) -> &BitNetConfig {
+        &self.config
+    }
+
+    fn forward(
+        &self,
+        input: &ConcreteTensor,
+        cache: &mut dyn std::any::Any,
+    ) -> Result<ConcreteTensor> {
+        // Fail fast if transformer not initialized - prevents silent zero-logit failures
+        let transformer = self.transformer.as_ref().ok_or_else(|| {
+            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: "BitNetModel::transformer not initialized (GGUF load failed or build_transformer returned error)".to_string()
+            })
+        })?;
+
+        // Get or create KV cache
+        let kv_cache = cache.downcast_mut::<KVCache>();
+
+        // Convert input to Candle tensor
+        let input_tensor = self.to_candle_tensor(input)?;
+
+        // Run transformer forward pass (passes ownership to avoid clone on hot path)
+        let output = transformer.forward(input_tensor, kv_cache)?;
+
+        // Convert back to ConcreteTensor
+        Ok(self.candle_to_concrete(output))
+    }
+
+    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
+        // Fail fast if transformer not initialized
+        let transformer = self.transformer.as_ref().ok_or_else(|| {
+            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: "BitNetModel::transformer not initialized (cannot embed tokens)"
+                    .to_string(),
+            })
+        })?;
+
+        let embedded = transformer.embed(tokens)?;
+        Ok(self.candle_to_concrete(embedded))
+    }
+
+    fn logits(&self, hidden: &ConcreteTensor) -> Result<ConcreteTensor> {
+        // Fail fast if transformer not initialized
+        let transformer = self.transformer.as_ref().ok_or_else(|| {
+            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
+                reason: "BitNetModel::transformer not initialized (cannot compute logits)"
+                    .to_string(),
+            })
+        })?;
+
+        let hidden_tensor = self.to_candle_tensor(hidden)?;
+        let logits = transformer.logits(&hidden_tensor)?;
+        Ok(self.candle_to_concrete(logits))
+    }
+
+    fn dense_q8_hook_selection_receipt(&self) -> serde_json::Value {
+        BitNetModel::dense_q8_hook_selection_receipt(self)
+    }
+}
+
 #[cfg(test)]
 mod dense_q8_runtime_hook_tests {
     use super::*;
@@ -429,7 +491,7 @@ mod dense_q8_runtime_hook_tests {
 
         assert_eq!(hook.tensor_name, "blk.0.attn_q.weight");
         assert_eq!(hook.role, "AttentionQ");
-        assert_eq!(hook.runtime_compute_enabled, false);
+        assert!(!hook.runtime_compute_enabled);
         assert!(hook.sidecar_payload_sha256.is_some());
         Ok(())
     }
@@ -505,67 +567,5 @@ mod dense_q8_runtime_hook_tests {
             std::env::remove_var(DENSE_Q8_RUNTIME_TENSOR_ENV);
         }
         result
-    }
-}
-
-impl Model for BitNetModel {
-    fn config(&self) -> &BitNetConfig {
-        &self.config
-    }
-
-    fn forward(
-        &self,
-        input: &ConcreteTensor,
-        cache: &mut dyn std::any::Any,
-    ) -> Result<ConcreteTensor> {
-        // Fail fast if transformer not initialized - prevents silent zero-logit failures
-        let transformer = self.transformer.as_ref().ok_or_else(|| {
-            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
-                reason: "BitNetModel::transformer not initialized (GGUF load failed or build_transformer returned error)".to_string()
-            })
-        })?;
-
-        // Get or create KV cache
-        let kv_cache = cache.downcast_mut::<KVCache>();
-
-        // Convert input to Candle tensor
-        let input_tensor = self.to_candle_tensor(input)?;
-
-        // Run transformer forward pass (passes ownership to avoid clone on hot path)
-        let output = transformer.forward(input_tensor, kv_cache)?;
-
-        // Convert back to ConcreteTensor
-        Ok(self.candle_to_concrete(output))
-    }
-
-    fn embed(&self, tokens: &[u32]) -> Result<ConcreteTensor> {
-        // Fail fast if transformer not initialized
-        let transformer = self.transformer.as_ref().ok_or_else(|| {
-            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
-                reason: "BitNetModel::transformer not initialized (cannot embed tokens)"
-                    .to_string(),
-            })
-        })?;
-
-        let embedded = transformer.embed(tokens)?;
-        Ok(self.candle_to_concrete(embedded))
-    }
-
-    fn logits(&self, hidden: &ConcreteTensor) -> Result<ConcreteTensor> {
-        // Fail fast if transformer not initialized
-        let transformer = self.transformer.as_ref().ok_or_else(|| {
-            BitNetError::Model(bitnet_common::ModelError::LoadingFailed {
-                reason: "BitNetModel::transformer not initialized (cannot compute logits)"
-                    .to_string(),
-            })
-        })?;
-
-        let hidden_tensor = self.to_candle_tensor(hidden)?;
-        let logits = transformer.logits(&hidden_tensor)?;
-        Ok(self.candle_to_concrete(logits))
-    }
-
-    fn dense_q8_hook_selection_receipt(&self) -> serde_json::Value {
-        BitNetModel::dense_q8_hook_selection_receipt(self)
     }
 }

@@ -496,7 +496,7 @@ impl PrefetchScheduler {
     /// Generate an OpenCL prefetch call string for documentation / source gen.
     pub fn opencl_prefetch_call(&self, ptr_name: &str, offset_expr: &str) -> String {
         let dist_elements = self.distance.elements();
-        format!("prefetch({ptr_name} + {offset_expr}, {dist_elements});",)
+        format!("prefetch({ptr_name} + {offset_expr}, {dist_elements});")
     }
 }
 
