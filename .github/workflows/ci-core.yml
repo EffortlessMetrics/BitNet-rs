@@ -46,7 +46,8 @@ on:
       - '.github/workflows/pr-plan.yml'
       - '.github/workflows/coverage.yml'
 
-      # CI configuration - codecov config affects verification signal
+      # CI configuration - policy inputs must emit the required core context
+      - '.github/dependabot.yml'
       - 'codecov.yml'
   push:
     branches: [ main ]
@@ -72,6 +73,7 @@ on:
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
       - 'Makefile'
+      - '.github/dependabot.yml'
       - '.github/workflows/ci-core.yml'
       - '.github/workflows/pr-plan.yml'
   workflow_dispatch:
