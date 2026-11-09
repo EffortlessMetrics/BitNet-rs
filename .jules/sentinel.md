@@ -23,3 +23,8 @@
 **Vulnerability:** The `validate_model_request` function bypassed directory checks entirely when `allowed_model_directories` was empty. This allowed attackers to specify absolute paths (e.g., `/etc/passwd.gguf`) and bypass path restrictions.
 **Learning:** Checking for `..` and `~` is insufficient for path safety because absolute paths don't contain them. When an allowlist is intentionally empty, it is critical to explicitly deny absolute paths or deny all requests, rather than allowing any path.
 **Prevention:** Explicitly deny absolute paths if no specific allowed directories are configured.
+
+## 2026-10-21 - Configured Request Body Limits
+**Finding:** The production router checked only the optional Content-Length header against twice max_prompt_length. Axum's Json extractor still had its separate default 2 MiB limit, so requests without a declared length could exceed the smaller configured limit. This does not establish unbounded allocation or request smuggling.
+**Correction:** Both request-validation entry points now apply the configured limit to Json/Bytes-based extractors while retaining early rejection of oversized declared lengths. Valid chunked bodies remain supported within that limit; HTTP framing stays with the transport parser.
+**Regression scope:** Production-router exact-boundary and pending-stream cases, HTTP/1 chunked and malformed-framing cases, and the standalone sanitization middleware. Passing runtime evidence must be recorded on the exact PR head before merge.

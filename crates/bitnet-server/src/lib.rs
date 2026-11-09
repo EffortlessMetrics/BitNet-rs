@@ -652,7 +652,10 @@ impl BitNetServer {
             .route("/v1/models/load", post(load_model_handler))
             .route("/v1/models", get(list_models_handler))
             .route("/v1/models/{model_id}", get(get_model_handler))
-            .route("/v1/models/{model_id}", axum::routing::delete(unload_model_handler))
+            .route(
+                "/v1/models/{model_id}",
+                axum::routing::delete(unload_model_handler),
+            )
             // Server statistics and management
             .route("/v1/stats", get(server_stats_handler))
             .route("/v1/devices", get(device_status_handler))
@@ -661,7 +664,10 @@ impl BitNetServer {
             .route("/receipts/latest", get(latest_receipt_handler))
             .route("/receipts/{receipt_id}", get(receipt_by_id_handler))
             // GPU streaming endpoint
-            .route("/api/v1/generate/stream", post(gpu_streaming::gpu_stream_handler))
+            .route(
+                "/api/v1/generate/stream",
+                post(gpu_streaming::gpu_stream_handler),
+            )
             // Root endpoint
             .route("/", get(root_handler))
             .with_state(app_state);
@@ -1945,18 +1951,10 @@ async fn enhanced_metrics_middleware(request: Request, next: Next) -> Response {
 /// Request validation middleware
 async fn request_validation_middleware(
     State(validator): State<Arc<SecurityValidator>>,
-    request: Request,
+    mut request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    // Check request size limits
-    if let Some(content_length) = request.headers().get("content-length")
-        && let Ok(length_str) = content_length.to_str()
-        && let Ok(length) = length_str.parse::<usize>()
-        && length > validator.config().max_prompt_length * 2
-    {
-        warn!(content_length = length, "Request payload too large");
-        return Err(StatusCode::PAYLOAD_TOO_LARGE);
-    }
+    security::apply_request_body_limit(&mut request, validator.config().max_prompt_length)?;
 
     Ok(next.run(request).await)
 }
@@ -2075,6 +2073,134 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::model_manager::{ModelMemoryStats, ModelMetadata};
+
+    mod request_body_limits {
+        use super::*;
+        use axum::body::Bytes;
+        use futures::StreamExt;
+        use std::{io, time::Duration};
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        const LIMIT: usize = 128;
+
+        fn payload(length: usize) -> String {
+            let mut json = r#"{"model":"test","messages":[]}"#.to_owned();
+            json.extend(std::iter::repeat_n(' ', length - json.len()));
+            json
+        }
+
+        async fn app() -> anyhow::Result<axum::Router> {
+            let mut config = ServerConfig::default();
+            config.security.max_prompt_length = LIMIT / 2;
+            config.monitoring.structured_logging = false;
+            config.monitoring.prometheus_enabled = false;
+            Ok(BitNetServer::new(config).await?.create_app())
+        }
+
+        // A parsed request reaches the handler, which reports that this test
+        // server has no model. No model download or inference is needed.
+        #[tokio::test]
+        async fn accepts_json_at_limit_with_or_without_content_length() -> anyhow::Result<()> {
+            let app = app().await?;
+            for declared_length in [None, Some(LIMIT)] {
+                let mut request = Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("content-type", "application/json");
+                if let Some(length) = declared_length {
+                    request = request.header("content-length", length);
+                }
+                let response =
+                    app.clone().oneshot(request.body(Body::from(payload(LIMIT)))?).await?;
+                assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+                let bytes = axum::body::to_bytes(response.into_body(), 64 * 1024).await?;
+                let json: Value = serde_json::from_slice(&bytes)?;
+                assert_eq!(json["error_code"], "SERVER_INFERENCE_UNAVAILABLE");
+            }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn bounds_stream_reads_without_trusting_content_length() -> anyhow::Result<()> {
+            let app = app().await?;
+            // The pending tail proves rejection happens once the byte limit is
+            // crossed, without waiting for the sender to finish the body.
+            for declared_length in [None, Some(1), Some(LIMIT + 1)] {
+                let bytes = Bytes::from(payload(LIMIT + 1));
+                let chunks = futures::stream::iter([
+                    Ok::<_, io::Error>(bytes.slice(..64)),
+                    Ok(bytes.slice(64..128)),
+                    Ok(bytes.slice(128..)),
+                ])
+                .chain(futures::stream::pending());
+                let mut request = Request::builder()
+                    .method("POST")
+                    .uri("/v1/chat/completions")
+                    .header("content-type", "application/json");
+                if let Some(length) = declared_length {
+                    request = request.header("content-length", length);
+                }
+                let response = tokio::time::timeout(
+                    Duration::from_secs(5),
+                    app.clone().oneshot(request.body(Body::from_stream(chunks))?),
+                )
+                .await??;
+                assert_eq!(response.status(), StatusCode::PAYLOAD_TOO_LARGE);
+            }
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn enforces_limits_on_http_chunked_bodies() -> anyhow::Result<()> {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+            let address = listener.local_addr()?;
+            let app = app().await?;
+            // Dropping the set aborts the server even if an assertion fails.
+            let mut servers = tokio::task::JoinSet::new();
+            servers.spawn(async move { axum::serve(listener, app).await });
+
+            for (headers, length, expected) in [
+                ("Transfer-Encoding: chunked\r\n", LIMIT, 503),
+                ("Transfer-Encoding: ChUnKeD\r\n", LIMIT, 503),
+                ("Transfer-Encoding: chunked\r\n", LIMIT + 1, 413),
+                ("Transfer-Encoding: gzip, ChUnKeD\r\n", LIMIT + 1, 413),
+                ("Transfer-Encoding: gzip\r\nTransfer-Encoding: ChUnKeD\r\n", LIMIT + 1, 413),
+            ] {
+                let body = payload(length);
+                let wire = format!(
+                    "POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\nConnection: close\r\n{headers}\r\n{:x}\r\n{body}\r\n0\r\n\r\n",
+                    body.len()
+                );
+                let response = exchange(address, &wire).await?;
+                assert!(response.starts_with(&format!("HTTP/1.1 {expected} ")), "{response}");
+            }
+
+            // These failures are produced by the HTTP parser, before routing.
+            for headers in [
+                "Content-Length: invalid\r\n",
+                "Content-Length: 1\r\nContent-Length: 2\r\n",
+                "Transfer-Encoding: chunked, gzip\r\n",
+            ] {
+                let wire = format!(
+                    "POST /v1/chat/completions HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n{headers}\r\nx"
+                );
+                let response = exchange(address, &wire).await?;
+                assert!(response.starts_with("HTTP/1.1 400 "), "{response}");
+            }
+            Ok(())
+        }
+
+        async fn exchange(address: std::net::SocketAddr, wire: &str) -> anyhow::Result<String> {
+            tokio::time::timeout(Duration::from_secs(5), async {
+                let mut stream = tokio::net::TcpStream::connect(address).await?;
+                stream.write_all(wire.as_bytes()).await?;
+                let mut response = String::new();
+                stream.read_to_string(&mut response).await?;
+                Ok(response)
+            })
+            .await?
+        }
+    }
 
     fn qwen25_server_receipt(request_id: &str) -> super::ServerSharedEngineReceipt {
         let request = ChatCompletionRequest {
