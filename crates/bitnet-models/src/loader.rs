@@ -1,7 +1,7 @@
 //! Model loading utilities
 
 use crate::Model;
-use bitnet_common::{BitNetError, Device, ModelMetadata, Result};
+use bitnet_common::{BitNetError, Device, ModelError, ModelMetadata, Result};
 use memmap2::Mmap;
 use std::fs::File;
 use std::io::Read;
@@ -156,7 +156,12 @@ impl ModelLoader {
 
     /// Detect format by magic bytes
     fn detect_by_magic_bytes(&self, path: &Path) -> Result<Option<&dyn FormatLoader>> {
-        let mut file = File::open(path).map_err(BitNetError::Io)?;
+        let mut file = File::open(path).map_err(|err| match err.kind() {
+            std::io::ErrorKind::NotFound => {
+                ModelError::NotFound { path: path.display().to_string() }.into()
+            }
+            _ => BitNetError::Io(err),
+        })?;
 
         let mut magic = [0u8; 8];
         let n = file.read(&mut magic).map_err(BitNetError::Io)?;

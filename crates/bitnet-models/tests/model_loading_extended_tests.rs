@@ -18,7 +18,9 @@
 //!    -- model_loading_extended_tests`
 #![cfg(feature = "cpu")]
 
-use bitnet_common::{BitNetConfig, Device, ModelMetadata, QuantizationType};
+use bitnet_common::{
+    BitNetConfig, BitNetError, Device, ModelError, ModelMetadata, QuantizationType,
+};
 use bitnet_models::{
     loader::{LoadConfig, ModelLoader},
     production_loader::{ProductionLoadConfig, ProductionModelLoader},
@@ -358,8 +360,13 @@ fn model_loader_available_formats_includes_safetensors() {
 #[test]
 fn model_loader_load_nonexistent_path_returns_err() {
     let loader = ModelLoader::new(Device::Cpu);
-    let result = loader.load("/nonexistent/path/model.gguf");
-    assert!(result.is_err(), "loading a non-existent file must fail");
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("missing.gguf");
+    let error = loader.load(&path).err().expect("loading a missing model must fail");
+    let BitNetError::Model(ModelError::NotFound { path: missing }) = error else {
+        panic!("expected a model-not-found error, got {error}");
+    };
+    assert_eq!(missing, path.display().to_string());
 }
 
 // ---------------------------------------------------------------------------
