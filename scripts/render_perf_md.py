@@ -233,6 +233,17 @@ def render_format_comparison(st_data: Dict[str, Any], gguf_data: Dict[str, Any])
 
     return comparison
 
+def load_report(path: str) -> Dict[str, Any]:
+    with open(path, 'r') as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError("expected a JSON object")
+    # Older reports omit the version. Versioned reports use a JSON integer.
+    version = data.get('schema_version', 1)
+    if type(version) is not int or version != 1:
+        raise ValueError(f"unsupported schema_version {version!r} (expected integer 1)")
+    return data
+
 def main():
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <performance.json> [<performance2.json>]", file=sys.stderr)
@@ -242,8 +253,7 @@ def main():
     json_file = sys.argv[1]
 
     try:
-        with open(json_file, 'r') as f:
-            data = json.load(f)
+        data = load_report(json_file)
     except Exception as e:
         print(f"Error reading {json_file}: {e}", file=sys.stderr)
         sys.exit(1)
@@ -271,8 +281,7 @@ def main():
     if len(sys.argv) > 2:
         json_file2 = sys.argv[2]
         try:
-            with open(json_file2, 'r') as f:
-                data2 = json.load(f)
+            data2 = load_report(json_file2)
             output += render_format_comparison(data, data2)
         except Exception as e:
             print(f"Warning: Could not load second JSON: {e}", file=sys.stderr)
