@@ -465,7 +465,7 @@ fn sse_token_debug() {
 fn streaming_token_serde_roundtrip() {
     let tok = StreamingToken {
         token: "hello".into(),
-        token_id: 99,
+        token_id: Some(99),
         cumulative_time_ms: 150,
         position: 3,
     };
@@ -474,7 +474,7 @@ fn streaming_token_serde_roundtrip() {
     assert!(json.contains("\"position\":3"));
     let de: StreamingToken = serde_json::from_str(&json).unwrap();
     assert_eq!(de.token, "hello");
-    assert_eq!(de.token_id, 99);
+    assert_eq!(de.token_id, Some(99));
     assert_eq!(de.cumulative_time_ms, 150);
     assert_eq!(de.position, 3);
 }

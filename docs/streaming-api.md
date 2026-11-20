@@ -53,7 +53,7 @@ Start the BitNet server with streaming support:
 cargo run -p bitnet-server -- --port 8080 --model model.gguf
 
 # Test streaming endpoint
-curl -X POST http://localhost:8080/v1/stream \
+curl -X POST http://localhost:8080/v1/inference/stream \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Explain quantum computing",
@@ -66,7 +66,9 @@ curl -X POST http://localhost:8080/v1/stream \
 
 ## SSE Response Format
 
-The streaming endpoint returns Server-Sent Events with the following structure:
+In a token event, `token_id` is the first generated ID in the text chunk.
+A generated ID of zero is the JSON number `0`. A chunk without an ID carries
+`"token_id": null`.
 
 ```javascript
 // Token event (generated text + token ID)
@@ -114,7 +116,7 @@ cargo test --no-default-features -p bitnet-inference --no-default-features --fea
 cargo test --no-default-features -p bitnet-inference --no-default-features --features cpu test_concurrent_streams
 
 # Validate SSE format
-cargo test --no-default-features -p bitnet-server --no-default-features --features cpu sse_token_ids_match_model_outputs
+cargo test -p bitnet-server --no-default-features --features cpu --lib streaming_token_distinguishes_zero_from_unavailable
 ```
 
 ## Troubleshooting Streaming Issues

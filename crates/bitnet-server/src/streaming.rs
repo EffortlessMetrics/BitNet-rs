@@ -8,6 +8,7 @@ use axum::{
     response::sse::{Event, KeepAlive, Sse},
     response::{IntoResponse, Response},
 };
+use bitnet_inference::streaming::StreamResponse;
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
@@ -45,12 +46,23 @@ pub struct StreamingRequest {
 pub struct StreamingToken {
     /// The generated token text
     pub token: String,
-    /// The token ID from the vocabulary
-    pub token_id: u32,
+    /// The first generated token ID in this chunk, or null when unavailable
+    pub token_id: Option<u32>,
     /// Cumulative generation time in milliseconds
     pub cumulative_time_ms: u64,
     /// Position of this token in the generation sequence
     pub position: usize,
+}
+
+impl StreamingToken {
+    fn from_chunk(chunk: StreamResponse, cumulative_time_ms: u64, position: usize) -> Self {
+        Self {
+            token: chunk.text,
+            token_id: chunk.token_ids.first().copied(),
+            cumulative_time_ms,
+            position,
+        }
+    }
 }
 
 /// Final message indicating streaming completion
@@ -183,7 +195,6 @@ async fn real_stream(
 
         // Get the engine and create a generation stream
         let engine = &managed_model.engine;
-        let tokenizer = engine.tokenizer();
         let mut gen_stream = engine.generate_stream_with_config(&request.prompt, &config)?;
         let mut token_count = 0u64;
 
@@ -193,20 +204,10 @@ async fn real_stream(
                     token_count += 1;
                     let elapsed = start.elapsed();
 
-                    let token_id = tokenizer
-                        .encode(&stream_response.text, false, false)
-                        .ok()
-                        .and_then(|ids| ids.first().copied())
-                        .unwrap_or(0);
-
-                    let data = StreamingToken {
-                        token: stream_response.text.clone(),
-                        token_id,
-                        cumulative_time_ms: elapsed.as_millis() as u64,
-                        position: token_count as usize,
-                    };
-
-                    debug!("Streaming token {}: '{}'", token_count, stream_response.text);
+                    let data = StreamingToken::from_chunk(
+                        stream_response, elapsed.as_millis() as u64, token_count as usize,
+                    );
+                    debug!("Streaming token {}: '{}'", token_count, data.token);
 
                     yield Ok(Event::default()
                         .event("token")
@@ -271,6 +272,21 @@ mod tests {
     use super::*;
     use axum::response::IntoResponse;
     use http_body_util::BodyExt;
+
+    #[test]
+    fn streaming_token_distinguishes_zero_from_unavailable() -> Result<()> {
+        for (ids, expected) in [
+            (vec![0], serde_json::json!(0)),
+            (vec![], serde_json::Value::Null),
+            (vec![17, 0], serde_json::json!(17)),
+        ] {
+            let chunk = StreamResponse { text: "same text".into(), token_ids: ids };
+            let token = StreamingToken::from_chunk(chunk, 12, 1);
+            let json = serde_json::to_value(token)?;
+            assert_eq!(json.get("token_id"), Some(&expected));
+        }
+        Ok(())
+    }
 
     #[tokio::test]
     async fn streaming_without_loaded_model_returns_503_instead_of_mock_tokens() {

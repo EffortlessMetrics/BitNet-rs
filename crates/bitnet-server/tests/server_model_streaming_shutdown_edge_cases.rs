@@ -261,20 +261,21 @@ async fn model_manager_get_status_empty() {
 fn streaming_token_serde_roundtrip() {
     let tok = StreamingToken {
         token: "Hello".into(),
-        token_id: 42,
+        token_id: Some(42),
         cumulative_time_ms: 100,
         position: 1,
     };
     let json = serde_json::to_string(&tok).unwrap();
     let tok2: StreamingToken = serde_json::from_str(&json).unwrap();
     assert_eq!(tok2.token, "Hello");
-    assert_eq!(tok2.token_id, 42);
+    assert_eq!(tok2.token_id, Some(42));
     assert_eq!(tok2.position, 1);
 }
 
 #[test]
 fn streaming_token_empty_string() {
-    let tok = StreamingToken { token: "".into(), token_id: 0, cumulative_time_ms: 0, position: 0 };
+    let tok =
+        StreamingToken { token: "".into(), token_id: Some(0), cumulative_time_ms: 0, position: 0 };
     let json = serde_json::to_string(&tok).unwrap();
     assert!(json.contains("\"token\":\"\""));
 }
